@@ -109,17 +109,20 @@
   .btn.primary { background: var(--akane); border-color: var(--akane); color: #1a1218; font-weight: 600; }
   .note { font-size: 12.5px; color: var(--muted); line-height: 1.7; }
   .sketch { width: 100%; max-width: 360px; align-self: center; display: block; }
-  .painting { position: relative; width: 100%; max-width: 420px; align-self: center; aspect-ratio: 3 / 2; border: 8px solid #e9e3d6; box-sizing: border-box; background: #999; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+  .painting { position: relative; width: 100%; max-width: 420px; align-self: center; border: 8px solid #e9e3d6; box-sizing: border-box; background: #999; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+  .painting::before { content: ''; display: block; padding-top: 66.667%; }
   .painting img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .painting .grey { filter: grayscale(.92) brightness(.82) contrast(.9); transition: opacity 3.6s ease; }
   .painting .grey.off { opacity: 0; }
   .painting .tears { position: absolute; inset: 0; width: 100%; height: 100%; }
   .painting .sign { position: absolute; right: 8px; bottom: 5px; font-size: 12px; color: #f7f2e8; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
-  .flip { margin-bottom: 36px; width: 100%; max-width: 420px; align-self: center; aspect-ratio: 3 / 2; perspective: 1200px; }
-  .flip-in { position: relative; width: 100%; height: 100%; transition: transform .8s ease; transform-style: preserve-3d; }
-  .flip.on .flip-in { transform: rotateY(180deg); }
-  .flip .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-  .flip .face.back { transform: rotateY(180deg); }
+  .flip { position: relative; margin-bottom: 36px; width: 100%; max-width: 420px; align-self: center; }
+  .flip::before { content: ''; display: block; padding-top: 66.667%; }
+  .flip-in { position: absolute; inset: 0; transition: transform .22s ease-in; }
+  .flip.turn .flip-in { transform: scaleX(0); }
+  .flip .face { position: absolute; inset: 0; }
+  .flip .face.back, .flip.on .face:not(.back) { display: none; }
+  .flip.on .face.back { display: block; }
   .flip .face img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 2px; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
   #flipBtn { align-self: center; }
   .zoom-btn { position: absolute; right: 0; bottom: -40px; width: 30px; height: 30px; padding: 5px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); background: rgba(20, 16, 26, .65); color: #f4ecdd; cursor: pointer; z-index: 2; }
@@ -637,8 +640,16 @@
   };
   // スマホは「タップを離した瞬間」などでないと音を出せないので、最初の操作で音の準備をしておく
   let audioReady = false;
+  // 無音の短いwav（iPhoneで、消音スイッチがオンでもゲーム音が鳴るようにする）
+  const SILENT_WAV = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+  let silentTag = null;
   function unlockAudio() {
     if (!P.sound) return;
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    try {
+      if (!silentTag) { silentTag = new Audio(SILENT_WAV); silentTag.loop = false; silentTag.setAttribute('playsinline', ''); }
+      if (silentTag.paused) { const pr = silentTag.play(); if (pr && pr.catch) pr.catch(() => {}); }
+    } catch (e) {}
     try {
       const a = audio();
       if (!audioReady) {
@@ -648,7 +659,7 @@
       }
     } catch (e) {}
   }
-  ['touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
+  ['touchend', 'pointerup', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
   // 鍵盤を開いているあいだ、無音を流して音の出口を起こしておく（最初の音が遅れないように）
   function keepAudioAwake() {
     if (!P.sound) return () => {};
@@ -952,8 +963,11 @@
   function wireFlip(mustSeeBack) {
     const close = card.querySelector('[data-v="0"]');
     if (mustSeeBack) close.hidden = true;
-    $('#flipBtn').onclick = () => {
-      const on = $('#flip').classList.toggle('on');
+    $('#flipBtn').onclick = async () => {
+      const fl = $('#flip');
+      fl.classList.add('turn'); await new Promise(r => setTimeout(r, reduce ? 0 : 220));
+      const on = fl.classList.toggle('on');
+      fl.classList.remove('turn');
       $('#flipBtn').textContent = on ? '表に戻す' : '裏返す';
       $('#signZoom').hidden = true;
       $('#zoomBtn').hidden = on;
@@ -993,7 +1007,7 @@
                    '彼女は、ゆっくりこちらを振り向いた。胸の名札には「2年 春日ヒナ」とある。',
                    ['ヒナ', '……美術室。見ればわかるでしょ', 'normal'],
                    '「きみは、ここで何してるの？」',
-                   ['ヒナ', '……部活。美術部だから', 'down'],
+                   ['ヒナ', '……部活。美術部だから', 'normal'],
                    ['ヒナ', '来てるだけ。……ほかに、行くとこないし', 'down'],
                    'イーゼルには、布をかけたままのキャンバス。床には、乾いた絵の具の跡がいくつも残っている。',
                    '「絵、描くの？」',
@@ -1144,7 +1158,7 @@
       await say([['ヒナ', '……きれい？', 'surprise'], ['ヒナ', '……そんなふうに言われたの、初めて', 'down'], 'ヒナはしばらく黙って、窓の外の夕焼けを見ていた。', 'それから、ぽつりと言った。', ['ヒナ', '破ったのは、お母さん', 'down'], ['ヒナ', '『こんなもの描いてる暇があるなら』って。目の前で、びりびりに', 'sad'], 'ヒナの声が、少しだけ震えた。']);
 
       // 2段目：県展の話から入り、何年も比べられ、母に愛されてこなかったことへつなげる
-      await say([['ヒナ', '……お姉ちゃん、去年の県展で金賞とったの', 'down'],
+      await say([['ヒナ', '……お姉ちゃん、高3のとき、県展で金賞とったの', 'down'],
                  ['ヒナ', '昔から、なんでもできる人なの。……私とは違って', 'down'],
                  ['ヒナ', 'リビングには、お姉ちゃんの賞状が全部飾ってあるの。私のは一枚もない', 'sad'],
                  ['ヒナ', '一回だけ、市の絵のコンクールで賞をもらったことがあるんだ。でも見せたら、『サクラはその年、金賞だった』って', 'sad'],
@@ -1621,7 +1635,9 @@
       if (R.st === 'vanished') return say(['ピアノの椅子の上には、楽譜だけが残っている。']);
       if (R.st === 'unraveled') {
         if (R.items.has('secondo') || R.know.has('melody')) return sotaDuet();
-        return say([['ソウタ', '……ハルのパート、破いちゃったんだ。ケンカした日に', 'sad'], '（部屋のどこかに、ハルのパートの切れ端が残っているはずだ）']);
+        return say([['ソウタ', '……ハルのパートは、破いちゃったんだ', 'sad'],
+                    ['ソウタ', '葬式のあと、ハルのお母さんが『持っててあげて』ってくれたのに。……ここで一人で弾こうとしたら指が止まって、気づいたら', 'blame'],
+                    '（部屋のどこかに、ハルのパートの切れ端が残っているはずだ）']);
       }
       if (!remembered('sota')) {
         const block = (R.know.has('melody')) ? null : comboBlock('secondo');
@@ -1717,7 +1733,8 @@
                  'ソウタは、鞄から楽譜を取り出した。',
                  ['ソウタ', '……あの日の昼休み、ここで二人で合わせたんだ', 'sad'],
                  ['ソウタ', 'ハルが『ソウタのほうにもブレスの位置書き込んどく』って、この楽譜を持って帰って', 'sad'],
-                 ['ソウタ', '葬式のあと、ハルのお母さんが返しに来てくれた。……ずっと、開けられなかった', 'sad'],
+                 ['ソウタ', '葬式のあと、ハルのお母さんが返しに来てくれた。ハルが弾き込んでたハルのパートも、一緒に', 'sad'],
+                 ['ソウタ', '……俺のほうは、ずっと開けられなかった', 'sad'],
                  '最後のページを、そっと裏返した。']);
       showCut('m_score_back');
       await say(['白紙の真ん中に、あの鉛筆の殴り書きがある。',
@@ -1735,7 +1752,9 @@
       await say(['……いつもならチャイムが鳴る17:00を、時計の針が、静かに越えていった。',
                  ['ソウタ', '……最初のフレーズだけでいい。ハルのところ、弾いてくれる？', 'smile']]);
       if (R.items.has('secondo') || R.know.has('melody')) return sotaDuet(true);
-      await say([['ソウタ', '……あ。ハルのパート、破いちゃったんだ。ケンカした日に', 'sad'], '（部屋のどこかに、ハルのパートの切れ端が残っているはずだ）']);
+      await say([['ソウタ', '……あ。ハルのパートは、破いちゃったんだ', 'sad'],
+                 ['ソウタ', '葬式のあと、ハルのお母さんが『持っててあげて』ってくれたのに。……ここで一人で弾こうとしたら指が止まって、気づいたら', 'blame'],
+                 '（部屋のどこかに、ハルのパートの切れ端が残っているはずだ）']);
     },
   };
   // asked=true：直前にソウタが「弾いてくれる？」と頼んだあと（同じ頼みを繰り返さない）
@@ -1761,6 +1780,16 @@
     ending(['開いた校門の真ん中で、ソウタが振り返って片手を挙げた。丸めた楽譜を、大事そうに握って。'],
            'm_gate', '開いた校門の真ん中で、ソウタが肩ごしに振り返り、丸めた楽譜を持って片手を挙げている');
   }
+
+  /* ---------- 書体の先読み ---------- */
+  const FONTS_READY = (() => {
+    if (!document.fonts || !document.fonts.load) return Promise.resolve();
+    const chars = [...new Set(document.documentElement.innerHTML.replace(/[\x00-\x7f\s]/g, ''))].join('') + 'ABCabc0123456789!?';
+    const jobs = ['400 16px "Klee One"', '600 16px "Klee One"', '600 16px "Shippori Mincho B1"', '800 16px "Shippori Mincho B1"']
+      .map(f => document.fonts.load(f, chars).catch(() => {}));
+    // 通信が遅くても、いつまでも待たせない
+    return Promise.race([Promise.all(jobs), new Promise(r => setTimeout(r, 6000))]);
+  })();
 
   /* ---------- 章の切り替え ---------- */
   const CHAPTERS = { art: ART, music: MUSIC };
@@ -1795,7 +1824,7 @@
     $('#portrait').removeAttribute('src');
     bg.src = `img/${C.bg}.webp`;
     sit.src = `img/${C.sit.src}.webp`; sit.setAttribute('style', C.sit.style);
-    const ready = Promise.all([bg, sit].map(i => i.decode().catch(() => {}))).then(() => { if (C.id !== id) return; $('#loading').hidden = true; if (show) scene.style.visibility = ''; requestAnimationFrame(() => requestAnimationFrame(() => scene.classList.remove('reset'))); });
+    const ready = Promise.all([...[bg, sit].map(i => i.decode().catch(() => {})), FONTS_READY]).then(() => { if (C.id !== id) return; $('#loading').hidden = true; if (show) scene.style.visibility = ''; requestAnimationFrame(() => requestAnimationFrame(() => scene.classList.remove('reset'))); });
     const lo = $('#leftover');
     if (C.leftoverImg) { lo.innerHTML = `<img src="img/${C.leftoverImg}.webp" alt="" style="width:100%;height:100%;display:block">`; lo.setAttribute('style', 'inset:0;width:100%;height:100%;background:none;box-shadow:none;display:none'); }
     else { lo.innerHTML = ''; lo.setAttribute('style', C.leftover + ';display:none'); }
