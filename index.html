@@ -44,7 +44,7 @@
   .bar-actions .menu-panel button { text-align: left; border-color: transparent; padding: 8px 10px; }
   .bar-actions .menu-panel button:hover { border-color: var(--akane); }
 
-  .scene-wrap { flex: 1 1 auto; min-height: 160px; display: flex; align-items: center; justify-content: center; }
+  .scene-wrap { flex: 0 0 auto; min-height: 160px; display: flex; align-items: flex-start; justify-content: center; }
   .scene { position: relative; width: 100%; max-width: calc(58vh * 1.5); aspect-ratio: 3 / 2; margin: 0 auto; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background: #1c1620; }
   .scene img { position: absolute; display: block; max-width: none; }
   .stage { position: absolute; inset: 0; }
@@ -57,7 +57,7 @@
   .get-item.show { opacity: 1; }
   .get-in { display: flex; flex-direction: column; align-items: center; gap: 6px; transform: scale(.85); transition: transform .35s cubic-bezier(.2, 1.4, .4, 1); }
   .get-item.show .get-in { transform: none; }
-  .get-in img { position: static; max-width: none; height: 58%; max-height: 62vh; width: auto; min-height: 120px; filter: drop-shadow(0 8px 18px rgba(0,0,0,.6)) drop-shadow(0 0 22px rgba(255, 226, 180, .35)); }
+  .get-in img { position: static; max-width: 70%; height: auto; width: auto; max-height: min(30vh, calc((min(100vw, 760px) - 32px) / 3.4)); min-height: 0; filter: drop-shadow(0 8px 18px rgba(0,0,0,.6)) drop-shadow(0 0 22px rgba(255, 226, 180, .35)); }
   .get-label { margin: 0; font-size: 12px; letter-spacing: .3em; color: var(--gold); }
   .get-name { margin: 0; font-family: var(--serif); font-weight: 800; font-size: clamp(16px, 2.6vw, 22px); color: #f4ecdd; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
   .scene .bg { inset: 0; width: 100%; height: 100%; object-fit: cover; transition: filter .5s ease; }
@@ -199,6 +199,11 @@
   .wk.down, .wk:active { background: linear-gradient(#e6dccb, #d6ccb8); }
   .bk { position: absolute; top: 0; width: 7.2%; height: 60%; background: linear-gradient(#2a2420, #0f0c0a); border: 1px solid #000; border-radius: 0 0 4px 4px; z-index: 2; cursor: pointer; padding: 0; }
   .bk.down, .bk:active { background: #3a322c; }
+  .phone-wrap { position: relative; }
+  .phone-wrap .phone { scrollbar-width: none; }
+  .phone-wrap .phone::-webkit-scrollbar { display: none; }
+  .phone-bar { position: absolute; right: 4px; top: 42px; bottom: 12px; width: 4px; border-radius: 2px; background: rgba(255,255,255,.12); pointer-events: none; }
+  .phone-thumb { position: absolute; left: 0; right: 0; border-radius: 2px; background: rgba(255,255,255,.55); }
   .phone { background: #0f0d12; border: 1px solid #3b3248; border-radius: 16px; padding: 12px 12px 16px; display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
   .phone-head { text-align: center; font-size: 13px; color: var(--muted); border-bottom: 1px solid #2a2334; padding-bottom: 8px; letter-spacing: .1em; }
   .bub { max-width: 78%; display: flex; flex-direction: column; gap: 2px; }
@@ -252,6 +257,7 @@
     </div>
   </header>
 
+  <div id="inv" class="inv" aria-label="持ち物"></div>
   <div class="scene-wrap">
     <div id="loading" class="loading" hidden aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span></div>
     <div id="scene" class="scene" role="group" aria-label="">
@@ -267,7 +273,6 @@
       <img class="chime-cg" src="img/chime_sky.webp" alt="17:00の夕焼け空。チャイムが響いている">
     </div>
   </div>
-  <div id="inv" class="inv" aria-label="持ち物"></div>
 
   <section id="msg" class="msg" aria-live="polite">
     <div id="speaker" class="speaker" hidden></div>
@@ -448,13 +453,22 @@
   }
   // 立ち絵の表情差分：normal（警戒）/ angry / surprise / sad / down / smile
   let face = 'normal';
+  const FACE_CACHE = {};  // 表情の絵を読み込んで持っておく（切り替えの瞬間に前の絵が残らないように）
   function setTalk(on, f) {
     const faces = C ? C.faces : {};
     const pt = $('#portrait'), wasShown = pt.classList.contains('show');
     if (on) {
       // 表情の指定がなければ、話し続けている間は今の表情のまま。出し直すときは「ふつう」から
       const want = f && faces[f] ? f : (wasShown ? face : 'normal');
-      if (want !== face || !pt.getAttribute('src')) { face = want; pt.src = `img/${faces[want]}.webp`; }
+      if (want !== face || !pt.getAttribute('src')) {
+        face = want;
+        const url = `img/${faces[want]}.webp`, pre = FACE_CACHE[url];
+        if (pre && pre.complete && pre.naturalWidth) pt.src = url;
+        else {
+          pt.style.visibility = 'hidden'; pt.src = url;
+          (pt.decode ? pt.decode() : Promise.resolve()).catch(() => {}).then(() => { if (pt.getAttribute('src') === url) pt.style.visibility = ''; });
+        }
+      }
     }
     // 消えるときは表情を変えない（フェードアウト中に「ふつう」に戻らないように）
     pt.classList.toggle('show', on);
@@ -590,6 +604,7 @@
   const ov = $('#overlay'), card = $('#ovCard');
   function openOverlay(html, cls = '', cardCls = 'ov-card') {
     ov.className = 'overlay ' + cls; card.className = cardCls; card.innerHTML = html; ov.hidden = false;
+    wirePhoneBar(card);
     const f = card.querySelector('.primary, button'); if (f) f.focus({ preventScroll: true });
   }
   function closeOverlay() { ov.hidden = true; card.innerHTML = ''; }
@@ -614,11 +629,35 @@
 
   /* ---------- sound ---------- */
   let actx = null;
+  const PIANO_VOL = 0.65;  // チャイムと聞こえ方をそろえる
   const audio = () => {
     actx = actx || new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
     if (actx.state === 'suspended') actx.resume();
     return actx;
   };
+  // スマホは「タップを離した瞬間」などでないと音を出せないので、最初の操作で音の準備をしておく
+  let audioReady = false;
+  function unlockAudio() {
+    if (!P.sound) return;
+    try {
+      const a = audio();
+      if (!audioReady) {
+        const b = a.createBuffer(1, 1, 22050), src = a.createBufferSource();
+        src.buffer = b; src.connect(a.destination); src.start(0);
+        audioReady = true;
+      }
+    } catch (e) {}
+  }
+  ['touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { capture: true, passive: true }));
+  // 鍵盤を開いているあいだ、無音を流して音の出口を起こしておく（最初の音が遅れないように）
+  function keepAudioAwake() {
+    if (!P.sound) return () => {};
+    try {
+      const a = audio(), o = a.createOscillator(), g = a.createGain();
+      g.gain.value = 0.00001; o.connect(g).connect(a.destination); o.start();
+      return () => { try { o.stop(); } catch (e) {} };
+    } catch (e) { return () => {}; }
+  }
   function bell() {
     if (!P.sound || replay) return;
     try {
@@ -628,7 +667,7 @@
         const t = a.currentTime + i * 0.55;
         const o = a.createOscillator(), g = a.createGain();
         o.type = 'sine'; o.frequency.value = f;
-        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.16, t + 0.02);
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.3, t + 0.02);
         g.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
         o.connect(g).connect(a.destination); o.start(t); o.stop(t + 1.5);
       });
@@ -639,6 +678,7 @@
     if (!P.sound) return;
     try {
       const a = audio(), t = a.currentTime + delay;
+      gain *= PIANO_VOL;
       [[1, 'triangle', 1], [2, 'sine', 0.35], [3, 'sine', 0.12]].forEach(([m, type, v]) => {
         const o = a.createOscillator(), g = a.createGain();
         o.type = type; o.frequency.value = freq * m;
@@ -783,6 +823,7 @@
     await say([`……気がつくと、${C.room}の扉の外、薄暗い廊下に立っていた。`,
                'あれほど開かなかった扉が、今度は向こう側から閉ざされている。', ...after]);
     R.over = true; clearRun(); P.endings.shut = true; P.shut[C.key] = true; saveP(); render(); idle();
+    if (ROOMS.every(([k]) => P.shut[k])) return allShutEnding();
     const next = nextChapter(C.id);
     overlayWait(`<p class="eyebrow">BAD END</p><h2>閉ざされた扉</h2>
       <p>${C.name}は、もう誰にも扉を開けなかった。</p>
@@ -791,20 +832,44 @@
       '', next ? ['次の章に進む', 'タイトルへ'] : ['タイトルへ']).then(v => v === 0 && next ? startRun(next.id) : showTitle(true));
   }
 
+  // 5人全員に閉め出されたときのBAD。周回はここで終わり、ノーマル・トゥルーと同じく「これまでの周回」に数える
+  function allShutEnding() {
+    P.endings.allShut = true; saveP();
+    completeRun();
+    overlayWait(`<img class="cg" src="img/${C.hall}.webp" alt="夕暮れの廊下。どの教室の扉も閉ざされている">
+      <div class="fade" style="display:flex;flex-direction:column;gap:12px">
+        <p>廊下に立って、並んだ扉を見渡した。</p>
+        <p>どの扉も、もう開かない。ノックをしても、名前を呼んでも、返事はない。</p>
+        <p>窓の外の夕焼けは、少しも動かなかった。</p>
+        <p>チャイムが鳴る。何度鳴っても、誰も出てこない。</p>
+        <p>……誰にも届かない言葉を、ずっと抱えていたのは、誰だったんだろう。</p>
+        <p class="eyebrow">BAD END「閉ざされた校舎」</p>
+      </div>
+      <p class="note">5人全員に、扉を閉ざされた。この放課後は、ここで終わる。</p>`,
+      '', ['タイトルへ']).then(() => showTitle(true));
+  }
   const ROOMS = [['hina', '美術室'], ['sota', '音楽室'], ['mio', '図書室'], ['kei', '体育館'], ['tsumugi', '保健室']];
+  // 部屋の名前は、その章を開放したあとだけ出す（まだ行ったことのない部屋は「ほかの教室」）
+  const knownRooms = () => new Set(ORDER.filter(id => unlocked(id)).map(id => CHAPTERS[id].room));
+  function windowLine() {
+    const named = ORDER.filter(id => id !== C.id && unlocked(id)).map(id => CHAPTERS[id].room);
+    return named.length ? `${named.join('からも、')}からも、ほかの教室からも、物音ひとつしない。` : 'ほかの教室からも、物音ひとつしない。';
+  }
   function ending(lines, gateImg, gateAlt) {
+    const known = knownRooms();  // この朝を迎える前に開放していた章の部屋だけ、名前を出す
     R.over = true; clearRun(); P.endings.normal = true; P.saved[C.key] = true; P.cleared[C.key] = true; saveP(); render(); idle();
     // 最後の放課後（5章）のエンディングだけが「周回」を1つ進める。試作版（2章まで）では数えない
     if (ORDER.length >= ROOMS.length && C.id === ORDER[ORDER.length - 1]) completeRun();
     const saved = ROOMS.filter(([k]) => P.cleared[k]).length;
-    const lit = ROOMS.filter(([k]) => !P.cleared[k]).map(([, r]) => r);
+    const litAll = ROOMS.filter(([k]) => !P.cleared[k]).map(([, r]) => r);
+    const litNamed = litAll.filter(r => known.has(r)), litOther = litAll.length > litNamed.length;
     const next = nextChapter(C.id);
     overlayWait(`<img class="cg" src="img/${gateImg}.webp" alt="${gateAlt}">
       <div class="fade" style="display:flex;flex-direction:column;gap:12px">
         <p>校門の鍵は、開いていた。</p>
         ${lines.map(l => `<p>${l}</p>`).join('')}
         <p>門の手前で、足が止まる。まだ、ここは通れない。</p>
-        ${lit.length ? `<p>校舎を見上げる。${lit.join('にも、')}にも、まだ明かりがついていた。</p>` : ''}
+        ${litAll.length ? `<p>校舎を見上げる。${[...litNamed, ...(litOther ? ['ほかの教室'] : [])].join('にも、')}にも、まだ明かりがついていた。</p>` : ''}
         <p class="eyebrow">NORMAL END「何人かの朝」 朝を迎えた生徒 ${saved} / 5</p>
       </div>
       ${next ? `<p class="note">次の放課後「${next.room}」が開放されました。</p>` : '<p class="note">試作版はここまでです。遊んでくれてありがとう。</p>'}`,
@@ -816,7 +881,7 @@
     async window() {
       showCut('ci_window');
       if (!R.know.has('window')) {
-        await say(['窓の外は、ずっと同じ夕焼け。校庭には誰もいない。', C.windowLine]);
+        await say(['窓の外は、ずっと同じ夕焼け。校庭には誰もいない。', windowLine()]);
         R.know.add('window'); await tick();
       } else await say(['夕焼けは、少しも動かない。']);
     },
@@ -891,6 +956,7 @@
       const on = $('#flip').classList.toggle('on');
       $('#flipBtn').textContent = on ? '表に戻す' : '裏返す';
       $('#signZoom').hidden = true;
+      $('#zoomBtn').hidden = on;
       if (on) close.hidden = false;
     };
     $('#zoomBtn').onclick = () => { $('#signZoom').hidden = !$('#signZoom').hidden; };
@@ -907,7 +973,6 @@
     idleFree: '（時計の針が17:00を越えた。ヒナが待っている）',
     samePose: '窓際には、さっきとまったく同じ姿勢で、ヒナが座っていた。',
     loopReply: [['ヒナ', '……は？ チャイムなんて鳴ってないけど', 'angry'], ['ヒナ', 'ていうか、誰？', 'angry']],
-    windowLine: '音楽室からも、図書室からも、体育館からも、物音ひとつしない。',
     closeLines: ['ヒナは膝を抱えたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。'],
     hotspots: [
       ['sink', '流し', 'left:83.3%;top:37.5%;width:16.7%;height:45.8%'],
@@ -959,7 +1024,7 @@
       async board() {
         showCut('ci_board');
         if (!R.know.has('deadline')) {
-          await say(['黒板の隅に、チョークの字。「県展 作品提出〆切 今週金曜」', 'その下に、手でこすって消した跡。……目を凝らすと、小さく震えた字で「描けない」と、かろうじて読める。']);
+          await say(['黒板の隅に、チョークの字。「県展 作品提出〆切 今週金曜」', 'その下に、手でこすって消した跡。……目を凝らすと、小さく震えた字で「描けない」と読める。']);
           R.know.add('deadline'); await tick();
         } else await say(['「県展 作品提出〆切 今週金曜」。その下の消しかけの字は、もうほとんど読めない。']);
       },
@@ -1219,7 +1284,7 @@
         card.querySelectorAll('.frag').forEach(b => b.onclick = () => {
           placed.push(+b.dataset.n);
           if (placed.length < 4) return draw();
-          if (placed.join('') === '1234') { draw(); $('#fragMsg').textContent = '……破れ目が、ぴたりと重なった。'; setTimeout(() => { closeOverlay(); res(true); }, 1100); return; }
+          if (placed.join('') === '1234') { draw(); card.querySelector('#fReset').closest('.row').hidden = true; $('#fragMsg').textContent = '……破れ目が、ぴたりと重なった。'; setTimeout(() => { closeOverlay(); res(true); }, 1100); return; }
           draw(); $('#fragMsg').textContent = '……破れ目が、かみ合わない。';
         });
         $('#fReset').onclick = () => { placed.length = 0; draw(); };
@@ -1301,7 +1366,7 @@
         <p class="note" id="kbMsg">${duet ? 'ソウタが自分のパートを弾き始めた。ハルのパートを重ねよう。' : '楽譜のとおりに、左から順に弾いてみよう。'}</p>
         <div class="row"><button type="button" class="btn" id="kbCancel">やめる</button></div>`);
       const prog = () => card.querySelectorAll('#kbProg i').forEach((el, i) => el.classList.toggle('on', i < pos));
-      if (P.sound) { try { audio(); } catch (e) {} }
+      const sleep = keepAudioAwake();
       const press = b => {
         const n = b.dataset.n;
         if (done) return;
@@ -1316,8 +1381,8 @@
               $('#kbMsg').textContent = 'ソウタの音だけが、そのまま続いていく。';
               $('#kbCancel').disabled = true;
               const wait = P.sound ? sotaSolo() + 600 : 1600;
-              setTimeout(() => { closeOverlay(); res(true); }, wait);
-            } else setTimeout(() => { closeOverlay(); res(true); }, 700);
+              setTimeout(() => { sleep(); closeOverlay(); res(true); }, wait);
+            } else setTimeout(() => { sleep(); closeOverlay(); res(true); }, 700);
           }
         } else {
           pos = 0; prog();
@@ -1334,7 +1399,7 @@
         b.addEventListener('pointerdown', e => { if (e.button > 0) return; e.preventDefault(); press(b); });
         b.addEventListener('click', e => { if (e.detail === 0) press(b); });  // キーボード操作（Enter/Space）
       });
-      $('#kbCancel').onclick = () => { closeOverlay(); res(false); };
+      $('#kbCancel').onclick = () => { sleep(); closeOverlay(); res(false); };
     });
   }
   function phoneView() {
@@ -1374,25 +1439,38 @@
       ['me', 'なあ', '3:18', false],
       ['me', '返事しろよ', '3:18', false],
     ];
-    return `<div class="phone"><div class="phone-head">ハル</div>
+    return `<div class="phone-wrap"><div class="phone"><div class="phone-head">ハル</div>
       ${msgs.map(([w, t, time, read], i) => {
         // 同じ人が同じ時刻に続けて送ったときは、最後の1通にだけ時刻を出す
         const nx = msgs[i + 1], last = !(nx && nx[0] === w && nx[2] === time && nx[3] === read);
         return `<div class="bub ${w === 'me' ? 'me' : 'them'}"><p>${t}</p>${last ? `<span>${w === 'me' && read ? '既読 ' : ''}${time}</span>` : ''}</div>`;
       }).join('')}
-    </div>`;
+    </div><div class="phone-bar" aria-hidden="true"><div class="phone-thumb"></div></div></div>`;
+  }
+  function wirePhoneBar(root) {
+    const ph = root.querySelector('.phone'), bar = root.querySelector('.phone-bar');
+    if (!ph || !bar) return;
+    const thumb = bar.firstElementChild;
+    const upd = () => {
+      const r = ph.clientHeight / ph.scrollHeight;
+      bar.hidden = r >= 1;
+      const bh = bar.clientHeight, th = Math.max(24, bh * r);
+      thumb.style.height = th + 'px';
+      thumb.style.top = ((bh - th) * (ph.scrollTop / Math.max(1, ph.scrollHeight - ph.clientHeight))) + 'px';
+    };
+    ph.addEventListener('scroll', upd, { passive: true });
+    requestAnimationFrame(upd);
   }
 
   const MUSIC = {
     id: 'music', key: 'sota', name: 'ソウタ', room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room',
     sit: { src: 'sota_sit', style: 'left:54.3%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
-    faces: { normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame' },
+    faces: { normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad' },
     lost: 'ソウタのパートだけの楽譜',
     idleFree: '（時計の針が17:00を越えた。ソウタが待っている）',
     samePose: 'ピアノの前には、さっきとまったく同じ姿勢で、ソウタが座っていた。',
     loopReply: [['ソウタ', '……チャイム？ 鳴ってないだろ', 'angry'], ['ソウタ', 'ていうか、誰', 'angry']],
-    windowLine: '美術室からも、図書室からも、体育館からも、物音ひとつしない。',
     closeLines: ['ソウタは閉じた鍵盤の蓋に額をつけたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。'],
     hotspots: [
       ['window', '窓', 'left:0;top:0;width:18%;height:52%'],
@@ -1574,7 +1652,7 @@
                                    ['ソウタ', '……お前に、何がわかるんだよ', 'angry'],
                                    'ソウタが立ち上がった。ピアノの椅子が倒れて、乾いた音が響く。',
                                    ['ソウタ', '今日会ったばっかりのやつが、わかったみたいなこと言うなよ', 'angry'],
-                                   ['ソウタ', '忘れたら、ハルが本当にいなくなるだろ！', 'angry'],
+                                   ['ソウタ', '忘れたら、ハルが本当にいなくなるだろ！', 'angrySad'],
                                    ['ソウタ', '……出てけ。出てけよ！', 'angry']],
                                   ['扉を叩いた。返事はない。', '……扉の向こうで、鍵盤の蓋が叩きつけられる音が、一度だけ響いた。']);
       await say(['ソウタは少し黙って、それから小さく息を吐いた。',
@@ -1596,8 +1674,8 @@
                  ['ソウタ', '部屋に戻ったら、ハルから。テンポ上げようって。……何も知らないで、楽しそうに', 'angry'],
                  ['ソウタ', '……あいつ、勉強もピアノも、いつも俺の一歩先にいて。それがちょっと、悔しかったのもある', 'down'],
                  ['ソウタ', 'それで……『お前はいいよな、楽しててもできるんだから』って送った。そんなこと、思ってもないのに', 'sad'],
-                 ['ソウタ', 'ほんとは、父さんに言い返したかった。……言えなかったぶん、全部ハルにぶつけた', 'sad'],
-                 ['ソウタ', 'あいつが毎晩、予備校のあとに練習してたの、知ってたのに', 'sad'],
+                 ['ソウタ', 'ほんとは、父さんに言い返したかった。……言えなかったぶん、全部ハルにぶつけた', 'blame'],
+                 ['ソウタ', 'あいつが毎晩、予備校のあとに練習してたの、知ってたのに', 'blame'],
                  ['ソウタ', 'あいつ、『楽しみにしてた』って。それから、『最後ってなに』って聞いてきた', 'sad'],
                  ['ソウタ', '答えたら、ピアノやめるって言わなきゃいけない。……それだけは、言いたくなかった', 'sad'],
                  ['ソウタ', 'どうせ取り上げられるなら、自分から手放したほうが、まだましだって……そう思ったんだ', 'sad'],
@@ -1618,7 +1696,7 @@
                  'ソウタの目から、ぽたりと一粒、鍵盤の蓋に落ちた。']);
 
       // 3段目
-      await say([['ソウタ', 'ハルは、最後まで俺に怒ってたと思う', 'shadow']]);
+      await say([['ソウタ', 'ハルは、最後まで俺に怒ってたと思う', 'down']]);
       if (P.shelf.sota) {
         await say([['ソウタ', 'だから俺は、もう弾いちゃいけないんだ。……あいつの気持ちなんて、もう誰にもわかんないんだから', 'sad']]);
         await line('……あの楽譜の裏の、乱暴な鉛筆の字が、頭に浮かんだ。', false);
@@ -1629,12 +1707,12 @@
       if (P.shelf.sota) opts.push('……ハルくん、仲直りするつもりだったんだと思う。楽譜の裏に、書いてあった');
       a = await choose(opts);
       if (a === 0) {
-        await say([['ソウタ', '……勝手に決めんなよ', 'angry'], ['ソウタ', 'ハルがどう思ってたかなんて、もう誰にもわかんないんだよ', 'sad'],
+        await say([['ソウタ', '……勝手に決めんなよ', 'angry'], ['ソウタ', 'ハルがどう思ってたかなんて、もう誰にもわかんないんだよ', 'angrySad'],
                    'ソウタは、ピアノの上のスマホに目をやった。',
                    '（何か、あと一つ足りない気がする。ハルが、最後に残した何かが）']);
         return closeHeart();
       }
-      if (a === 1) return doom([['ソウタ', '……じゃあ、どうしろって言うんだよ', 'shadow'], ['ソウタ', '弾いたって、隣にあいつはいないのに', 'despair']]);
+      if (a === 1) return doom([['ソウタ', '……じゃあ、どうしろって言うんだよ', 'angrySad'], ['ソウタ', '弾いたって、隣にあいつはいないのに', 'despair']]);
       await say([['ソウタ', '……裏？', 'surprise'],
                  'ソウタは、鞄から楽譜を取り出した。',
                  ['ソウタ', '……あの日の昼休み、ここで二人で合わせたんだ', 'sad'],
@@ -1722,7 +1800,11 @@
     if (C.leftoverImg) { lo.innerHTML = `<img src="img/${C.leftoverImg}.webp" alt="" style="width:100%;height:100%;display:block">`; lo.setAttribute('style', 'inset:0;width:100%;height:100%;background:none;box-shadow:none;display:none'); }
     else { lo.innerHTML = ''; lo.setAttribute('style', C.leftover + ';display:none'); }
     face = ''; setTalk(false);
-    Object.values(C.faces).forEach(f => { const i = new Image(); i.src = `img/${f}.webp`; });
+    Object.values(C.faces).forEach(f => {
+      const url = `img/${f}.webp`;
+      if (!FACE_CACHE[url]) { const i = new Image(); i.src = url; if (i.decode) i.decode().catch(() => {}); FACE_CACHE[url] = i; }
+    });
+    $('#portrait').style.visibility = '';
     const layer = $('#hsLayer'); layer.innerHTML = '';
     C.hotspots.forEach(([id, label, style]) => {
       const b = document.createElement('button');
@@ -1738,7 +1820,7 @@
   /* ---------- title / shelf ---------- */
   async function startRun(ch) {
     closeOverlay();
-    busy = true;
+    busy = true; P.played = true; saveP();
     clearRun(); await setChapter(ch); newRun(ch); render();
     busy = false;
     act(scriptFn('intro'), 'intro');
@@ -1760,14 +1842,14 @@
         ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save)}</span></button>` : ''}
         <button type="button" class="btn ${save ? '' : 'primary'}" id="tSelect">放課後を選ぶ</button>
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
-        <button type="button" class="btn" id="tReset">はじめから</button>
+        ${played() ? '<button type="button" class="btn" id="tReset">はじめから</button>' : ''}
         <button type="button" class="btn" id="tShelf">わすれもの棚</button>
         <button type="button" class="btn-quiet" id="tWipe">データを消去</button>
         <p class="note">このゲームはオートセーブです。調べたり話したりするたびに、自動で記録されます。</p>
         <p class="note">この作品には、自傷・死・いじめ・家庭での心理的虐待を示唆する表現が含まれます。</p>
       </div>`, 'title-screen', 'ov-card title-card');
     $('#tSelect').onclick = () => selectRoom();
-    $('#tReset').onclick = () => resetAll();
+    if ($('#tReset')) $('#tReset').onclick = () => resetAll();
     $('#tWipe').onclick = () => wipeAll();
     if (save) $('#tCont').onclick = () => continueRun(save);
     $('#tShelf').onclick = showShelf;
@@ -1783,6 +1865,9 @@
       ov.addEventListener('click', reveal); document.addEventListener('keydown', reveal);
     }
   }
+  // 一度でも遊んだことがあるか（初めてのときは「はじめから」を出さない）
+  const played = () => !!(P.played || P.runs || loadRun() || SLOTS.some(n => readSlot(n))
+    || Object.keys(P.shelf).length || Object.keys(P.cleared).length || Object.keys(P.shut).length);
   function saveLabel(d) {
     const time = d.st === 'unraveled' ? '17:00過ぎ' : `16:${String(d.ticks * MIN_PER_TICK).padStart(2, '0')}`;
     return `${(CHAPTERS[d.ch] || ART).room}・${time}・チャイム${d.loop}回`;
@@ -1900,6 +1985,7 @@
     const last = R.log[R.log.length - 1];
     if (last && last.t === e.t && last.who === e.who && !e.choice) return;
     R.log.push(e); if (R.log.length > LOG_MAX) R.log.splice(0, R.log.length - LOG_MAX);
+    const b = $('#btnLog'); if (b) b.disabled = false;
   }
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function showLog() {
