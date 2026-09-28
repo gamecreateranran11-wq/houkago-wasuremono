@@ -1,0 +1,1942 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>放課後のわすれもの</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Shippori+Mincho+B1:wght@600;800&display=swap">
+<style>
+  [hidden] { display: none !important; }
+  body { margin: 0; }
+  :root {
+    --ground: #15121c;
+    --panel: #1f1a28;
+    --panel2: #2a2334;
+    --line: #3b3248;
+    --ink: #ece6d6;
+    --muted: #a69cb2;
+    --akane: #e3875c;
+    --gold: #d8b26a;
+    --blue: #4f8ad8;
+    --serif: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+    --hand: "Klee One", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--hand); font-size: 16px; }
+  button { font: inherit; color: inherit; }
+  button:focus-visible, .hs:focus-visible { outline: 2px solid var(--akane); outline-offset: 2px; }
+
+  #app { height: 100%; max-width: 760px; margin: 0 auto; padding: 10px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; }
+
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .clock { display: flex; align-items: baseline; gap: 12px; }
+  #clock { font-family: var(--serif); font-weight: 800; font-size: 22px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+  .bells { display: flex; gap: 5px; align-items: center; }
+  .bells i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--akane); display: block; }
+  .bells i.on { background: var(--akane); }
+  .bells-label { font-size: 12px; color: var(--muted); letter-spacing: .08em; }
+  .bar-actions { display: flex; gap: 6px; }
+  .bar-actions button { background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+  .bar-actions button:hover { border-color: var(--akane); }
+  .bar-actions button:disabled { opacity: .35; cursor: default; }
+  .menu-wrap { position: relative; }
+  .menu-panel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 170px; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  .bar-actions .menu-panel button { text-align: left; border-color: transparent; padding: 8px 10px; }
+  .bar-actions .menu-panel button:hover { border-color: var(--akane); }
+
+  .scene-wrap { flex: 1 1 auto; min-height: 160px; display: flex; align-items: center; justify-content: center; }
+  .scene { position: relative; width: 100%; max-width: calc(58vh * 1.5); aspect-ratio: 3 / 2; margin: 0 auto; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background: #1c1620; }
+  .scene img { position: absolute; display: block; max-width: none; }
+  .stage { position: absolute; inset: 0; }
+  .cutin { position: absolute; inset: 4%; z-index: 1; opacity: 0; transform: translateX(6%) rotate(.6deg); transition: opacity .35s ease, transform .35s ease; pointer-events: none; background: #1c1620; border: 3px solid #efe6d6; box-shadow: 0 10px 30px rgba(0, 0, 0, .6); overflow: hidden; }
+  .cutin.show { opacity: 1; transform: none; }
+  .cutin img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; max-width: none; }
+  .cutin .clock-hands { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .scene.cut .hs, .scene.story .hs { visibility: hidden; }
+  .get-item { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; background: rgba(12, 9, 16, .55); opacity: 0; transition: opacity .25s ease; cursor: pointer; }
+  .get-item.show { opacity: 1; }
+  .get-in { display: flex; flex-direction: column; align-items: center; gap: 6px; transform: scale(.85); transition: transform .35s cubic-bezier(.2, 1.4, .4, 1); }
+  .get-item.show .get-in { transform: none; }
+  .get-in img { position: static; max-width: none; height: 58%; max-height: 62vh; width: auto; min-height: 120px; filter: drop-shadow(0 8px 18px rgba(0,0,0,.6)) drop-shadow(0 0 22px rgba(255, 226, 180, .35)); }
+  .get-label { margin: 0; font-size: 12px; letter-spacing: .3em; color: var(--gold); }
+  .get-name { margin: 0; font-family: var(--serif); font-weight: 800; font-size: clamp(16px, 2.6vw, 22px); color: #f4ecdd; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
+  .scene .bg { inset: 0; width: 100%; height: 100%; object-fit: cover; transition: filter .5s ease; }
+  .scene.talk .bg, .scene.talk .sit { filter: brightness(.55) saturate(.8); }
+  .sit { position: absolute; width: auto; transition: filter .5s ease; pointer-events: none; }
+  .sit.gone { display: none; }
+  .scene .chime-cg { inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .9s ease; pointer-events: none; z-index: 2; }
+  .scene.cg .chime-cg { opacity: 1; }
+  .scene.cg .hs { visibility: hidden; }
+  .leftover { position: absolute; background: #efe8da; box-shadow: 0 1px 2px rgba(0,0,0,.4); }
+  .portrait { right: 1%; bottom: 0; height: 97%; width: auto; opacity: 0; transform: translateX(12px); transition: opacity .4s ease, transform .4s ease; pointer-events: none; }
+  .portrait.show { opacity: 1; transform: none; }
+  .hs { position: absolute; background: transparent; border: 1px dashed transparent; border-radius: 4px; padding: 0; cursor: pointer; }
+  .hs::after { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -4px 0 0 -4px; border-radius: 50%; background: #fff4de; box-shadow: 0 0 8px 2px rgba(255, 220, 170, .7); opacity: .55; animation: glint 2.8s ease-in-out infinite; }
+  .hs span { position: absolute; left: 4px; bottom: 4px; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: rgba(15, 12, 20, .78); color: var(--ink); opacity: 0; transition: opacity .2s; white-space: nowrap; }
+  .hs:hover, .hs:focus-visible { border-color: rgba(236, 230, 214, .7); background: rgba(255, 240, 220, .07); outline: none; }
+  .hs:hover span, .hs:focus-visible span { opacity: 1; }
+  .scene.talk .hs { visibility: hidden; }
+  @keyframes glint { 50% { opacity: .15; transform: scale(.7); } }
+
+  .inv { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
+  .inv .label { font-size: 12px; color: var(--muted); letter-spacing: .08em; margin-right: 4px; }
+  .chip { background: var(--panel2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; }
+  .chip:hover { border-color: var(--akane); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; }
+  .chip img { height: 20px; width: auto; display: block; }
+  .chip.act { border-color: var(--akane); color: var(--akane); }
+  .chip.blue { border-color: var(--blue); }
+
+
+  .msg { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px 18px; min-height: 124px; max-height: 46vh; overflow-y: auto; box-sizing: border-box; cursor: pointer; }
+  .speaker { font-family: var(--serif); font-weight: 800; color: var(--akane); font-size: 14px; letter-spacing: .1em; margin-bottom: 4px; }
+  .text { line-height: 1.85; white-space: pre-wrap; }
+  .text.narr { color: #d9d2c4; }
+  .more { position: absolute; right: 14px; bottom: 6px; font-size: 11px; color: var(--akane); animation: blink 1.2s infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .choices { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .choice { text-align: left; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 10px 14px; line-height: 1.6; cursor: pointer; }
+  .choice:hover { border-color: var(--akane); }
+
+  .overlay { position: fixed; inset: 0; background: rgba(12, 10, 16, .9); display: grid; place-items: center; padding: 16px; overflow-y: auto; z-index: 10; }
+  .ov-card { width: 100%; max-width: 520px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 22px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; }
+  .ov-card h2 { font-family: var(--serif); font-weight: 800; font-size: 22px; margin: 0; text-wrap: balance; }
+  .ov-card p { margin: 0; line-height: 1.85; }
+  .eyebrow { font-size: 12px; letter-spacing: .14em; color: var(--akane); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 10px 18px; cursor: pointer; }
+  .btn:hover { border-color: var(--akane); }
+  .btn.primary { background: var(--akane); border-color: var(--akane); color: #1a1218; font-weight: 600; }
+  .note { font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+  .sketch { width: 100%; max-width: 360px; align-self: center; display: block; }
+  .painting { position: relative; width: 100%; max-width: 420px; align-self: center; aspect-ratio: 3 / 2; border: 8px solid #e9e3d6; box-sizing: border-box; background: #999; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+  .painting img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .painting .grey { filter: grayscale(.92) brightness(.82) contrast(.9); transition: opacity 3.6s ease; }
+  .painting .grey.off { opacity: 0; }
+  .painting .tears { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .painting .sign { position: absolute; right: 8px; bottom: 5px; font-size: 12px; color: #f7f2e8; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+  .flip { margin-bottom: 36px; width: 100%; max-width: 420px; align-self: center; aspect-ratio: 3 / 2; perspective: 1200px; }
+  .flip-in { position: relative; width: 100%; height: 100%; transition: transform .8s ease; transform-style: preserve-3d; }
+  .flip.on .flip-in { transform: rotateY(180deg); }
+  .flip .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .flip .face.back { transform: rotateY(180deg); }
+  .flip .face img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 2px; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+  #flipBtn { align-self: center; }
+  .zoom-btn { position: absolute; right: 0; bottom: -40px; width: 30px; height: 30px; padding: 5px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); background: rgba(20, 16, 26, .65); color: #f4ecdd; cursor: pointer; z-index: 2; }
+  .zoom-btn:hover { background: rgba(20, 16, 26, .85); }
+  .zoom-btn svg { width: 100%; height: 100%; display: block; }
+  .sign-zoom { position: absolute; right: 6px; bottom: 6px; width: 58%; z-index: 3; cursor: zoom-out; border: 2px solid #efe6d6; box-shadow: 0 6px 16px rgba(0,0,0,.55); }
+  .sign-zoom img { width: 100%; display: block; }
+  .sketch { border-radius: 4px; }
+  .cg { width: 100%; display: block; border-radius: 4px; }
+  .quote { font-family: var(--serif); font-size: 17px; border-left: 2px solid var(--akane); padding-left: 12px; }
+
+  .dial { display: flex; gap: 14px; justify-content: center; }
+  .wheel { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .wheel button { width: 48px; height: 36px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+  .wheel output { font-family: var(--serif); font-weight: 800; font-size: 34px; width: 48px; text-align: center; background: #120f17; border: 1px solid var(--line); border-radius: 4px; font-variant-numeric: tabular-nums; }
+
+  .title-screen { background: linear-gradient(90deg, rgba(12, 9, 16, .9) 0%, rgba(12, 9, 16, .55) 45%, rgba(12, 9, 16, .1) 100%), url("img/title.webp") center / cover no-repeat, var(--ground); justify-items: start; padding-left: max(16px, 6vw); }
+  .title-card { background: transparent; border: none; max-width: 560px; flex-direction: row; align-items: stretch; gap: 26px; }
+  .vtitle { writing-mode: vertical-rl; font-family: var(--serif); font-weight: 800; font-size: clamp(34px, 9vw, 52px); letter-spacing: .12em; line-height: 1.2; margin: 0; }
+  .vtitle span { color: var(--akane); }
+  .title-side { display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; flex: 1; }
+  .title-side .btn { width: 100%; text-align: left; }
+  .title-side.later { animation: rise .8s ease both; }
+  .tap-hint { position: fixed; left: 0; right: 0; bottom: 12vh; margin: 0; text-align: center; font-size: 15px; letter-spacing: .3em; color: #f6efe0; text-shadow: 0 1px 6px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.8); animation: breathe 2.8s ease-in-out infinite; pointer-events: none; }
+  @keyframes breathe { 50% { opacity: .55; } }
+  .title-screen { cursor: pointer; }
+  .btn-quiet { align-self: flex-start; background: none; border: none; padding: 2px 0; font-size: 12px; color: var(--muted); text-decoration: underline; cursor: pointer; }
+  .btn-quiet:hover { color: var(--ink); }
+  .title-side .btn .sub { display: block; font-size: 12px; font-weight: 400; opacity: .8; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+  .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .save-slots { display: flex; flex-direction: column; gap: 8px; }
+  .save-slot { display: flex; align-items: center; gap: 10px; background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; }
+  .save-slot .info { flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+  .save-slot .no { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
+  .save-slot .when { font-size: 11.5px; color: var(--muted); }
+  .save-slot .btn { padding: 7px 14px; font-size: 13px; }
+  .save-slot .btn:disabled { opacity: .35; cursor: default; }
+  .slot { background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 12px 8px; min-height: 76px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; font-size: 13px; text-align: left; }
+  .slot .who { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
+  .slot.got { border-color: var(--gold); cursor: pointer; }
+  .slot.got:hover { background: var(--panel2); }
+
+  .dawn { background: linear-gradient(180deg, #f4e7d7 0%, #dfe6ee 100%); }
+  .dawn .ov-card { background: rgba(255, 255, 255, .55); border-color: #c9c2ba; color: #2a2530; }
+  .dawn .ov-card p { color: #2a2530; }
+  .dawn .eyebrow { color: #a4502c; }
+  .dawn .note { color: #5b5462; border-color: #c9c2ba; }
+  .dawn .btn { background: #fff; border-color: #c9c2ba; color: #2a2530; }
+  .dawn .btn.primary { background: #3b5f9a; border-color: #3b5f9a; color: #fff; }
+  .fade p { animation: rise .9s ease both; }
+  .fade p:nth-child(2) { animation-delay: .8s; } .fade p:nth-child(3) { animation-delay: 1.6s; }
+  .fade p:nth-child(4) { animation-delay: 2.4s; } .fade p:nth-child(5) { animation-delay: 3.2s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+
+  .log { list-style: none; margin: 0; padding: 0 4px 0 0; max-height: 58vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  .log li { line-height: 1.75; font-size: 14.5px; color: #d9d2c4; }
+  .log-who { display: block; font-family: var(--serif); font-weight: 800; font-size: 12px; letter-spacing: .1em; color: var(--akane); }
+  .log-t { white-space: pre-wrap; }
+  .log-choice { color: var(--gold) !important; font-size: 13.5px !important; padding-left: 4px; }
+  .log-empty { color: var(--muted) !important; }
+
+  /* 音楽室：楽譜・鍵盤・スマホ */
+  .staff { width: 100%; display: block; filter: drop-shadow(0 3px 6px rgba(0,0,0,.45)); }
+  .fboard { position: relative; width: 100%; aspect-ratio: 1520 / 388; border: 1px dashed var(--line); border-radius: 4px; background: #120f17; }
+  .fboard img { position: absolute; top: 0; height: 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+  .frags { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 70px; }
+  .frag { padding: 4px; background: none; border: none; cursor: pointer; }
+  .frag img { height: clamp(84px, 22vw, 118px); width: auto; display: block; filter: drop-shadow(0 3px 6px rgba(0,0,0,.45)); }
+  .frag:hover img { transform: translateY(-2px); }
+  .progress { display: flex; gap: 6px; justify-content: center; }
+  .progress i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--gold); display: block; }
+  .progress i.on { background: var(--gold); }
+  .kb { position: relative; display: flex; height: 150px; user-select: none; touch-action: manipulation; }
+  .wk { flex: 1; position: relative; background: linear-gradient(#fbf7ee, #e8e0d0); border: 1px solid #6b5e52; border-radius: 0 0 5px 5px; margin: 0 1px; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; }
+  .wk span { font-size: 11px; color: #9a8e80; }
+  .wk.down, .wk:active { background: linear-gradient(#e6dccb, #d6ccb8); }
+  .bk { position: absolute; top: 0; width: 7.2%; height: 60%; background: linear-gradient(#2a2420, #0f0c0a); border: 1px solid #000; border-radius: 0 0 4px 4px; z-index: 2; cursor: pointer; padding: 0; }
+  .bk.down, .bk:active { background: #3a322c; }
+  .phone { background: #0f0d12; border: 1px solid #3b3248; border-radius: 16px; padding: 12px 12px 16px; display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
+  .phone-head { text-align: center; font-size: 13px; color: var(--muted); border-bottom: 1px solid #2a2334; padding-bottom: 8px; letter-spacing: .1em; }
+  .bub { max-width: 78%; display: flex; flex-direction: column; gap: 2px; }
+  .bub p { margin: 0 !important; padding: 7px 11px; border-radius: 14px; font-size: 14px; line-height: 1.5 !important; }
+  .bub span { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bub.them { align-self: flex-start; } .bub.them p { background: #2a2334; color: var(--ink); }
+  .bub.me { align-self: flex-end; align-items: flex-end; } .bub.me p { background: #3b5f4a; color: #eef3ea; }
+  .loading { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 5; font-family: var(--serif); font-size: 14px; letter-spacing: .18em; color: #cfc6b6; pointer-events: none; }
+  .loading span { animation: ld 1.2s infinite; opacity: .2; }
+  .loading span:nth-child(2) { animation-delay: .2s; } .loading span:nth-child(3) { animation-delay: .4s; }
+  @keyframes ld { 0%, 60%, 100% { opacity: .2; } 30% { opacity: 1; } }
+  .dm { opacity: 0; animation: dmIn 1.4s ease-out forwards; }
+  @keyframes dmIn { 0% { opacity: 0; filter: drop-shadow(0 0 0 #f3c77a); } 40% { opacity: 1; filter: drop-shadow(0 0 10px #f3c77a) brightness(1.8); } 100% { opacity: .95; filter: none; } }
+  .flash { position: fixed; inset: 0; background: #f2d2b0; opacity: 0; pointer-events: none; z-index: 20; }
+  .flash.go { animation: flash 1.6s ease; }
+  @keyframes flash { 10% { opacity: .55; } 100% { opacity: 0; } }
+
+  .scene.reset, .scene.reset * { transition: none !important; }
+  @media (max-width: 480px) {
+    #clock { font-size: 19px; }
+    .bar-actions button { padding: 5px 8px; font-size: 12px; }
+    .title-card { gap: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fade p, .more, .flash.go, .tap-hint, .title-side.later { animation: none; }
+    .sit, .painting .grey, .portrait, .scene .chime-cg, .cutin, .get-item, .get-in { transition: none; }
+    .hs::after { animation: none; }
+  }
+</style>
+
+<div id="app">
+  <header class="bar">
+    <div class="clock">
+      <span id="clock">16:00</span>
+      <span id="remain" class="bells-label">チャイムまで あと60分</span>
+      <span class="bells" id="bells"></span>
+    </div>
+    <div class="bar-actions">
+      <button id="btnLog" type="button">ログ</button>
+      <button id="btnHint" type="button">ヒント</button>
+      <button id="btnWait" type="button">チャイムを待つ</button>
+      <button id="btnSave" type="button">セーブ</button>
+      <div class="menu-wrap">
+        <button id="btnOpenMenu" type="button" aria-expanded="false" aria-controls="menuPanel">メニュー</button>
+        <div id="menuPanel" class="menu-panel" hidden>
+          <button id="btnSkip" type="button" aria-pressed="true">既読スキップ</button>
+          <button id="btnSound" type="button" aria-pressed="true">音あり</button>
+          <button id="btnMenu" type="button">タイトルへ</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="scene-wrap">
+    <div id="loading" class="loading" hidden aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span></div>
+    <div id="scene" class="scene" role="group" aria-label="">
+      <div id="stage" class="stage">
+        <img id="bgImg" class="bg" src="" alt="">
+        <img id="sitFig" class="sit" src="" alt="">
+        <div id="leftover" class="leftover" style="display:none"></div>
+      </div>
+      <div id="hsLayer"></div>
+      <div id="cutin" class="cutin" aria-live="polite"></div>
+      <div id="getItem" class="get-item" role="status" hidden></div>
+      <img id="portrait" class="portrait" alt="">
+      <img class="chime-cg" src="img/chime_sky.webp" alt="17:00の夕焼け空。チャイムが響いている">
+    </div>
+  </div>
+  <div id="inv" class="inv" aria-label="持ち物"></div>
+
+  <section id="msg" class="msg" aria-live="polite">
+    <div id="speaker" class="speaker" hidden></div>
+    <div id="text" class="text narr"></div>
+    <div id="choices" class="choices"></div>
+    <span id="more" class="more" hidden>▼</span>
+  </section>
+</div>
+
+<div id="overlay" class="overlay" hidden><div id="ovCard" class="ov-card"></div></div>
+<div id="flash" class="flash"></div>
+
+<script>
+(() => {
+  const KEY = 'houkago-wasuremono-v1';
+  const CHIME_AT = 10;
+  const MIN_PER_TICK = 60 / CHIME_AT;
+  const $ = s => document.querySelector(s);
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const P = (() => {
+    try { const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if (d) return d; } catch (e) {}
+    return { shelf: {}, runs: 0, endings: {}, sound: true };
+  })();
+  P.shelf = P.shelf || {}; P.endings = P.endings || {}; P.saved = P.saved || {};
+  // cleared：今回のプレイで朝を迎えた子（章の開放に使う。はじめからで消える）／saved：実績（はじめからでも残る）
+  P.cleared = P.cleared || { ...P.saved };
+  // shut：今回のプレイで部屋から閉め出された子。最後の放課後のエンディングを迎えるまで、その章には戻れない
+  P.shut = P.shut || {};
+  // 周回数は「最後の放課後のノーマル／トゥルーエンドを見た回数」。以前の数え方（章を始めるたび）の値は消す
+  if (!P.runsV2) { P.runs = 0; P.runsV2 = true; }
+  const saveP = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} };
+
+  /* 周回の途中経過（つづきから用）。操作待ちになるたびに自動で保存し、周回が終わったら消す */
+  const SAVE_KEY = 'houkago-wasuremono-save-v1';
+  function saveRun() {
+    if (!R || R.over) return;
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...R, items: [...R.items], know: [...R.know], seen: [...R.seen] })); } catch (e) {}
+  }
+  function loadRun() {
+    try {
+      const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+      if (!d) return null;
+      d.items = new Set(d.items); d.know = new Set(d.know); d.seen = new Set(d.seen || []); d.log = d.log || []; d.over = false;
+      d.ch = d.ch || 'art'; d.st = d.st || d.hina || 'here';
+      return d;
+    } catch (e) { return null; }
+  }
+  function clearRun() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+
+  /* 手動セーブ：3つのファイル。放課後の途中経過と、そのときの進み具合（わすれもの棚・開放した章・閉ざされた扉）をまとめて記録する。
+     実績（朝を迎えた記録・見たエンディング・周回数）と既読はファイルに含めず、ロードしても変わらない */
+  const SLOT_KEY = n => `houkago-wasuremono-slot-v1-${n}`;
+  const SLOTS = [1, 2, 3];
+  function readSlot(n) {
+    try {
+      const d = JSON.parse(localStorage.getItem(SLOT_KEY(n)) || 'null');
+      if (!d || !d.run) return null;
+      const r = d.run;
+      r.items = new Set(r.items); r.know = new Set(r.know); r.seen = new Set(r.seen || []); r.log = r.log || []; r.over = false;
+      return d;
+    } catch (e) { return null; }
+  }
+  function writeSlot(n) {
+    const d = scr
+      ? { at: Date.now(), label: saveLabel(R), mid: true, run: scr.start, prog: scr.prog,
+          resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs } }
+      : { at: Date.now(), label: saveLabel(R), run: serR(R), prog: progSnap() };
+    try { localStorage.setItem(SLOT_KEY(n), JSON.stringify(d)); return true; } catch (e) { return false; }
+  }
+  const slotLabel = d => (d.label || saveLabel(d.run)) + (d.mid ? '・会話の途中' : '');
+  const slotDate = t => { const d = new Date(t), z = v => String(v).padStart(2, '0'); return `${d.getFullYear()}/${z(d.getMonth() + 1)}/${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+
+  /* 既読テキスト：周回をまたいで記録し、既読スキップがONなら早送りする。
+     既読は章ごとに分ける（チャイムなど章をまたいで同じ文章でも、別の章で初めて読むときは飛ばさない） */
+  const READ_KEY = 'houkago-wasuremono-read-v2';
+  try { localStorage.removeItem('houkago-wasuremono-read-v1'); } catch (e) {}
+  const READ = (() => { try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]')); } catch (e) { return new Set(); } })();
+  let readTimer = null;
+  function markRead(k) {
+    if (READ.has(k)) return;
+    READ.add(k);
+    clearTimeout(readTimer);
+    readTimer = setTimeout(() => { try { localStorage.setItem(READ_KEY, JSON.stringify([...READ])); } catch (e) {} }, 400);
+  }
+  if (P.skip === undefined) P.skip = true;
+
+  /* 組み合わせアイテム：素材を集めて「組み合わせる」まで、それに依存するストーリーは一切進まない。
+     判定は「組み合わせた完成品を今の放課後で持っているか」。チャイムで持ち物が消えたら、組み直すまで再び止まる。 */
+  const COMBOS = {
+    painting: { parts: ['pieceA', 'pieceB', 'pieceC'], block: '（ヒナについて、まだ知らないことがある気がする）' },
+    secondo: { parts: ['frag1', 'frag2', 'frag3', 'frag4'], block: '（ソウタについて、まだ知らないことがある気がする）' },
+  };
+  const combined = id => R.items.has(id);
+  const partsHeld = id => COMBOS[id].parts.filter(p => R.items.has(p)).length;
+  function comboBlock(id) {
+    if (combined(id)) return null;
+    return partsHeld(id) ? [COMBOS[id].block] : null;
+  }
+
+  // その子のわすれものが棚にある＝前の周回の記憶を引き継いでいる。この場合は、その子の手がかり集めと組み合わせを飛ばして対話に入れる
+  const remembered = who => !!P.shelf[who];
+
+  let R;
+  let C;  // 今遊んでいる章
+  function newRun(ch) {
+    R = { ch, loop: 0, ticks: 0, items: new Set(), taken: {}, know: new Set(), seen: new Set(), log: [], stage: 0,
+          st: 'here', doom: false, over: false, drawerOpen: false };
+  }
+
+  /* ---------- message engine ---------- */
+  const msg = $('#msg'), spk = $('#speaker'), txt = $('#text'), chs = $('#choices'), more = $('#more');
+  let advance = null;
+  /* 会話の途中セーブ：ストーリー（調べる・持ち物・ヒント・導入など）を始めた時点の状態と、
+     そこから出した文章の数・選んだ答えを記録しておく。ロードすると、始めた時点から同じ答えで
+     画面に出さずに早送りし、セーブしたときの文章から表示を再開する */
+  let scr = null;     // 進行中のストーリーの記録 { key, start, prog, lines, inputs }
+  let replay = null;  // ロード直後の早送り { skip: 画面に出さずに進める文章の数, inputs: 記録した答え }
+  const serR = r => JSON.parse(JSON.stringify({ ...r, items: [...r.items], know: [...r.know], seen: [...r.seen] }));
+  const progSnap = () => ({ shelf: { ...P.shelf }, cleared: { ...P.cleared }, shut: { ...P.shut } });
+  function beginScript(key) { scr = key ? { key, start: serR(R), prog: progSnap(), lines: 0, inputs: [] } : null; }
+  const rec = v => { if (scr) scr.inputs.push(v); return v; };
+  // 早送り中なら、記録した答えを返す（画面は出さない）
+  const replayed = () => (replay && replay.inputs.length ? { v: rec(replay.inputs.shift()) } : null);
+  let gen = 0;  // タイトルに戻るたびに増やす。古い放課後の文章送りタイマーが、新しい放課後に割り込まないように
+  let lastSkipped = false;  // 直前の文章を既読スキップで飛ばしたか
+  // noSkip：既読でも早送りしない（チャイムの夕焼けなど、必ず見せたい演出）
+  function line(l, wait = true, noSkip = false) {
+    const g = gen;
+    if (scr) scr.lines++;
+    if (replay) {
+      if (replay.skip > 0) {
+        // 早送り：表示と記録だけ整えて、すぐ次へ
+        replay.skip--;
+        const [who, t, face] = Array.isArray(l) ? l : ['', l];
+        const full = who ? `「${t}」` : t;
+        spk.textContent = who; spk.hidden = !who;
+        setTalk(!!C && (who === C.name || (!who && !!face)), face);
+        txt.classList.toggle('narr', !who); txt.textContent = full;
+        addLog({ who, t: full }); markRead((C ? C.id : '') + '|' + who + '|' + t);
+        lastSkipped = true; advance = null;
+        return Promise.resolve();
+      }
+      replay = null; syncSave();
+      noSkip = true;  // セーブしたときの文章は、既読でも止めて見せる
+    }
+    return new Promise(res => {
+      const [who, t, face] = Array.isArray(l) ? l : ['', l];
+      $('#scene').classList.add('story');  // 文章を読んでいる間は探索用の目印を隠す
+      spk.textContent = who; spk.hidden = !who;
+      setTalk(!!C && (who === C.name || (!who && !!face)), face);
+      txt.classList.toggle('narr', !who);
+      chs.innerHTML = ''; more.hidden = true;
+      const full = who ? `「${t}」` : t;
+      addLog({ who, t: full });
+      const rk = (C ? C.id : '') + '|' + who + '|' + t, known = READ.has(rk);
+      markRead(rk);
+      lastSkipped = !!(P.skip && known && !noSkip);
+      if (lastSkipped) {
+        // 既読：その場で全文を出し、少しだけ見せて次へ（未読・選択肢・画面表示で止まる）
+        txt.textContent = full; advance = null;
+        setTimeout(() => { if (g === gen) res(); }, wait ? 70 : 0);
+        return;
+      }
+      let i = 0, done = false, timer = null;
+      const finish = () => {
+        clearInterval(timer); txt.textContent = full; done = true;
+        if (!wait) { advance = null; res(); return; }
+        more.hidden = false;
+      };
+      advance = () => {
+        if (!done) { finish(); return; }
+        advance = null; more.hidden = true; res();
+      };
+      if (reduce) finish();
+      else { txt.textContent = ''; timer = setInterval(() => { if (g !== gen) { clearInterval(timer); return; } i++; txt.textContent = full.slice(0, i); if (i >= full.length) finish(); }, 32); }
+    });
+  }
+  // 立ち絵の表情差分：normal（警戒）/ angry / surprise / sad / down / smile
+  let face = 'normal';
+  function setTalk(on, f) {
+    const faces = C ? C.faces : {};
+    const pt = $('#portrait'), wasShown = pt.classList.contains('show');
+    if (on) {
+      // 表情の指定がなければ、話し続けている間は今の表情のまま。出し直すときは「ふつう」から
+      const want = f && faces[f] ? f : (wasShown ? face : 'normal');
+      if (want !== face || !pt.getAttribute('src')) { face = want; pt.src = `img/${faces[want]}.webp`; }
+    }
+    // 消えるときは表情を変えない（フェードアウト中に「ふつう」に戻らないように）
+    pt.classList.toggle('show', on);
+    $('#scene').classList.toggle('talk', on);
+  }
+  async function say(lines) { for (const l of lines) await line(l); }
+  // 文章送りは画面のどこを押しても進む（ボタン・選択肢・開いている画面の操作は除く）
+  document.addEventListener('click', e => {
+    if (!advance) return;
+    if (e.target.closest('.choice, .bar-actions') || !ov.hidden) return;
+    e.preventDefault(); e.stopPropagation();
+    advance();
+  }, true);
+  document.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && advance && !(document.activeElement && document.activeElement.closest('button, .hs'))) {
+      e.preventDefault(); advance();
+    }
+  });
+  function choose(opts) {
+    const r = replayed(); if (r) { chs.innerHTML = ''; addLog({ choice: opts[r.v] }); return Promise.resolve(r.v); }
+    return new Promise(res0 => {
+      const res = v => res0(rec(v));
+      chs.innerHTML = '';
+      const build = () => { more.hidden = true; opts.forEach((o, i) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'choice'; b.textContent = o;
+        b.onclick = ev => { ev.stopPropagation(); chs.innerHTML = ''; addLog({ choice: o }); res(i); };
+        chs.appendChild(b);
+      }); };
+      // 誤タップ防止：直前の文章を読んだあと、1タップしてから選択肢を出す
+      if (txt.textContent.trim() && !lastSkipped) { more.hidden = false; advance = () => { advance = null; setTimeout(build, 120); }; }
+      else build();
+    });
+  }
+
+  /* ---------- 楽譜（音楽室） ---------- */
+  // ハルのパート：4小節×2音。ミソ｜ラソ｜ファミ｜レド
+  const MELODY = ['E4', 'G4', 'A4', 'G4', 'F4', 'E4', 'D4', 'C4'];
+  const KANA = { C4: 'ド', D4: 'レ', E4: 'ミ', F4: 'ファ', G4: 'ソ', A4: 'ラ', B4: 'シ', C5: 'ド' };
+  const FREQ = { C4: 261.63, 'C#4': 277.18, D4: 293.66, 'D#4': 311.13, E4: 329.63, F4: 349.23, 'F#4': 369.99, G4: 392.0, 'G#4': 415.3, A4: 440, 'A#4': 466.16, B4: 493.88, C5: 523.25 };
+  // 五線譜の切れ端（make_frags.py で生成）。破れ目はどれも同じ幅なので、隣どうしを OVERLAP だけ重ねるとぴったり合う
+  const SCORE = { w: 1520, h: 388, overlap: 58, dmY: 264,
+    notes: [220.9, 342.1, 533.2, 666.8, 870.8, 1009.2, 1211.1, 1341.9],
+    pieces: [{ w: 425 }, { w: 386 }, { w: 397 }, { w: 475 }] };
+  // ピアノで3回間違えると、音符の下にハルの乱暴な字でドレミが浮かび上がる。anim=true でそのとき一文字ずつ現れる
+  function doremiMarks(anim) {
+    return SCORE.notes.map((x, i) => {
+      const w = MELODY[i] === 'F4' ? 140 : 100;
+      const st = anim ? ` class="dm" style="animation-delay:${0.25 + i * 0.32}s"` : '';
+      return `<image href="img/m_dm${i + 1}.webp" x="${x - w / 2}" y="${SCORE.dmY}" width="${w}" height="88"${st}/>`;
+    }).join('');
+  }
+  function fullScoreSVG(anim = false) {
+    const dm = R && R.know.has('doremi');
+    return `<svg class="staff" viewBox="0 0 ${SCORE.w} ${SCORE.h}" role="img" aria-label="破れ目をつなぎ合わせた、ハルのパートの五線譜">
+      <image href="img/m_score_full.webp" width="${SCORE.w}" height="${SCORE.h}"/>
+      ${dm ? doremiMarks(anim) : ''}</svg>`;
+  }
+
+  /* ---------- アイテム ---------- */
+  const ITEM_INFO = {
+    pieceA: { name: '絵の切れ端（左）', img: 'item_pieceA' },
+    pieceB: { name: '絵の切れ端（中央）', img: 'item_pieceB' },
+    pieceC: { name: '絵の切れ端（右）', img: 'item_pieceC' },
+    blue: { name: '青い絵の具', img: 'item_blue' },
+    frag1: { name: '五線譜の切れ端', img: 'm_frag1' },
+    frag2: { name: '五線譜の切れ端', img: 'm_frag2' },
+    frag3: { name: '五線譜の切れ端', img: 'm_frag3' },
+    frag4: { name: '五線譜の切れ端', img: 'm_frag4' },
+    photo: { name: '発表会の写真', img: 'm_photo' },
+  };
+  const itemSrc = it => it.src || `img/${it.img}.webp`;
+  Object.values(ITEM_INFO).forEach(it => { const i = new Image(); i.src = itemSrc(it); });
+  function gotItem(id) {
+    const it = ITEM_INFO[id];
+    R.items.add(id); render();
+    if (replay) return Promise.resolve();
+    // 画像を読み込み終えてから、文字と画像を同時に出す
+    const pic = new Image(); pic.src = itemSrc(it); pic.alt = '';
+    return (pic.decode ? pic.decode() : Promise.resolve()).catch(() => {}).then(() => new Promise(res => {
+      const el = $('#getItem');
+      el.innerHTML = `<div class="get-in"><p class="get-label">手に入れた</p><p class="get-name">${it.name}</p></div>`;
+      el.querySelector('.get-in').insertBefore(pic, el.querySelector('.get-name'));
+      el.hidden = false;
+      requestAnimationFrame(() => el.classList.add('show'));
+      const close = () => { advance = null; el.classList.remove('show'); setTimeout(() => { el.hidden = true; res(); }, 250); };
+      advance = close;
+    }));
+  }
+
+  // 調べた場所のカットイン（クローズアップの一枚絵）
+  function showCut(name) {
+    const el = $('#cutin');
+    el.innerHTML = name === 'clock' ? clockSVG() : `<img src="img/${name}.webp" alt="">`;
+    el.classList.add('show');
+    $('#scene').classList.add('cut');
+  }
+  function hideCut() {
+    $('#cutin').classList.remove('show');
+    $('#scene').classList.remove('cut');
+  }
+  // 時計のカットイン：針のない時計の絵に、今の時刻の針を重ねる（座標は ci_clock 画像 1536×1024 基準）
+  function clockSVG() {
+    const min = R.st === 'unraveled' ? 61 : R.ticks * MIN_PER_TICK;
+    const cx = 781, cy = 433;
+    const hand = (deg, len, tail, w) => {
+      const t = deg * Math.PI / 180, sx = Math.sin(t), sy = -Math.cos(t);
+      const px = -sy * w / 2, py = sx * w / 2;
+      const tipX = cx + sx * len, tipY = cy + sy * len, bX = cx - sx * tail, bY = cy - sy * tail;
+      return `${bX + px},${bY + py} ${tipX + px * 0.25},${tipY + py * 0.25} ${tipX - px * 0.25},${tipY - py * 0.25} ${bX - px},${bY - py}`;
+    };
+    const hAng = (16 * 30 + min * 0.5) % 360, mAng = (min * 6) % 360;
+    const hands = `<polygon points="${hand(hAng, 150, 26, 16)}"/><polygon points="${hand(mAng, 232, 34, 10)}"/>`;
+    return `<img src="img/ci_clock.webp" alt="壁の時計">
+      <svg class="clock-hands" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <g fill="#000" opacity=".28" transform="translate(7 9)">${hands}</g>
+        <g fill="#231b16">${hands}</g>
+        <circle cx="${cx}" cy="${cy}" r="11" fill="#2b221b"/><circle cx="${cx - 3}" cy="${cy - 3}" r="3" fill="#6a5846"/>
+      </svg>`;
+  }
+  function idle() {
+    $('#scene').classList.remove('story');
+    hideCut();
+    setTalk(false); setCG(false);
+    spk.hidden = true; txt.classList.add('narr'); chs.innerHTML = ''; more.hidden = true;
+    txt.textContent = R.over ? '' : (R.st === 'unraveled' ? C.idleFree : '（気になる場所をタップして調べる）');
+    $('#btnLog').disabled = !R.log || !R.log.length;
+    syncSave();
+    saveRun();
+  }
+
+  /* ---------- overlay ---------- */
+  const ov = $('#overlay'), card = $('#ovCard');
+  function openOverlay(html, cls = '', cardCls = 'ov-card') {
+    ov.className = 'overlay ' + cls; card.className = cardCls; card.innerHTML = html; ov.hidden = false;
+    const f = card.querySelector('.primary, button'); if (f) f.focus({ preventScroll: true });
+  }
+  function closeOverlay() { ov.hidden = true; card.innerHTML = ''; }
+  function overlayWait(html, cls, buttons) {
+    const r = replayed();
+    return new Promise(res0 => {
+      const res = v => res0(rec(v));
+      const btns = buttons.map((b, i) => `<button type="button" class="btn ${i === 0 ? 'primary' : ''}" data-v="${i}">${b}</button>`).join('');
+      openOverlay(html + `<div class="row">${btns}</div>`, cls);
+      card.querySelectorAll('[data-v]').forEach(b => b.onclick = () => res(+b.dataset.v));
+      if (r) res0(r.v);
+    });
+  }
+  // セーブ画面などの操作用（ストーリーの答えとして記録しない）
+  function uiWait(html, cls, buttons) {
+    return new Promise(res => {
+      const btns = buttons.map((b, i) => `<button type="button" class="btn ${i === 0 ? 'primary' : ''}" data-v="${i}">${b}</button>`).join('');
+      openOverlay(html + `<div class="row">${btns}</div>`, cls);
+      card.querySelectorAll('[data-v]').forEach(b => b.onclick = () => res(+b.dataset.v));
+    });
+  }
+
+  /* ---------- sound ---------- */
+  let actx = null;
+  const audio = () => {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  };
+  function bell() {
+    if (!P.sound || replay) return;
+    try {
+      const a = audio();
+      const notes = [329.63, 261.63, 293.66, 196.0, 196.0, 293.66, 329.63, 261.63];
+      notes.forEach((f, i) => {
+        const t = a.currentTime + i * 0.55;
+        const o = a.createOscillator(), g = a.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.16, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+        o.connect(g).connect(a.destination); o.start(t); o.stop(t + 1.5);
+      });
+    } catch (e) {}
+  }
+  // ピアノらしい減衰音
+  function pianoNote(freq, gain = 0.2, delay = 0) {
+    if (!P.sound) return;
+    try {
+      const a = audio(), t = a.currentTime + delay;
+      [[1, 'triangle', 1], [2, 'sine', 0.35], [3, 'sine', 0.12]].forEach(([m, type, v]) => {
+        const o = a.createOscillator(), g = a.createGain();
+        o.type = type; o.frequency.value = freq * m;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain * v, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0008, t + 1.8);
+        o.connect(g).connect(a.destination); o.start(t); o.stop(t + 1.9);
+      });
+    } catch (e) {}
+  }
+  function flash() { if (replay) return; const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+
+  /* ---------- render ---------- */
+  function render() {
+    // 放課後は16:00〜17:00の1時間。調べるたびに MIN_PER_TICK 分進む
+    const min = R.ticks * MIN_PER_TICK;
+    const free = R.st === 'unraveled';
+    $('#clock').textContent = free ? '17:01' : `16:${String(min).padStart(2, '0')}`;
+    $('#remain').textContent = free || R.over ? '' : `チャイムまで あと${60 - min}分`;
+    $('#bells').innerHTML = [0, 1, 2].map(i => `<i class="${i < R.loop ? 'on' : ''}"></i>`).join('');
+    $('#btnWait').disabled = R.over || R.st === 'unraveled';
+    $('#btnHint').disabled = R.over;
+    syncSave();
+    $('#btnLog').disabled = !R.log || !R.log.length;
+    $('#btnSound').textContent = P.sound ? '音あり' : '音なし';
+    $('#btnSkip').textContent = P.skip ? '既読スキップ ON' : '既読スキップ OFF';
+    $('#btnSkip').setAttribute('aria-pressed', P.skip ? 'true' : 'false');
+    $('#btnSound').setAttribute('aria-pressed', P.sound ? 'true' : 'false');
+    if (!C) return;
+    $('#sitFig').classList.toggle('gone', R.st === 'vanished' || R.st === 'shut');
+    $('#leftover').style.display = R.st === 'vanished' ? '' : 'none';
+
+    const inv = $('#inv'); inv.innerHTML = '';
+    const add = (label, cls, fn, src) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'chip ' + cls;
+      b.innerHTML = (src ? `<img src="${src}" alt="">` : '') + `<span>${label}</span>`;
+      b.onclick = () => act(fn, 'inv:' + label); inv.appendChild(b);
+    };
+    if (R.items.size) { const s = document.createElement('span'); s.className = 'label'; s.textContent = '持ち物'; inv.appendChild(s); }
+    C.inv(add);
+  }
+
+  /* ---------- flow ---------- */
+  let busy = false;
+  // セーブは放課後の途中ならいつでも（会話の途中でも）。ロード直後の早送り中だけは押せない
+  function syncSave() { const b = $('#btnSave'); if (b) b.disabled = !R || R.over || !C || !!replay; }
+  // key：どのストーリーかを表す名前（会話の途中セーブから再開するときに、同じストーリーを呼び直すのに使う）
+  async function act(fn, key) {
+    if (busy || !R || R.over) return;
+    busy = true; beginScript(key); syncSave();
+    try { await fn(); } finally { scr = null; replay = null; busy = false; render(); if (!R.over) idle(); }
+  }
+  const hintScript = async () => { await say([`【ヒント】${C.hint()}`]); };
+  const waitScript = async () => {
+    await say(['窓の外を眺めて、チャイムを待った。']);
+    R.ticks = CHIME_AT - 1; await tick();
+  };
+  function scriptFn(key) {
+    if (key === 'intro') return () => C.intro(remembered(C.key));
+    if (key === 'hint') return hintScript;
+    if (key === 'wait') return waitScript;
+    if (key.startsWith('hs:')) { const id = key.slice(3); return C.H[id] || COMMON[id] || null; }
+    if (key.startsWith('inv:')) { const lab = key.slice(4); let f = null; C.inv((label, cls, fn) => { if (label === lab) f = fn; }); return f; }
+    return null;
+  }
+  async function tick() {
+    if (R.st === 'unraveled' || R.over) return;
+    R.ticks++; render();
+    if (R.ticks >= CHIME_AT) await chime();
+  }
+  // 17:00のチャイム：鳴っている間は夕焼け空の一枚絵に切り替え、明けたら部屋に戻す
+  function setCG(on) { $('#scene').classList.toggle('cg', on); }
+  async function chime() {
+    R.loop++; R.ticks = 0; bell(); flash(); render();
+    const vanishing = R.doom || (R.loop >= 3 && R.st !== 'unraveled');
+    setCG(true);
+    await line(vanishing && !R.doom ? '17:00。三度目のチャイムが鳴った。' : '17:00。チャイムが鳴った。', true, true);
+    if (vanishing) R.st = 'vanished';
+    else { R.taken = {}; R.stage = 0; R.drawerOpen = false; R.seen = new Set(); }
+    const hadItems = R.items.size > 0;
+    if (!vanishing) R.items = new Set();
+    render(); hideCut(); setCG(false);
+    if (vanishing) { await vanish(); return; }
+    if (R.loop === 1 && !remembered(C.key)) {
+      // わすれものを持たない周回で、初めて時間が巻き戻ったとき
+      await say(['……え？',
+                 `気がつくと、${C.room}の真ん中に立っていた。`,
+                 '壁の時計は、16:00を指している。',
+                 ...(hadItems ? ['拾ったはずの物が、手の中にない。'] : []),
+                 C.samePose,
+                 '「……ねえ、今のチャイム、聞こえた？」',
+                 ...C.loopReply,
+                 '……覚えていない。さっき話したことも、全部。',
+                 '時間が、巻き戻っている。',
+                 '扉は、やっぱり開かない。チャイムが鳴っても、この放課後は終わらなかった。',
+                 '（それでも、見たものは覚えている。同じことを繰り返さなくても、先へ進めそうだ）']);
+    } else {
+      await say([`……気がつくと、また16:00の${C.room}にいた。`, '手の中にあったものは消えている。でも、見たことは覚えている。']);
+      if (R.loop === 2) await say(['チャイムの余韻が、さっきより重く耳に残っている。']);
+    }
+  }
+
+  // 全章共通：その子の放課後が終わるまで、部屋の扉は開かない
+  const locked = room => ['扉に手をかけた。……開かない。鍵穴もないのに、びくともしない。',
+                          `（この放課後が終わるまで、${room}からは出られない気がする）`];
+  async function vanish() {
+    await C.vanishScene();
+    const first = !P.shelf[C.key];
+    P.shelf[C.key] = true; saveP();
+    R.over = true; clearRun(); render(); idle();
+    overlayWait(`<p class="eyebrow">消失イベント</p><h2>${C.name}が消えた</h2>
+      <p>わすれもの「${C.lost}」を、わすれもの棚にしまった。</p>
+      ${first ? `<p class="note">わすれものの記憶は、次の周回に持ち越されます。……今なら、${C.name}にかけられる言葉があるかもしれない。</p>` : ''}
+      `, '', ['新しい放課後へ', 'タイトルへ']).then(v => v === 0 ? startRun(C.id) : showTitle(true));
+  }
+
+  async function closeHeart() {
+    // 心を閉ざしたら、その場でチャイムの時間まで飛ばす
+    await say(C.closeLines);
+    R.ticks = CHIME_AT - 1; await tick();
+  }
+  async function doom(lines) {
+    await say(lines);
+    await say([`${C.name}は、もうこちらを見なかった。`]);
+    R.doom = true;
+    await chime();
+  }
+
+  // 消失とは別のBAD：相手に完全に拒まれ、部屋から閉め出される。わすれものは残らない
+  async function shutOut(lines, after) {
+    await say(lines);
+    R.loop++; bell(); flash(); render();
+    setCG(true);
+    await line('17:00。チャイムが鳴った。', true, true);
+    // チャイムの絵を出しているあいだに廊下の背景へ差し替え、読み込みが済んでから絵を消す（美術室が一瞬映らないように）
+    R.st = 'shut'; hideCut(); setTalk(false);
+    if (C.hall) {
+      const bg = $('#bgImg'); bg.src = `img/${C.hall}.webp`;
+      $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = '';
+      try { await bg.decode(); } catch (e) {}
+    }
+    setCG(false);
+    await say([`……気がつくと、${C.room}の扉の外、薄暗い廊下に立っていた。`,
+               'あれほど開かなかった扉が、今度は向こう側から閉ざされている。', ...after]);
+    R.over = true; clearRun(); P.endings.shut = true; P.shut[C.key] = true; saveP(); render(); idle();
+    const next = nextChapter(C.id);
+    overlayWait(`<p class="eyebrow">BAD END</p><h2>閉ざされた扉</h2>
+      <p>${C.name}は、もう誰にも扉を開けなかった。</p>
+      <p class="note">この放課後には、もう戻れない。最後の放課後を終えるまで、${C.room}は選べなくなります。</p>
+      ${next ? '' : '<p class="note">試作版はここまでです。遊んでくれてありがとう。</p>'}`,
+      '', next ? ['次の章に進む', 'タイトルへ'] : ['タイトルへ']).then(v => v === 0 && next ? startRun(next.id) : showTitle(true));
+  }
+
+  const ROOMS = [['hina', '美術室'], ['sota', '音楽室'], ['mio', '図書室'], ['kei', '体育館'], ['tsumugi', '保健室']];
+  function ending(lines, gateImg, gateAlt) {
+    R.over = true; clearRun(); P.endings.normal = true; P.saved[C.key] = true; P.cleared[C.key] = true; saveP(); render(); idle();
+    // 最後の放課後（5章）のエンディングだけが「周回」を1つ進める。試作版（2章まで）では数えない
+    if (ORDER.length >= ROOMS.length && C.id === ORDER[ORDER.length - 1]) completeRun();
+    const saved = ROOMS.filter(([k]) => P.cleared[k]).length;
+    const lit = ROOMS.filter(([k]) => !P.cleared[k]).map(([, r]) => r);
+    const next = nextChapter(C.id);
+    overlayWait(`<img class="cg" src="img/${gateImg}.webp" alt="${gateAlt}">
+      <div class="fade" style="display:flex;flex-direction:column;gap:12px">
+        <p>校門の鍵は、開いていた。</p>
+        ${lines.map(l => `<p>${l}</p>`).join('')}
+        <p>門の手前で、足が止まる。まだ、ここは通れない。</p>
+        ${lit.length ? `<p>校舎を見上げる。${lit.join('にも、')}にも、まだ明かりがついていた。</p>` : ''}
+        <p class="eyebrow">NORMAL END「何人かの朝」 朝を迎えた生徒 ${saved} / 5</p>
+      </div>
+      ${next ? `<p class="note">次の放課後「${next.room}」が開放されました。</p>` : '<p class="note">試作版はここまでです。遊んでくれてありがとう。</p>'}`,
+      'dawn', [next ? `次の放課後へ（${next.room}）` : 'もう一度はじめる', 'タイトルへ']).then(v => v === 0 ? startRun(next ? next.id : C.id) : showTitle(true));
+  }
+
+  /* ---------- 共通の調べもの ---------- */
+  const COMMON = {
+    async window() {
+      showCut('ci_window');
+      if (!R.know.has('window')) {
+        await say(['窓の外は、ずっと同じ夕焼け。校庭には誰もいない。', C.windowLine]);
+        R.know.add('window'); await tick();
+      } else await say(['夕焼けは、少しも動かない。']);
+    },
+    async clock() {
+      showCut('clock');
+      await say([R.st === 'unraveled' ? '時計の針は、17:00を越えている。'
+        : `壁の時計は、${$('#clock').textContent}を指している。17:00まで、あと${60 - R.ticks * MIN_PER_TICK}分。`]);
+    },
+    char: () => C.talk(),
+  };
+
+  /* ================================================================
+     第一章　美術室（ヒナ）
+     ================================================================ */
+  function dial() {
+    const r = replayed(); if (r) return Promise.resolve(r.v);
+    return new Promise(res0 => {
+      const res = v => res0(rec(v));
+      const d = [0, 0, 0];
+      openOverlay(`<p class="eyebrow">画材棚の引き出し</p><h2>3桁のダイヤル錠</h2>
+        <div class="dial">${[0, 1, 2].map(i => `<div class="wheel">
+          <button type="button" data-i="${i}" data-d="1" aria-label="${i + 1}桁目を上げる">▲</button>
+          <output id="dg${i}">0</output>
+          <button type="button" data-i="${i}" data-d="-1" aria-label="${i + 1}桁目を下げる">▼</button></div>`).join('')}</div>
+        <div class="row"><button type="button" class="btn primary" id="dOpen">開ける</button><button type="button" class="btn" id="dCancel">やめる</button></div>`);
+      card.querySelectorAll('.wheel button').forEach(b => b.onclick = () => {
+        const i = +b.dataset.i; d[i] = (d[i] + +b.dataset.d + 10) % 10; $('#dg' + i).textContent = d[i];
+      });
+      $('#dOpen').onclick = () => { closeOverlay(); res(d.join('')); };
+      $('#dCancel').onclick = () => { closeOverlay(); res(null); };
+    });
+  }
+  function paintingSVG(mode) {
+    return `<div class="painting" role="img" aria-label="${mode === 'blue' ? '青い空の絵' : '破られた、色の抜けた空の絵'}">
+      <img src="img/sky.webp" alt=""><img id="greyLayer" class="grey" src="img/sky.webp" alt=""><span class="sign">7.14 Hina</span></div>`;
+  }
+  const SKETCH_FACE = `<img class="sketch" src="img/sketchbook_face.webp" alt="スケッチブックの最後のページ。自画像に、震える線で泣きそうな笑顔が描き込まれている">`;
+  const SKETCH = `<img class="sketch" src="img/sketchbook.webp" alt="破り取られたページの残るスケッチブック。最後のページの自画像は、顔だけが消されている">`;
+  async function combinePainting() {
+    ['pieceA', 'pieceB', 'pieceC'].forEach(p => R.items.delete(p));
+    R.items.add('painting'); render();
+    const p = overlayWait(`<p class="eyebrow">3枚の切れ端</p><h2>一枚の絵になった</h2>${flipCard()}
+      <p>窓から見た空の絵だ。右下に「7.14 Hina」とサインがある。</p>`, '', ['閉じる']);
+    wireFlip(true);
+    await p;
+    closeOverlay();
+    R.know.add('painting'); R.seen.add('painting');
+  }
+  async function viewPainting() {
+    const p = overlayWait(`<p class="eyebrow">持ち物</p><h2>空の絵</h2>${flipCard()}`, '', ['閉じる']);
+    wireFlip(false);
+    await p;
+    closeOverlay();
+  }
+  // 表（破れた空の絵）と裏（大人の殴り書き）をめくれるカード
+  function flipCard() {
+    return `<div class="flip" id="flip"><div class="flip-in">
+        <div class="face"><img src="img/sky_torn.webp" alt="3枚に引き裂かれた紙を貼り合わせた空の絵。右下に「7.14 Hina」のサイン">
+          <button type="button" class="zoom-btn" id="zoomBtn" aria-label="右下のサインを拡大">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15l5.5 5.5M10 7v6M7 10h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+          <div class="sign-zoom" id="signZoom" hidden><img src="img/sky_sign.webp" alt="右下のサインの拡大。「7.14 Hina」と書かれている"></div>
+        </div>
+        <div class="face back"><img src="img/sky_back.webp" alt="絵の裏面。テープで貼り合わせた紙に、大人の字で「こんなもの描いてる暇があるなら」と殴り書きされている"></div>
+      </div></div>
+      <button type="button" class="btn" id="flipBtn">裏返す</button>`;
+  }
+  function wireFlip(mustSeeBack) {
+    const close = card.querySelector('[data-v="0"]');
+    if (mustSeeBack) close.hidden = true;
+    $('#flipBtn').onclick = () => {
+      const on = $('#flip').classList.toggle('on');
+      $('#flipBtn').textContent = on ? '表に戻す' : '裏返す';
+      $('#signZoom').hidden = true;
+      if (on) close.hidden = false;
+    };
+    $('#zoomBtn').onclick = () => { $('#signZoom').hidden = !$('#signZoom').hidden; };
+    $('#signZoom').onclick = () => { $('#signZoom').hidden = true; };
+    $('#flipBtn').focus({ preventScroll: true });
+  }
+
+  const ART = {
+    id: 'art', key: 'hina', name: 'ヒナ', room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom',
+    sit: { src: 'hina_sit', style: 'left:1%;top:36.7%;height:20%' },
+    leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)',
+    faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_shadow', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry' },
+    lost: '顔のないスケッチブック',
+    idleFree: '（時計の針が17:00を越えた。ヒナが待っている）',
+    samePose: '窓際には、さっきとまったく同じ姿勢で、ヒナが座っていた。',
+    loopReply: [['ヒナ', '……は？ チャイムなんて鳴ってないけど', 'angry'], ['ヒナ', 'ていうか、誰？', 'angry']],
+    windowLine: '音楽室からも、図書室からも、体育館からも、物音ひとつしない。',
+    closeLines: ['ヒナは膝を抱えたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。'],
+    hotspots: [
+      ['sink', '流し', 'left:83.3%;top:37.5%;width:16.7%;height:45.8%'],
+      ['shelf', '画材棚', 'left:75.8%;top:14.2%;width:13.3%;height:30%'],
+      ['trash', 'ゴミ箱', 'left:77.6%;top:44.5%;width:4.8%;height:12%'],
+      ['easel', 'イーゼル', 'left:57.7%;top:46%;width:20.6%;height:54%'],
+      ['notice', '掲示板', 'left:63.8%;top:19.7%;width:10.4%;height:17.3%'],
+      ['board', '黒板', 'left:29.0%;top:19.7%;width:34.2%;height:17.8%'],
+      ['clock', '時計', 'left:46.5%;top:11.8%;width:5.2%;height:7.8%'],
+      ['window', '窓', 'left:0;top:0;width:20%;height:34%'],
+      ['char', 'ヒナ', 'left:0.5%;top:35%;width:15%;height:23%'],
+    ],
+    async intro(rem) {
+      if (!rem) {
+        await say(['……目を覚ますと、美術室にいた。', '窓の外は夕焼け。時計は16:00を指している。', ...locked('美術室'), '窓際に、女子生徒がひとり座っていた。',
+                   '膝を抱えて、じっと窓の外を見ている。……声をかけてみる。',
+                   '「あの……ここ、どこかわかる？」',
+                   '彼女は、ゆっくりこちらを振り向いた。胸の名札には「2年 春日ヒナ」とある。',
+                   ['ヒナ', '……美術室。見ればわかるでしょ', 'normal'],
+                   '「きみは、ここで何してるの？」',
+                   ['ヒナ', '……部活。美術部だから', 'down'],
+                   ['ヒナ', '来てるだけ。……ほかに、行くとこないし', 'down'],
+                   'イーゼルには、布をかけたままのキャンバス。床には、乾いた絵の具の跡がいくつも残っている。',
+                   '「絵、描くの？」',
+                   'ヒナの肩が、ほんの少しこわばった。',
+                   ['ヒナ', '……描かない。絵ならもうやめたから', 'angry'],
+                   ['ヒナ', '放っといて', 'angry'],
+                   'それきり、ヒナはまた窓の外に目を戻した。真夏なのに、長袖のカーディガンの袖を手の甲まで伸ばしている。',
+                   '【操作】気になる場所をタップすると調べられます。調べるたびに時計が6分進み、17:00になるとチャイムが鳴ります。話しかけても時間は進みません。']);
+      } else {
+        await say(['……また、この美術室だ。', '扉は、今度も開かない。', '16:00。窓際には、ヒナがいる。',
+                   '「……絵、描くの？」',
+                   ['ヒナ', '……描かない。絵ならもうやめたから', 'angry'],
+                   ['ヒナ', '放っといて', 'angry'],
+                   '（あのスケッチブックの、真っ白な顔を覚えている）']);
+      }
+    },
+    inv(add) {
+      const pieces = ['pieceA', 'pieceB', 'pieceC'].filter(p => R.items.has(p)).length;
+      if (pieces) {
+        if (pieces === 3) add('絵の切れ端（3枚）', '', combinePainting, 'img/item_pieceB.webp');
+        else ['pieceA', 'pieceB', 'pieceC'].filter(p => R.items.has(p)).forEach(p =>
+          add(ITEM_INFO[p].name, '', () => say([`破られた絵の切れ端。持っているのは${pieces}枚。まだ、どこかに残りがありそうだ。`]), itemSrc(ITEM_INFO[p])));
+      }
+      if (R.items.has('painting')) add('空の絵', '', viewPainting, 'img/sky_torn.webp');
+      if (R.items.has('blue')) add('青い絵の具', 'blue', () => R.st === 'unraveled' ? ART.talk() : say(['青い絵の具のチューブ。この部屋で、青いものはこれだけだ。']), 'img/item_blue.webp');
+    },
+    H: {
+      async board() {
+        showCut('ci_board');
+        if (!R.know.has('deadline')) {
+          await say(['黒板の隅に、チョークの字。「県展 作品提出〆切 今週金曜」', 'その下に、手でこすって消した跡。……目を凝らすと、小さく震えた字で「描けない」と、かろうじて読める。']);
+          R.know.add('deadline'); await tick();
+        } else await say(['「県展 作品提出〆切 今週金曜」。その下の消しかけの字は、もうほとんど読めない。']);
+      },
+      async notice() {
+        showCut('ci_notice');
+        if (!R.know.has('notice')) {
+          await say(['過去の受賞作が貼られている。「県展 金賞 3年 春日サクラ」', '隅の付箋に、先生の字で「妹さんにも期待しています」。', '……春日。ヒナの名札と、同じ苗字だ。']);
+          R.know.add('notice'); await tick();
+        } else await say(['金賞のリボンが、夕日を受けて光っている。']);
+      },
+      async trash() {
+        if (!R.taken.trash) {
+          showCut('ci_trash');
+          await say(['丸めた紙のあいだに、絵の切れ端がまじっていた。', '空の一部みたいだ。']);
+          R.taken.trash = true; await gotItem('pieceA'); await tick();
+        } else await say(['もう何も入っていない。']);
+      },
+      async shelf() {
+        if (R.know.has('drawer') && !R.drawerOpen) {
+          R.drawerOpen = true; R.seen.add('drawer');
+          showCut('ci_drawer');
+          await say(['番号は覚えている。7・1・4。', 'カチリ。空の絆創膏の箱と、長袖のカーディガン。……前に見たときのままだ。']);
+          await tick(); return;
+        }
+        // 絵のサインを知っていれば、棚の下の切れ端は拾わずにダイヤル錠へ進める
+        if (!R.taken.scrap && !R.know.has('painting')) {
+          showCut('ci_shelf');
+          await say(['画材棚。いちばん上の引き出しに、3桁のダイヤル錠がかかっている。', '……棚の下に、紙切れが挟まっている。引き抜くと、絵の切れ端だった。']);
+          R.taken.scrap = true; await gotItem('pieceB'); await tick(); return;
+        }
+        if (R.drawerOpen) { showCut('ci_drawer'); await say(['開いた引き出し。空の絆創膏の箱と、長袖のカーディガン。']); return; }
+        showCut(R.taken.scrap ? 'ci_shelf_empty' : 'ci_shelf');
+        if (!combined('painting') && !R.know.has('painting')) {
+          await say(['3桁のダイヤル錠。番号の手がかりが、まだ見つからない。']);
+          return;
+        }
+        const code = await dial();
+        if (code === null) return;
+        if (code === '714') {
+          R.drawerOpen = true; R.seen.add('drawer');
+          showCut('ci_drawer');
+          await say(['カチリ。引き出しが開いた。', '中には、空になった絆創膏の箱がいくつも。', 'それと、予備の長袖のカーディガンが一枚。', '……今は、七月だ。']);
+          R.know.add('drawer'); await tick();
+        } else { await say(['ガチャ。開かない。']); await tick(); }
+      },
+      async easel() {
+        if (!R.taken.cloth) {
+          showCut('ci_easel');
+          await say(['イーゼルの布をめくる。', 'キャンバスは真ん中から裂かれて、木枠の端に一片だけ残っていた。', 'はがして手に取る。隅にサインのような文字が見える。']);
+          R.taken.cloth = true; await gotItem('pieceC'); await tick();
+        } else await say(['裂かれたキャンバスの、木枠だけが残っている。']);
+      },
+      async sink() {
+        if (!R.taken.blue) {
+          showCut('ci_sink');
+          await say(['筆洗いのバケツの底に、青い絵の具のチューブが沈んでいた。', '拾い上げる。……この部屋で、青いものはこれだけだ。']);
+          R.taken.blue = true; await gotItem('blue'); await tick();
+        } else await say(['乾いた筆が、何本も立てかけてある。']);
+      },
+    },
+    hint() {
+      const pieces = partsHeld('painting');
+      if (R.st === 'unraveled') return R.items.has('blue') ? 'ヒナに、青い絵の具を渡しましょう。' : 'ヒナは青い絵の具を探しています。水まわりを調べてみましょう。';
+      if (!combined('painting') && !R.know.has('painting')) {
+        if (pieces === 3) return '絵の切れ端が3枚そろいました。持ち物の「絵の切れ端」を押してみましょう。';
+        if (pieces > 0) return '破れた紙は、まだ部屋のどこかに残っていそうです。捨てられた物や、物の下、布の下も調べてみましょう。';
+        return '部屋の中で、気になる場所を調べてみましょう。';
+      }
+      if (!R.know.has('drawer')) return 'ダイヤル錠は3桁です。空の絵を、すみずみまでよく見てみましょう。';
+      if (!R.know.has('notice')) return '掲示板も調べてみましょう。';
+      return 'ヒナに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
+    },
+    async vanishScene() {
+      await say(['窓際の席に、ヒナの姿はなかった。', '椅子の上に、スケッチブックが一冊だけ残っている。']);
+      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>顔のないスケッチブック</h2>${SKETCH}
+        <p>ほとんどのページは破り取られていた。最後のページにだけ、女の子の絵が残っている。</p>
+        <p>髪も、長袖の制服も、細かく描き込まれているのに、顔だけが真っ白だった。消しゴムで何度も消した跡がある。</p>`, '', ['閉じる']);
+    },
+    shelfItem(saved) {
+      return saved
+        ? { title: '顔のあるスケッチブック', body: `${SKETCH_FACE}<p>真っ白だった顔に、ヒナが自分で線を引いた。震えていて、泣きそうで、少しだけ笑っている。</p>` }
+        : { title: '顔のないスケッチブック', body: `${SKETCH}<p>最後のページの自画像。顔だけが、何度も消されて真っ白になっている。</p>` };
+    },
+    async talk() {
+      if (R.st === 'vanished') return say(['椅子の上には、スケッチブックだけが残っている。']);
+      if (R.st === 'unraveled') {
+        if (R.items.has('blue')) return hinaPaint();
+        return say([['ヒナ', '……青い絵の具、どこかにあったはずなんだけど', 'smile'], '（流しのあたりを探してみよう）']);
+      }
+      // わすれものの記憶を引き継いでいる周回では、手がかり集め・組み合わせなしで対話に入れる
+      if (!remembered('hina')) {
+        const block = R.know.has('painting') ? null : comboBlock('painting');
+        if (block) return say([['ヒナ', '……さっきから、何してんの', 'angry'], ...block]);
+        const n = [R.know.has('notice'), R.know.has('painting'), R.know.has('drawer')].filter(Boolean).length;
+        if (n === 0) return say([['ヒナ', '……まだ何か用？', 'angry'], '（この子のことを、まだ何も知らない。部屋を調べてみよう）']);
+        if (n < 3) return say([['ヒナ', '……さっきから、何してんの', 'angry'], '（ヒナについて、まだ知らないことがある気がする）']);
+      } else {
+        await say(['（破られた空の絵も、引き出しの中身も、もう知っている）']);
+      }
+
+      // 1段目
+      if (R.seen.has('painting')) {
+        await line(['ヒナ', '……見たんでしょ。ゴミ箱の絵', 'down'], false);
+      } else {
+        await say(['「……空の絵を、見たことがある。この窓から見た空の」', 'ヒナが、はっとこちらを見た。']);
+        await line(['ヒナ', '……なんで知ってんの。あれ、もう捨てたのに', 'surprise'], false);
+      }
+      let a = await choose(['きれいな空だった。……破いたの、ヒナじゃないよね', 'どうして捨てちゃったの？ もったいないよ', 'お母さんも、ヒナのことを心配して言ってるんだよ']);
+      if (a === 1) { await say([['ヒナ', '……捨てたんじゃない', 'angry'], 'ヒナは何か言いかけて、唇を噛んだ。', ['ヒナ', '……もういい', 'angry'], ['', 'ヒナは窓のほうへ顔をそむけた。……その横顔が、ほんの一瞬、寂しそうに見えた気がした。', 'sad'], 'それきり、ヒナは口を閉ざした。']); return closeHeart(); }
+      if (a === 2) return shutOut([['ヒナ', '……心配？', 'surprise'],
+                                ['ヒナ', '……みんな、そう言うんだよね', 'sad'],
+                                'ヒナの目から、すっと温度が消えた。',
+                                ['ヒナ', '……そっか', 'reject'], ['ヒナ', 'あんたも、そっち側なんだ', 'reject'],
+                                ['ヒナ', '……出てって', 'reject'],
+                                'ヒナは窓のほうを向いたまま、二度とこちらを振り返らなかった。'],
+                               ['扉を叩いた。返事はない。', '……扉の向こうで、紙を引き裂く音が、一度だけ聞こえた。']);
+      await say([['ヒナ', '……きれい？', 'surprise'], ['ヒナ', '……そんなふうに言われたの、初めて', 'down'], 'ヒナはしばらく黙って、窓の外の夕焼けを見ていた。', 'それから、ぽつりと言った。', ['ヒナ', '破ったのは、お母さん', 'down'], ['ヒナ', '『こんなもの描いてる暇があるなら』って。目の前で、びりびりに', 'sad'], 'ヒナの声が、少しだけ震えた。']);
+
+      // 2段目：県展の話から入り、何年も比べられ、母に愛されてこなかったことへつなげる
+      await say([['ヒナ', '……お姉ちゃん、去年の県展で金賞とったの', 'down'],
+                 ['ヒナ', '昔から、なんでもできる人なの。……私とは違って', 'down'],
+                 ['ヒナ', 'リビングには、お姉ちゃんの賞状が全部飾ってあるの。私のは一枚もない', 'sad'],
+                 ['ヒナ', '一回だけ、市の絵のコンクールで賞をもらったことがあるんだ。でも見せたら、『サクラはその年、金賞だった』って', 'sad'],
+                 ['ヒナ', 'その賞状、次の日にはもう、どこにもなかった', 'sad'],
+                 ['ヒナ', '……その夜、お姉ちゃんが部屋に来て、新しい色鉛筆をくれたの', 'sad']]);
+      await overlayWait(`<img class="cg" src="img/sakura.webp" alt="夜、部屋の扉を開けた姉が、リボンのかかった色鉛筆の箱を差し出して微笑んでいる">
+        <p>『ヒナの色、私は好きだよ』</p>`, '', ['続ける']);
+      closeOverlay();
+      await say([
+                 ['ヒナ', '……いらないって言って、扉閉めた', 'down'],
+                 ['ヒナ', 'だってずるいじゃん。金賞とった人に『好きだよ』って言われたって、なぐさめにしか聞こえない', 'angry'],
+                 ['ヒナ', 'お姉ちゃんの色鉛筆で描いたら、どうせまた『サクラのおかげ』って言われるんだよ', 'angry'],
+                 'ヒナの声がとがる。けれど、すぐにしぼんでいった。',
+                 ['ヒナ', '……次の朝、その箱、私の机の上に置いてあったの。手紙もなにもなしで', 'down'],
+                 ['ヒナ', '一本も使ってない。リボンもほどいてない。……でも、捨てられないの', 'grief'],
+                 ['ヒナ', 'お姉ちゃんのこと、嫌いになれたら楽なのに。……なれないから、苦しい', 'grief'],
+                 'ヒナは、袖の中で指先を握りしめた。',
+                 ['ヒナ', 'お母さんに『よくできたね』って言われたこと、一回もない。……お姉ちゃんには、毎日言ってるのに', 'sad']]);
+      await line(['ヒナ', '……だから私は、"失敗作"なんだって', 'sad'], false);
+      a = await choose(['お姉さんと比べる必要なんてないよ', '……そう言われてきたこと、ずっとひとりで抱えてたんだね', 'じゃあ今年の県展で金賞とって、見返してやろうよ']);
+      if (a === 0) { await say([['ヒナ', 'わかってる。……わかってるよ、そんなの', 'angry'], ['ヒナ', 'わかってても、比べられるの。私が比べなくたって、お母さんが比べるの', 'angry'], 'ヒナの声が震えた。', ['ヒナ', '……わかってるなら楽になれるって、思ってるんでしょ', 'sad'], 'ヒナは膝を抱えて、顔を伏せた。', '正しい言葉ほど、今のヒナには痛いのかもしれない。']); return closeHeart(); }
+      if (a === 2) return doom([['ヒナ', '……また、それ', 'surprise'], ['ヒナ', 'お姉ちゃんも、先生も、みんなそう。『次はもっと頑張れば』『結果で見返せば』って', 'sad'], 'ヒナは、袖の中で指先を握りしめた。そのまま、ゆっくりうつむいていく。', ['ヒナ', '……結局、みんな同じなんだ', 'shadow'], ['ヒナ', '結果を出さないと、私はいちゃいけないんだ', 'despair']]);
+      await say([['ヒナ', '……うん', 'sad'], ['ヒナ', '何を描いても、先にお母さんの声が聞こえるの。『またそんなもの』って', 'sad']]);
+
+      // 3段目
+      await say(['ヒナは左の袖口を、ぎゅっと握った。']);
+      if (R.seen.has('drawer')) {
+        await line(['ヒナ', '……引き出しも、見たんでしょ', 'down']);
+      } else {
+        await say(['「画材棚の、いちばん上の引き出し。……中に何があるか、知ってる」']);
+        await line(['ヒナ', '……っ。鍵、かけてたのに', 'surprise']);
+      }
+      // 何があったのかを察せるよう、1往復だけ確かめる（具体的には言わせない）
+      await say(['「……あの絆創膏、ぜんぶ使ったの？」',
+                 ['ヒナ', '……うん。転んだとか、そういうのじゃないけど', 'wrist']]);
+      if (P.shelf.hina) {
+        // わすれもの（顔のないスケッチブック）を知っている周回：顔の話へ自然につなぐ
+        await say(['ヒナは長袖の上から、左の手首をそっと押さえた。',
+                   ['ヒナ', '……こんなことする自分の顔なんて、見たくない。鏡も、ずっと見てない', 'wrist']]);
+        await line('……あのスケッチブックの、何度も消された真っ白な顔が、頭に浮かんだ。', false);
+      } else {
+        await line('ヒナは長袖の上から、左の手首をそっと押さえた。', false);
+      }
+      const opts = ['もう二度としないって、約束して', '痛かったね'];
+      if (P.shelf.hina) opts.push('……だから、自画像の顔だけ描けなかったんだね');
+      a = await choose(opts);
+      if (a === 0) return doom([['ヒナ', '……やめたら', 'wrist'],
+                                ['ヒナ', '苦しくなったとき、どうすればいいの。……ほかのやり方なんて、知らないのに', 'sad'],
+                                'ヒナは答えを待たずに、うつむいた。',
+                                ['ヒナ', '……それに、約束守れなかったら？', 'shadow'],
+                                ['ヒナ', 'また、失敗作だね', 'despair']]);
+      if (a === 1) {
+        await say([['ヒナ', '……うん', 'wrist'],
+                   'ヒナは手首から手を離して、胸のあたりをぎゅっと押さえた。',
+                   ['ヒナ', '……痛くしてるあいだだけは、息ができるの', 'chest'],
+                   ['ヒナ', 'でも、痛いのが引いたら、また胸がつぶれそうになる。夜になると、息の仕方もわかんなくなる', 'chestCry'],
+                   'ヒナの声が、涙でかすれた。',
+                   ['ヒナ', '……それでも、何もしないで、苦しいのに押しつぶされるよりはましだから', 'chestCry'],
+                   ['ヒナ', 'それにね、わかんないの。自分がどんな顔してるのか。鏡、見られなくて', 'grief'], 'ヒナは膝に顔をうずめた。',
+                   '（何か、あと一つ足りない気がする。この子が、誰にも見せていない何かが）']);
+        return closeHeart();
+      }
+      await say([['ヒナ', '……なんで', 'surprise'], ['ヒナ', 'なんで知ってるの。あのスケッチブック、誰にも見せてないのに', 'surprise'],
+                 '答えられなかった。ただ、あの真っ白な顔を覚えていた。',
+                 '「……ヒナの顔は、ヒナが描いていいんだよ。上手じゃなくても」',
+                 ['ヒナ', '……簡単に言わないでよ', 'angry'],
+                 ['ヒナ', '……何回も、描こうとしたよ', 'angry'],
+                 'ヒナの声が、だんだん大きくなる。',
+                 ['ヒナ', '鉛筆を持つとね、頭の中でお母さんの声がするの。『またそんなもの』『サクラなら』って。止めようとしても、止まらない', 'angry'],
+                 ['ヒナ', '手が震えて、線がぐちゃぐちゃになって。そのたびに消して、消して……紙が破れるまで消して', 'angryCry'],
+                 ['ヒナ', '何を描いても、どうせまた"失敗作"なんだって。……自分でそう思っちゃうの。それが、いちばん悔しい', 'angryCry'],
+                 'ヒナは、袖で乱暴に目元をぬぐった。',
+                 'ヒナは、スケッチブックの入った鞄を、胸にぎゅっと抱えた。',
+                 ['ヒナ', '……それに、自分の顔なんて。見たら、きっと嫌いになる', 'down'],
+                 '「嫌いになっても、いいと思う。……それでも、今のヒナの顔を、ヒナ自身に見てあげてほしい」',
+                 'ヒナは、長いあいだ黙っていた。窓の外の夕焼けを見て、それから、自分の手を見た。',
+                 'ヒナの目から、ぽろりと涙がこぼれた。',
+                 ['ヒナ', '……描いても、いいのかな', 'grief'],
+                 ['ヒナ', 'お母さんが、嫌な顔しても', 'grief'],
+                 ['ヒナ', '褒められたいからじゃなくて。……私が、描きたいから', 'grief'],
+                 '「いいよ。空も、ヒナの顔も。……見たいな、ヒナが描いたの」',
+                 'ヒナは袖で目元をこすって、それから、少しだけ笑った。']);
+      R.st = 'unraveled'; render();
+      await say(['……いつもならチャイムが鳴る17:00を、時計の針が、静かに越えていった。', ['ヒナ', 'ねえ。青い絵の具、持ってない？', 'smile']]);
+      if (R.items.has('blue')) return hinaPaint();
+      await say(['（流しに、青い絵の具があったはずだ）']);
+    },
+  };
+  async function hinaPaint() {
+    R.items.delete('blue'); render();
+    await say(['青い絵の具を渡すと、ヒナは新しい画用紙をイーゼルに立てかけた。', '筆が走る。迷いのない線だった。']);
+    const p = overlayWait(`<p class="eyebrow">ヒナの絵</p><h2>もう一度、空を</h2>${paintingSVG('blue')}
+      <p>灰色だった空に、青が広がっていく。</p>`, '', ['続ける']);
+    setTimeout(() => { const g = $('#greyLayer'); if (g) g.classList.add('off'); }, 400);
+    await p; closeOverlay();
+    await say([['ヒナ', '……空って、こんな色だったっけ', 'smile'],
+               'ヒナは筆を置くと、鞄からスケッチブックを取り出した。',
+               ['ヒナ', '……ねえ。そこで、見てて', 'smile'],
+               '最後のページを開く。何度も消されて、白く毛羽立った顔の部分。',
+               '鉛筆の先が、ためらうように紙に触れて、離れて、もう一度触れた。',
+               '……一本、線が引かれた。']);
+    await overlayWait(`<p class="eyebrow">ヒナの自画像</p><h2>顔を、描いた</h2>${SKETCH_FACE}
+      <p>震えた線で描かれた、泣きそうで、少しだけ笑っている顔。</p>`, '', ['続ける']);
+    closeOverlay();
+    await say([['ヒナ', '……へたくそ', 'smile'],
+               ['ヒナ', 'でも、これが今の私の顔なんだと思う。……もっと、ちゃんと描けるようになりたいな', 'smile'],
+               '美術室の扉の向こうで、カチリと鍵の外れる音がした。']);
+    await line('校門の鍵が、開いた。', false);
+    await choose(['校門へ行く']);
+    ending(['門の向こうで、ヒナが振り返って手を振った。青い絵の具のついたスケッチブックを、胸に抱えて。'],
+           'gate', '朝の校門の向こうで、ヒナが振り返って手を振っている');
+  }
+
+  /* ================================================================
+     第二章　音楽室（ソウタ）
+     ================================================================ */
+  // 切れ端を破れ目の形で並べる（番号はない）。置いた順に左からつながり、隣どうしは破れ目の幅だけ重なる
+  function arrangeFrags() {
+    const r = replayed(); if (r) return Promise.resolve(r.v);
+    return new Promise(res0 => {
+      const res = v => res0(rec(v));
+      const order = [3, 1, 4, 2], tilt = { 1: -3, 2: 2.5, 3: -1.5, 4: 3.5 };
+      const placed = [];
+      const pct = v => `${(v / SCORE.w * 100).toFixed(3)}%`;
+      const draw = () => {
+        let x = 0;
+        const onBoard = placed.map(n => {
+          const w = SCORE.pieces[n - 1].w, h = `<img src="img/m_frag${n}.webp" alt="五線譜の切れ端" style="left:${pct(x)};width:${pct(w)}">`;
+          x += w - SCORE.overlap; return h;
+        }).join('');
+        openOverlay(`<p class="eyebrow">4枚の切れ端</p><h2>つなぎ合わせる</h2>
+          <p class="note">【操作】切れ端を押すと、左から順につながります。</p>
+          <div class="fboard">${onBoard}</div>
+          <div class="frags">${order.filter(n => !placed.includes(n)).map(n => `<button type="button" class="frag" data-n="${n}" style="transform:rotate(${tilt[n]}deg)"><img src="img/m_frag${n}.webp" alt="五線譜の切れ端"></button>`).join('')}</div>
+          <p class="note" id="fragMsg"></p>
+          <div class="row"><button type="button" class="btn" id="fReset">並べ直す</button><button type="button" class="btn" id="fCancel">やめる</button></div>`);
+        card.querySelectorAll('.frag').forEach(b => b.onclick = () => {
+          placed.push(+b.dataset.n);
+          if (placed.length < 4) return draw();
+          if (placed.join('') === '1234') { draw(); $('#fragMsg').textContent = '……破れ目が、ぴたりと重なった。'; setTimeout(() => { closeOverlay(); res(true); }, 1100); return; }
+          draw(); $('#fragMsg').textContent = '……破れ目が、かみ合わない。';
+        });
+        $('#fReset').onclick = () => { placed.length = 0; draw(); };
+        $('#fCancel').onclick = () => { closeOverlay(); res(false); };
+      };
+      draw();
+    });
+  }
+  async function combineScore() {
+    const ok = await arrangeFrags();
+    if (!ok) return;
+    ['frag1', 'frag2', 'frag3', 'frag4'].forEach(p => R.items.delete(p));
+    R.items.add('secondo'); R.know.add('melody'); render();
+    await overlayWait(`<p class="eyebrow">4枚の切れ端</p><h2>ハルのパート</h2>${fullScoreSVG()}
+      <p>${R.know.has('doremi') ? '音符の下には、あのとき浮かび上がったハルの字が残っている。ド、レ、ミ。' : '鉛筆の書き込みは、最初の小節の小さな「mp」と、上の余白の「夕焼けの帰り道みたいに、足どり軽く」だけ。紙の端は擦り切れて、何年も弾き込んだ楽譜だとわかる。'}</p>`, '', ['閉じる']);
+    closeOverlay();
+  }
+  async function viewScore() {
+    await overlayWait(`<p class="eyebrow">持ち物</p><h2>ハルのパート</h2>${fullScoreSVG()}`, '', ['閉じる']);
+    closeOverlay();
+  }
+  async function viewPhoto() {
+    await overlayWait(`<p class="eyebrow">持ち物</p><h2>発表会の写真</h2><img class="cg" src="img/m_photo.webp" alt="「ひまわりピアノ教室 発表会」の看板の前で、幼い男の子が二人並んでいる">
+      <p>幼稚園くらいの男の子が二人。照れてうつむいている子は、ソウタに似ている。</p>`, '', ['閉じる']);
+    closeOverlay();
+  }
+  // ソウタのパート（Primo）。10年以上弾いてきた子のパートなので、16分音符の分散和音と左手のベースで動く。
+  // ハルの音を1つ弾くたびに、その拍（16分音符4つ＋左手8分音符2つ）が重なる
+  const noteF = n => { const m = /^([A-G])([#b]?)(\d)$/.exec(n); if (!m) return 0;
+    const k = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+    return 440 * Math.pow(2, (k + (+m[3] + 1) * 12 - 69) / 12); };
+  const PRIMO = [  // [右手16分×4, 左手8分×2]
+    [['C5', 'E5', 'G5', 'C6'], ['C3', 'G3']], [['B5', 'G5', 'E5', 'G5'], ['E3', 'G3']],
+    [['A5', 'F5', 'C6', 'A5'], ['F2', 'C3']], [['G5', 'E5', 'C5', 'E5'], ['C3', 'G3']],
+    [['F5', 'D5', 'A5', 'F5'], ['D3', 'A3']], [['E5', 'C5', 'A4', 'C5'], ['A2', 'E3']],
+    [['D5', 'F5', 'B5', 'D6'], ['G2', 'F3']], [['C6', 'G5', 'E5', 'C5'], ['C3', 'G2']]];
+  const S16 = 0.14;
+  function sotaBeat(i) {
+    const [rh, lh] = PRIMO[i];
+    rh.forEach((n, k) => pianoNote(noteF(n), k ? 0.07 : 0.09, 0.02 + k * S16));
+    lh.forEach((n, k) => pianoNote(noteF(n), 0.08, 0.02 + k * S16 * 2));
+  }
+  // フレーズのあと、ソウタがひとりで弾く続き（2/4拍子で4小節＋終止）。2オクターブにわたる分散和音と駆け下りるパッセージ
+  const SOLO_RH = ['E5', 'G5', 'C6', 'E6', 'D6', 'C6', 'B5', 'A5',
+                   'G5', 'B5', 'D6', 'G6', 'F6', 'D6', 'B5', 'G5',
+                   'A5', 'C6', 'E6', 'A6', 'G6', 'F6', 'E6', 'D6',
+                   'C6', 'B5', 'A5', 'G5', 'F5', 'E5', 'D5', 'B4'];
+  const SOLO_LH = [['C3', 'G3'], ['C3', 'G3'], ['G2', 'D3'], ['G2', 'D3'], ['A2', 'E3'], ['F2', 'C3'], ['D3', 'A3'], ['G2', 'F3']];
+  function sotaSolo() {
+    const t0 = 0.3;
+    SOLO_RH.forEach((n, k) => pianoNote(noteF(n), 0.075, t0 + k * S16));
+    SOLO_LH.forEach((pair, beat) => pair.forEach((n, k) => pianoNote(noteF(n), 0.07, t0 + beat * S16 * 4 + k * S16 * 2)));
+    const end = t0 + SOLO_RH.length * S16;
+    ['C2', 'C3', 'G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'].forEach((n, k) => pianoNote(noteF(n), k < 2 ? 0.1 : 0.07, end + k * 0.045));
+    return (end + 2.2) * 1000;
+  }
+  // 鍵盤：ハルのパートを弾く。duet のときはソウタのパートも重ねて鳴らす
+  function keyboard(duet) {
+    const r = replayed();
+    if (r) {
+      const o = r.v || {};
+      R.pianoMiss = o.miss || 0;
+      if (o.dm && !R.know.has('doremi')) { R.know.add('doremi'); addLog({ who: '', t: '……音符の下に、鉛筆の字がにじむように浮かび上がってきた。ド、レ、ミ。読めるか怪しいくらいの、ハルの字だ。' }); }
+      return Promise.resolve(!!o.v);
+    }
+    return new Promise(res0 => {
+      const res = v => { rec({ v, miss: R.pianoMiss, dm: R.know.has('doremi') }); res0(v); };
+      const whites = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
+      const blacks = [['C#4', 1], ['D#4', 2], ['F#4', 4], ['G#4', 5], ['A#4', 6]];
+      let pos = 0, done = false;
+      if (R.pianoMiss === undefined) R.pianoMiss = 0;
+      openOverlay(`<p class="eyebrow">${duet ? '連弾' : 'ピアノ'}</p><h2>${duet ? 'ソウタと、はじめのフレーズを' : 'ハルのパートを弾く'}</h2>
+        <div id="kbScore">${fullScoreSVG()}</div>
+        <div class="progress" id="kbProg">${MELODY.map(() => '<i></i>').join('')}</div>
+        <div class="kb">
+          ${whites.map(n => `<button type="button" class="wk" data-n="${n}"><span>${KANA[n]}</span></button>`).join('')}
+          ${blacks.map(([n, i]) => `<button type="button" class="bk" data-n="${n}" style="left:calc(${i} * 12.5% - 3.6%)" aria-label="黒鍵"></button>`).join('')}
+        </div>
+        <p class="note" id="kbMsg">${duet ? 'ソウタが自分のパートを弾き始めた。ハルのパートを重ねよう。' : '楽譜のとおりに、左から順に弾いてみよう。'}</p>
+        <div class="row"><button type="button" class="btn" id="kbCancel">やめる</button></div>`);
+      const prog = () => card.querySelectorAll('#kbProg i').forEach((el, i) => el.classList.toggle('on', i < pos));
+      if (P.sound) { try { audio(); } catch (e) {} }
+      const press = b => {
+        const n = b.dataset.n;
+        if (done) return;
+        pianoNote(FREQ[n], 0.22);
+        b.classList.add('down'); setTimeout(() => b.classList.remove('down'), 160);
+        if (n === MELODY[pos]) {
+          if (duet) sotaBeat(pos);
+          pos++; prog();
+          if (pos === MELODY.length) {
+            done = true;
+            if (duet) {
+              $('#kbMsg').textContent = 'ソウタの音だけが、そのまま続いていく。';
+              $('#kbCancel').disabled = true;
+              const wait = P.sound ? sotaSolo() + 600 : 1600;
+              setTimeout(() => { closeOverlay(); res(true); }, wait);
+            } else setTimeout(() => { closeOverlay(); res(true); }, 700);
+          }
+        } else {
+          pos = 0; prog();
+          $('#kbMsg').textContent = '……音が違う。最初から。';
+          if (!R.know.has('doremi') && ++R.pianoMiss >= 3) {
+            R.know.add('doremi'); saveRun();
+            $('#kbScore').innerHTML = fullScoreSVG(true);
+            $('#kbMsg').textContent = '……音符の下に、鉛筆の字がにじむように浮かび上がってきた。ド、レ、ミ。読めるか怪しいくらいの、ハルの字だ。';
+            addLog({ who: '', t: '……音符の下に、鉛筆の字がにじむように浮かび上がってきた。ド、レ、ミ。読めるか怪しいくらいの、ハルの字だ。' });
+          }
+        }
+      };
+      card.querySelectorAll('.wk, .bk').forEach(b => {
+        b.addEventListener('pointerdown', e => { if (e.button > 0) return; e.preventDefault(); press(b); });
+        b.addEventListener('click', e => { if (e.detail === 0) press(b); });  // キーボード操作（Enter/Space）
+      });
+      $('#kbCancel').onclick = () => { closeOverlay(); res(false); };
+    });
+  }
+  function phoneView() {
+    const msgs = [
+      ['ハル', '明日のリハ テンポもうちょい上げよ！', '7/8 18:40', true],
+      ['ハル', 'そのほうが絶対かっこいい', '7/8 18:40', true],
+      ['me', 'は？ 今さら？', '18:41', true],
+      ['ハル', 'いけるって', '18:41', true],
+      ['ハル', 'ソウタならすぐ合わせられるし', '18:41', true],
+      ['me', '無理', '18:42', true],
+      ['me', 'こっちは数学の補習で放課後ほとんど練習できてないんだって', '18:42', true],
+      ['ハル', 'あー赤点の補習か', '18:43', true],
+      ['ハル', 'じゃあ予備校終わったら電話で合わせよ', '18:43', true],
+      ['ハル', '楽譜にテンポも書いとくから', '18:43', true],
+      ['me', '変なことすんな', '18:44', true],
+      ['me', '本番前に変えて崩れたらどうすんだよ', '18:44', true],
+      ['ハル', 'ソウタいつも慎重すぎなんだって', '18:45', true],
+      ['ハル', '攻めたほうが楽しいじゃん', '18:45', true],
+      ['me', '楽しいとかじゃねえんだよ', '18:46', true],
+      ['me', 'こっちは最後なんだよ', '18:46', true],
+      ['me', 'お前はいいよな', '18:46', true],
+      ['me', '勉強もピアノも楽しててもできるんだから', '18:46', true],
+      ['ハル', '……楽してるように見えてたんだ', '18:48', true],
+      ['ハル', '俺 毎晩予備校のあとに練習してたよ', '18:48', true],
+      ['ハル', 'ソウタと弾くの楽しみにしてたから', '18:48', true],
+      ['ハル', 'てか最後ってなに？', '18:49', true],
+      ['me', 'もういい', '18:50', true],
+      ['me', 'お前とはやらない', '18:50', true],
+      ['ハル', 'は？ 本番あさってだぞ', '18:51', true],
+      ['ハル', 'ごめん 授業はじまる', '18:59', true],
+      ['ハル', 'あとでちゃんと話そ', '18:59', true],
+      ['me', '話すことなんかない', '19:00', true],
+      ['me', 'ピアノもお前も もうどうでもいい', '19:00', true],
+      ['me', 'ごめん', '22:41', false],
+      ['me', '言い過ぎた', '23:10', false],
+      ['me', '起きてる？', '7/9 0:52', false],
+      ['me', 'なあ', '3:18', false],
+      ['me', '返事しろよ', '3:18', false],
+    ];
+    return `<div class="phone"><div class="phone-head">ハル</div>
+      ${msgs.map(([w, t, time, read], i) => {
+        // 同じ人が同じ時刻に続けて送ったときは、最後の1通にだけ時刻を出す
+        const nx = msgs[i + 1], last = !(nx && nx[0] === w && nx[2] === time && nx[3] === read);
+        return `<div class="bub ${w === 'me' ? 'me' : 'them'}"><p>${t}</p>${last ? `<span>${w === 'me' && read ? '既読 ' : ''}${time}</span>` : ''}</div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  const MUSIC = {
+    id: 'music', key: 'sota', name: 'ソウタ', room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room',
+    sit: { src: 'sota_sit', style: 'left:54.3%;top:46.5%;height:29.5%' },
+    leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
+    faces: { normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame' },
+    lost: 'ソウタのパートだけの楽譜',
+    idleFree: '（時計の針が17:00を越えた。ソウタが待っている）',
+    samePose: 'ピアノの前には、さっきとまったく同じ姿勢で、ソウタが座っていた。',
+    loopReply: [['ソウタ', '……チャイム？ 鳴ってないだろ', 'angry'], ['ソウタ', 'ていうか、誰', 'angry']],
+    windowLine: '美術室からも、図書室からも、体育館からも、物音ひとつしない。',
+    closeLines: ['ソウタは閉じた鍵盤の蓋に額をつけたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。'],
+    hotspots: [
+      ['window', '窓', 'left:0;top:0;width:18%;height:52%'],
+      ['board', '黒板', 'left:32.8%;top:28.7%;width:33.9%;height:19%'],
+      ['clock', '時計', 'left:46.7%;top:20%;width:5%;height:7.5%'],
+      ['stand', '譜面台', 'left:38.3%;top:49%;width:8.3%;height:28.5%'],
+      ['phone', 'ピアノの上', 'left:66.8%;top:46.7%;width:10%;height:6.3%'],
+      ['piano', 'ピアノ', 'left:66.7%;top:53%;width:15%;height:23.7%'],
+      ['char', 'ソウタ', 'left:53.8%;top:47%;width:12.8%;height:30%'],
+      ['timpani', 'ティンパニ', 'left:77.2%;top:45%;width:12%;height:17.5%'],
+      ['shelf', '楽譜棚', 'left:90.6%;top:23.3%;width:9.4%;height:38.3%'],
+      ['trash', 'ゴミ箱', 'left:92.8%;top:62.5%;width:7.2%;height:14.2%'],
+    ],
+    async intro(rem) {
+      if (!rem) {
+        await say(['……目を覚ますと、音楽室にいた。', '窓の外は夕焼け。時計は16:00を指している。', ...locked('音楽室'), 'グランドピアノの前に、男子生徒がひとり座っていた。',
+                   '鍵盤の蓋は閉じたまま。両手を膝に置いて、じっとうつむいている。……声をかけてみる。',
+                   '「……ピアノ、弾くの？」',
+                   '彼が、少しだけ顔を上げた。胸の名札には「2年 井上ソウタ」とある。',
+                   ['ソウタ', '……弾かない', 'down'],
+                   ['ソウタ', '一人じゃ、弾けない曲だから', 'down'],
+                   '「一人じゃ？」',
+                   ['ソウタ', '……関係ないだろ', 'angry'],
+                   'それきり、ソウタは閉じた蓋をじっと見下ろした。膝の上で、両手を固く握りしめている。',
+                   '【操作】気になる場所をタップすると調べられます。調べるたびに時計が6分進み、17:00になるとチャイムが鳴ります。話しかけても時間は進みません。']);
+      } else {
+        await say(['……また、この音楽室だ。', '扉は、今度も開かない。', '16:00。ピアノの前には、ソウタがいる。',
+                   '「……ピアノ、弾くの？」',
+                   ['ソウタ', '……弾かない。一人じゃ、弾けない曲だから', 'down'],
+                   '（あの楽譜の裏の、乱暴な字を覚えている）']);
+      }
+    },
+    inv(add) {
+      const frags = ['frag1', 'frag2', 'frag3', 'frag4'].filter(p => R.items.has(p));
+      if (frags.length === 4) add('五線譜の切れ端（4枚）', '', combineScore, itemSrc(ITEM_INFO.frag1));
+      else frags.forEach(p => add(ITEM_INFO[p].name, '', () => say([`破られた五線譜の切れ端。持っているのは${frags.length}枚。まだ、どこかに残りがありそうだ。`]), itemSrc(ITEM_INFO[p])));
+      if (R.items.has('secondo')) add('ハルのパート', '', viewScore, 'img/m_score_full.webp');
+      if (R.items.has('photo')) add('発表会の写真', '', viewPhoto, 'img/m_photo.webp');
+    },
+    H: {
+      async board() {
+        showCut('mci_board');
+        if (!R.know.has('board')) {
+          await say(['黒板に、チョークの字。「文化祭 リハーサル」', 'その下に「ピアノ連弾『放課後』 ソウタ・ハル」。', '……「ハル」の名前にだけ、二本線が引かれている。']);
+          R.know.add('board'); await tick();
+        } else await say(['「ソウタ・ハル」。二本線の下で、ハルの名前はまだ読める。']);
+      },
+      async phone() {
+        showCut('mci_piano');
+        if (!R.know.has('phone')) {
+          await say(['閉じたピアノの上に、白い菊が生けてある。', 'その横に、画面の割れたスマホが伏せて置いてあった。', '画面に触れると、メッセージの画面が開いたままだった。']);
+          await overlayWait(`<p class="eyebrow">スマホ</p><h2>「ハル」とのメッセージ</h2>${phoneView()}
+            <p>「ピアノもお前も もうどうでもいい」には、既読がついている。返事はない。その夜の「ごめん」から先には、既読がついていない。</p>`, '', ['閉じる']);
+          closeOverlay();
+          await say(['……白い菊は、お供えの花だ。']);
+          R.know.add('phone'); R.seen.add('phone'); await tick();
+        } else {
+          R.seen.add('phone');
+          await say(['白い菊と、伏せたスマホ。', '画面に触れると、あのメッセージがまた開いた。']);
+          await overlayWait(`<p class="eyebrow">スマホ</p><h2>「ハル」とのメッセージ</h2>${phoneView()}
+            <p>「ピアノもお前も もうどうでもいい」には、既読がついている。返事はない。その夜の「ごめん」から先には、既読がついていない。</p>`, '', ['閉じる']);
+          closeOverlay();
+        }
+      },
+      async piano() {
+        if (R.st === 'unraveled') return sotaDuet();
+        if (!R.items.has('secondo') && !R.know.has('melody')) {
+          await say(['グランドピアノ。鍵盤の蓋は閉じている。', ...(comboBlock('secondo') ? [] : ['……弾ける曲を、何も知らない。'])]);
+          return;
+        }
+        await say([R.items.has('secondo') ? 'ソウタの隣から、そっと鍵盤の蓋を開けた。' : '旋律は覚えている。ソウタの隣から、そっと鍵盤の蓋を開けた。']);
+        const ok = await keyboard(false);
+        if (!ok) { await say(['……蓋を、そっと閉じた。']); return; }
+        R.know.add('played'); R.seen.add('played');
+        if (R.know.has('doremi') && !R.seen.has('doremiThanks')) {
+          R.seen.add('doremiThanks');
+          await say(['音符の下の乱暴な字を、指でなぞった。', '（……ハルが、教えてくれたんだ。ソウタに、この曲を聞かせるために）']);
+        }
+        await say(['ミ、ソ、ラ、ソ、ファ、ミ、レ、ド。', 'ソウタの肩が、びくっと震えた。',
+                   ['ソウタ', '……今の', 'surprise'], ['ソウタ', 'ハルのパートだ', 'surprise']]);
+        // 演奏に成功したら、そのままソウタとの対話へ進む（黒板とスマホの手がかりがまだなら、ここで止める）
+        if (remembered('sota') || (R.know.has('board') && R.know.has('phone'))) return C.talk();
+        await say(['ソウタは何か言いかけて、そのまま口を閉ざした。', '（ソウタについて、まだ知らないことがある気がする）']);
+        await tick();
+      },
+      async stand() {
+        if (!R.taken.stand) {
+          showCut('mci_stand');
+          await say(['譜面台の板のすき間に、破れた五線譜が挟まっている。']);
+          R.taken.stand = true; await gotItem('frag2'); await tick();
+        } else await say(['何も載っていない譜面台。']);
+      },
+      async shelf() {
+        if (!R.taken.shelf) {
+          showCut('mci_shelf');
+          await say(['楽譜棚から、古い楽譜ファイルが一冊だけはみ出している。', '間から、写真と、破れた五線譜の切れ端がのぞいていた。']);
+          R.taken.shelf = true; await gotItem('frag1');
+          await overlayWait(`<p class="eyebrow">楽譜ファイルの写真</p><h2>ひまわりピアノ教室 発表会</h2><img class="cg" src="img/m_photo.webp" alt="「ひまわりピアノ教室 発表会」の看板の前で、幼い男の子が二人並んでいる">
+            <p>幼稚園くらいの男の子が二人、手をつないで並んでいる。照れてうつむいている子は、ソウタに似ている。</p>`, '', ['持っていく']);
+          closeOverlay();
+          R.items.add('photo'); R.know.add('photo'); render();
+          await tick();
+        } else await say(['色とりどりの楽譜ファイルが並んでいる。']);
+      },
+      async timpani() {
+        if (!R.taken.timpani) {
+          showCut('mci_timpani');
+          await say(['ティンパニの脚と壁のあいだに、ほこりをかぶった紙切れが落ちていた。', '拾い上げると、五線譜の切れ端だった。']);
+          R.taken.timpani = true; await gotItem('frag3'); await tick();
+        } else await say(['銅の胴に、夕日が映っている。']);
+      },
+      async trash() {
+        if (!R.taken.trash) {
+          showCut('mci_trash');
+          await say(['丸めたプリントのあいだに、小さく折りたたまれた五線譜がまじっていた。']);
+          R.taken.trash = true; await gotItem('frag4'); await tick();
+        } else await say(['丸めたプリントと、空のペットボトル。']);
+      },
+    },
+    hint() {
+      const n = partsHeld('secondo');
+      const ready = R.items.has('secondo') || R.know.has('melody');
+      if (R.st === 'unraveled') return ready ? 'ピアノで、ハルのパートを弾きましょう。' : 'ソウタが破いてしまったハルのパートを、部屋の中から集め直しましょう。';
+      if (!ready) {
+        if (n === 4) return '五線譜の切れ端が4枚そろいました。持ち物の「五線譜の切れ端」を押して並べましょう。切れ端に番号はありません。破れ目の形がぴったり合うものどうしを隣に置きます。まっすぐな紙の端が、楽譜の左端と右端です。';
+        if (n > 0) return '五線譜の切れ端は、まだ部屋のどこかに残っていそうです。譜面台や楽器の陰、捨てられた物も調べてみましょう。';
+        return '部屋の中で、気になる場所を調べてみましょう。';
+      }
+      if (!R.know.has('played')) return '並べた旋律を、ピアノで弾いてみましょう。五線のいちばん下の線にある音がミ。線と間をひとつ上がるごとにファ、ソ、ラ。下の線のすぐ下がレ、短い線を足した音がドです。';
+      if (!R.know.has('board')) return '黒板も調べてみましょう。';
+      if (!R.know.has('phone')) return 'ピアノの上も調べてみましょう。';
+      return 'ソウタに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
+    },
+    async vanishScene() {
+      await say(['ピアノの前に、ソウタの姿はなかった。', '椅子の上に、楽譜が一冊だけ残っている。']);
+      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>ソウタのパートだけの楽譜</h2><img class="cg" src="img/m_score.webp" alt="「放課後 連弾 Primo」と書かれた、使い込まれた楽譜">
+        <p>「放課後　連弾 Primo」。ソウタのパートだけの楽譜だ。指番号の書き込みで、余白が埋まっている。</p>`, '', ['最後のページをめくる']);
+      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>最後のページの裏</h2><img class="cg" src="img/m_score_back.webp" alt="楽譜の裏に、鉛筆で「仲直りしたら、続き弾こう。ハル」と書かれている">
+        <p>ほとんど白紙の裏に、鉛筆の殴り書き。字が暴れていて、何度も目で追って、やっと読めた。「仲直りしたら、続き弾こう。」……その下に、「ハル」。</p>
+        <p class="note">ソウタは、この裏を一度も見なかったのかもしれない。</p>`, '', ['閉じる']);
+    },
+    shelfItem(saved) {
+      return saved
+        ? { title: '最後まで弾いた楽譜', body: `<img class="cg" src="img/m_duet.webp" alt="夕日の音楽室で、ソウタと並んで連弾している"><p>はじめのフレーズだけ、二人で。続きは、ソウタがひとりで最後まで弾いた。</p>` }
+        : { title: 'ソウタのパートだけの楽譜', body: `<img class="cg" src="img/m_score_back.webp" alt="楽譜の裏の書き込み"><p>最後のページの裏に、ハルの字で「仲直りしたら、続き弾こう。」</p>` };
+    },
+    async talk() {
+      if (R.st === 'vanished') return say(['ピアノの椅子の上には、楽譜だけが残っている。']);
+      if (R.st === 'unraveled') {
+        if (R.items.has('secondo') || R.know.has('melody')) return sotaDuet();
+        return say([['ソウタ', '……ハルのパート、破いちゃったんだ。ケンカした日に', 'sad'], '（部屋のどこかに、ハルのパートの切れ端が残っているはずだ）']);
+      }
+      if (!remembered('sota')) {
+        const block = (R.know.has('melody')) ? null : comboBlock('secondo');
+        if (block) return say([['ソウタ', '……さっきから、何', 'angry'], ...block]);
+        const n = [R.know.has('board'), R.know.has('phone'), R.know.has('played')].filter(Boolean).length;
+        if (n === 0) return say([['ソウタ', '……なに', 'angry'], '（この人のことを、まだ何も知らない。部屋を調べてみよう）']);
+        if (n < 3) return say([['ソウタ', '……さっきから、何', 'angry'], '（ソウタについて、まだ知らないことがある気がする）']);
+      } else {
+        await say(['（ハルのパートの旋律も、返事のこないメッセージも、もう知っている）']);
+      }
+
+      // 1段目
+      if (R.seen.has('played')) {
+        await say([['ソウタ', '……なんで、ハルのパート弾けんの', 'surprise']]);
+      } else {
+        await say(['「……『放課後』。ハルくんと二人で、弾くはずだった曲だよね」', 'ソウタが、はっと顔を上げた。', ['ソウタ', '……なんで知ってんの', 'surprise']]);
+      }
+      await say(['答えられなかった。ソウタは、閉じた蓋に目を落とした。',
+                 ['ソウタ', '……ハルとは、幼稚園のときから同じピアノ教室だった', 'down'],
+                 ['ソウタ', '発表会は、いつも二人で連弾。先生が、息がぴったりだって', 'down'],
+                 ['ソウタ', '文化祭でも、弾くはずだった', 'sad'],
+                 'ソウタは、長いピアノ椅子の右端に座っている。左半分だけが、ぽっかり空いていた。']);
+      await line(['ソウタ', '……もう弾けない。ハルがいないから', 'sad'], false);
+      let a = await choose(['……ハルくんって、どんなふうに弾く人だったの？', '一人でも弾けるように練習すればいいよ', 'もう忘れたほうが、楽になるよ']);
+      if (a === 1) { await say([['ソウタ', '……連弾だよ。一人で弾いたら、意味ないんだ', 'angry'], 'ソウタはそれきり、口を閉ざした。']); return closeHeart(); }
+      if (a === 2) return shutOut([['ソウタ', '……忘れる？', 'surprise'],
+                                   'ソウタの顔から、すっと表情が消えた。',
+                                   ['ソウタ', '……お前に、何がわかるんだよ', 'angry'],
+                                   'ソウタが立ち上がった。ピアノの椅子が倒れて、乾いた音が響く。',
+                                   ['ソウタ', '今日会ったばっかりのやつが、わかったみたいなこと言うなよ', 'angry'],
+                                   ['ソウタ', '忘れたら、ハルが本当にいなくなるだろ！', 'angry'],
+                                   ['ソウタ', '……出てけ。出てけよ！', 'angry']],
+                                  ['扉を叩いた。返事はない。', '……扉の向こうで、鍵盤の蓋が叩きつけられる音が、一度だけ響いた。']);
+      await say(['ソウタは少し黙って、それから小さく息を吐いた。',
+                 ['ソウタ', '……うるさいくらい、楽しそうに弾くやつ', 'smile'],
+                 ['ソウタ', '楽譜どおりに弾かないんだよ。隙あらば『ここアレンジしたい』って言いだしたり、本番でいきなりアドリブ入れてきたり', 'smile'],
+                 ['ソウタ', 'で、俺が横で必死に合わせる。……毎回、それ', 'smile'],
+                 'ソウタは、椅子の空いた左側に目をやった。',
+                 ['ソウタ', '……いつも、そっち側に座ってた', 'sad']]);
+
+      // 2段目
+      await say([['ソウタ', '……ケンカしたんだ。リハーサルの前の日', 'down'],
+                 ['ソウタ', '俺、期末で数学赤点取って。毎日、放課後は学校の補習で、ろくに練習できてなかった', 'down'],
+                 ['ソウタ', 'あの日は、この前の模試の結果が返ってきて。第一志望、E判定だった', 'sad'],
+                 ['ソウタ', '家に帰ったら、父さんに言われた。『文化祭が終わったら、ピアノはやめろ』って', 'sad'],
+                 ['ソウタ', '『ハルくんは予備校に通いながら、ピアノも続けてるだろ。お前は何をやってるんだ』……って', 'down'],
+                 ['ソウタ', '何も言い返せなかった', 'down'],
+                 ['ソウタ', 'だから、あの連弾が最後だった。……最後くらい、ちゃんと弾きたかった', 'sad'],
+                 ['ソウタ', 'ハルには、やめるって言えてなかった。言ったら、本当に終わる気がして', 'sad'],
+                 ['ソウタ', '部屋に戻ったら、ハルから。テンポ上げようって。……何も知らないで、楽しそうに', 'angry'],
+                 ['ソウタ', '……あいつ、勉強もピアノも、いつも俺の一歩先にいて。それがちょっと、悔しかったのもある', 'down'],
+                 ['ソウタ', 'それで……『お前はいいよな、楽しててもできるんだから』って送った。そんなこと、思ってもないのに', 'sad'],
+                 ['ソウタ', 'ほんとは、父さんに言い返したかった。……言えなかったぶん、全部ハルにぶつけた', 'sad'],
+                 ['ソウタ', 'あいつが毎晩、予備校のあとに練習してたの、知ってたのに', 'sad'],
+                 ['ソウタ', 'あいつ、『楽しみにしてた』って。それから、『最後ってなに』って聞いてきた', 'sad'],
+                 ['ソウタ', '答えたら、ピアノやめるって言わなきゃいけない。……それだけは、言いたくなかった', 'sad'],
+                 ['ソウタ', 'どうせ取り上げられるなら、自分から手放したほうが、まだましだって……そう思ったんだ', 'sad'],
+                 ['ソウタ', 'あいつが『授業はじまる』って言ってきて。最後に、『ピアノも、お前も、もうどうでもいい』って送った', 'sad'],
+                 ['ソウタ', '……既読はついたのに、返事はなかった', 'sad'],
+                 ['ソウタ', '夜になって頭が冷えて、『ごめん』って送った。……今度は、既読もつかなかった', 'sad'],
+                 ['ソウタ', 'まだ怒ってるんだと思った。眠れなくて、明け方まで何回も送った', 'sad'],
+                 'ピアノの上で伏せたままのスマホが、小さく鳴った気がした。',
+                 ['ソウタ', '次の朝、母さんに起こされた。ハルのお母さんから、電話があったって', 'sad'],
+                 ['ソウタ', 'ハルは、あの夜……予備校から帰る途中で、車に……', 'grief'],
+                 'ソウタは、そこで言葉を切った。',
+                 ['ソウタ', '……あの『ごめん』には、今も既読がつかないんだ', 'grief']]);
+      await line(['ソウタ', '……ハルが最後に読んだ俺の言葉が、あれなんだよ', 'grief'], false);
+      a = await choose(['ソウタのせいじゃないよ', '……謝りたかったんだね。ハルくんに', 'ハルくんの分まで、頑張らなきゃ']);
+      if (a === 0) { await say([['ソウタ', '……わかってる。そんなの、みんな言う', 'angry'], ['ソウタ', 'でも、言ったのは俺なんだよ', 'blame'], '正しい言葉ほど、今のソウタには届かないのかもしれない。']); return closeHeart(); }
+      if (a === 2) return doom([['ソウタ', '……ハルの分まで？', 'surprise'], ['ソウタ', '俺が、あいつの代わりに生きてるってこと？', 'shadow'], ['ソウタ', '……無理だよ、そんなの', 'despair']]);
+      await say([['ソウタ', '……うん', 'grief'], ['ソウタ', 'ほんとは、ちゃんと顔見て謝りたかった。……次の日のリハで言えばいいって、思ってた', 'grief'],
+                 'ソウタの目から、ぽたりと一粒、鍵盤の蓋に落ちた。']);
+
+      // 3段目
+      await say([['ソウタ', 'ハルは、最後まで俺に怒ってたと思う', 'shadow']]);
+      if (P.shelf.sota) {
+        await say([['ソウタ', 'だから俺は、もう弾いちゃいけないんだ。……あいつの気持ちなんて、もう誰にもわかんないんだから', 'sad']]);
+        await line('……あの楽譜の裏の、乱暴な鉛筆の字が、頭に浮かんだ。', false);
+      } else {
+        await line(['ソウタ', 'だから俺は、もう弾いちゃいけないんだ', 'sad'], false);
+      }
+      const opts = ['そんなことないよ。ハルくんも、きっと許してくれてる', 'ピアノをやめて、ハルくんが喜ぶと思う？'];
+      if (P.shelf.sota) opts.push('……ハルくん、仲直りするつもりだったんだと思う。楽譜の裏に、書いてあった');
+      a = await choose(opts);
+      if (a === 0) {
+        await say([['ソウタ', '……勝手に決めんなよ', 'angry'], ['ソウタ', 'ハルがどう思ってたかなんて、もう誰にもわかんないんだよ', 'sad'],
+                   'ソウタは、ピアノの上のスマホに目をやった。',
+                   '（何か、あと一つ足りない気がする。ハルが、最後に残した何かが）']);
+        return closeHeart();
+      }
+      if (a === 1) return doom([['ソウタ', '……じゃあ、どうしろって言うんだよ', 'shadow'], ['ソウタ', '弾いたって、隣にあいつはいないのに', 'despair']]);
+      await say([['ソウタ', '……裏？', 'surprise'],
+                 'ソウタは、鞄から楽譜を取り出した。',
+                 ['ソウタ', '……あの日の昼休み、ここで二人で合わせたんだ', 'sad'],
+                 ['ソウタ', 'ハルが『ソウタのほうにもブレスの位置書き込んどく』って、この楽譜を持って帰って', 'sad'],
+                 ['ソウタ', '葬式のあと、ハルのお母さんが返しに来てくれた。……ずっと、開けられなかった', 'sad'],
+                 '最後のページを、そっと裏返した。']);
+      showCut('m_score_back');
+      await say(['白紙の真ん中に、あの鉛筆の殴り書きがある。',
+                 ['ソウタ', '……仲直りしたら、続き弾こう', 'surprise'],
+                 '何度も目で追ってやっと読めた字を、ソウタは一目で読んだ。',
+                 'ソウタの指が、その字をなぞった。']);
+      hideCut();
+      await say([
+                 ['ソウタ', '……あのメッセージのあとだ。予備校が終わって、帰る前に書いたんだ', 'surprise'],
+                 ['ソウタ', '返事がなかったんじゃない。……ここに、書いてたのかよ', 'grief'],
+                 ['ソウタ', '……あいつ、ほんとバカ。謝らなきゃいけないの、俺のほうなのに', 'grief'],
+                 '泣きながら、ソウタが少しだけ笑った。',
+                 ['ソウタ', '……弾くよ。続き、最後まで', 'smile']]);
+      R.st = 'unraveled'; render();
+      await say(['……いつもならチャイムが鳴る17:00を、時計の針が、静かに越えていった。',
+                 ['ソウタ', '……最初のフレーズだけでいい。ハルのところ、弾いてくれる？', 'smile']]);
+      if (R.items.has('secondo') || R.know.has('melody')) return sotaDuet(true);
+      await say([['ソウタ', '……あ。ハルのパート、破いちゃったんだ。ケンカした日に', 'sad'], '（部屋のどこかに、ハルのパートの切れ端が残っているはずだ）']);
+    },
+  };
+  // asked=true：直前にソウタが「弾いてくれる？」と頼んだあと（同じ頼みを繰り返さない）
+  async function sotaDuet(asked = false) {
+    if (!R.items.has('secondo') && !R.know.has('melody')) {
+      return say([['ソウタ', '……ハルのパートの楽譜、まだ見つからない？', 'down']]);
+    }
+    await say([...(asked ? [] : [['ソウタ', '……最初のフレーズだけでいい。ハルのところ、弾いてくれる？', 'smile']]),
+               ['ソウタ', '記号とか、難しいことはいい。音の順番どおりに、鍵盤を叩いてくれるだけでいいから', 'smile'],
+               '小さくうなずいた。', '「……うん。弾かせて」',
+               'ソウタが、鍵盤の蓋を開けた。', '二人で並んで、椅子に座る。', ['ソウタ', '……いくよ', 'smile']]);
+    const ok = await keyboard(true);
+    if (!ok) return say([['ソウタ', '……ゆっくりでいいよ', 'smile']]);
+    await overlayWait(`<img class="cg" src="img/m_duet.webp" alt="夕日の音楽室で、ソウタと並んで連弾している">
+      <p>ソウタの旋律に、ハルのパートが重なる。</p><p>たった4小節。それでも、二人の音が確かにひとつになった。</p><p>フレーズの終わりで手を止めると、ソウタはそのまま、ひとりで続きを弾き始めた。最後の小節まで、一度も止まらずに。</p>`, '', ['続ける']);
+    closeOverlay();
+    await say([['ソウタ', '……テンポ、上げたほうがかっこいいな', 'smile'],
+               ['ソウタ', 'ハルの言うとおりだった', 'sad'],
+               ['ソウタ', '……ありがとう。最後まで弾けた', 'smile'],
+               '音楽室の扉の向こうで、カチリと鍵の外れる音がした。']);
+    await line('校門の鍵が、開いた。', false);
+    await choose(['校門へ行く']);
+    ending(['開いた校門の真ん中で、ソウタが振り返って片手を挙げた。丸めた楽譜を、大事そうに握って。'],
+           'm_gate', '開いた校門の真ん中で、ソウタが肩ごしに振り返り、丸めた楽譜を持って片手を挙げている');
+  }
+
+  /* ---------- 章の切り替え ---------- */
+  const CHAPTERS = { art: ART, music: MUSIC };
+  const ORDER = ['art', 'music'];
+  // 章は順番に開放：前の章で朝を迎えると次の章が選べる
+  const done = id => { const k = CHAPTERS[id].key; return !!(P.cleared[k] || P.shut[k]); };
+  const unlocked = id => { const i = ORDER.indexOf(id); return i <= 0 || done(ORDER[i - 1]); };
+  const selectable = id => unlocked(id) && !P.shut[CHAPTERS[id].key];
+  const nextChapter = id => { const n = ORDER.slice(ORDER.indexOf(id) + 1).find(k => !P.shut[CHAPTERS[k].key]); return n ? CHAPTERS[n] : null; };
+  // 最後の放課後（5章）のノーマル／トゥルーエンドを見たとき：周回を数え、閉め出された章をまた選べるようにする
+  function completeRun() { P.runs = (P.runs || 0) + 1; P.shut = {}; saveP(); }
+  // 前の場面の名残（カットイン・立ち絵・文章・消えた演出など）を、演出なしで消す
+  function clearStage() {
+    const scene = $('#scene');
+    scene.classList.add('reset');
+    scene.classList.remove('cut', 'talk', 'cg', 'story');
+    const ci = $('#cutin'); ci.classList.remove('show'); ci.innerHTML = '';
+    $('#getItem').hidden = true;
+    $('#sitFig').classList.remove('gone');
+    $('#portrait').classList.remove('show');
+    spk.hidden = true; txt.textContent = ''; txt.classList.add('narr'); chs.innerHTML = ''; more.hidden = true;
+  }
+  function setChapter(id, show = true) {
+    C = CHAPTERS[id] || ART;
+    const scene = $('#scene');
+    scene.setAttribute('aria-label', `夕暮れの${C.room}`);
+    scene.style.visibility = 'hidden';
+    clearStage();
+    if (show) $('#loading').hidden = false;
+    const bg = $('#bgImg'), sit = $('#sitFig');
+    bg.removeAttribute('src'); sit.removeAttribute('src');
+    $('#portrait').removeAttribute('src');
+    bg.src = `img/${C.bg}.webp`;
+    sit.src = `img/${C.sit.src}.webp`; sit.setAttribute('style', C.sit.style);
+    const ready = Promise.all([bg, sit].map(i => i.decode().catch(() => {}))).then(() => { if (C.id !== id) return; $('#loading').hidden = true; if (show) scene.style.visibility = ''; requestAnimationFrame(() => requestAnimationFrame(() => scene.classList.remove('reset'))); });
+    const lo = $('#leftover');
+    if (C.leftoverImg) { lo.innerHTML = `<img src="img/${C.leftoverImg}.webp" alt="" style="width:100%;height:100%;display:block">`; lo.setAttribute('style', 'inset:0;width:100%;height:100%;background:none;box-shadow:none;display:none'); }
+    else { lo.innerHTML = ''; lo.setAttribute('style', C.leftover + ';display:none'); }
+    face = ''; setTalk(false);
+    Object.values(C.faces).forEach(f => { const i = new Image(); i.src = `img/${f}.webp`; });
+    const layer = $('#hsLayer'); layer.innerHTML = '';
+    C.hotspots.forEach(([id, label, style]) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'hs'; b.dataset.id = id; b.setAttribute('style', style);
+      b.innerHTML = `<span>${label}</span>`;
+      const go = () => act(C.H[id] || COMMON[id], 'hs:' + id);
+      b.addEventListener('click', go);
+      layer.appendChild(b);
+    });
+    return ready;
+  }
+
+  /* ---------- title / shelf ---------- */
+  async function startRun(ch) {
+    closeOverlay();
+    busy = true;
+    clearRun(); await setChapter(ch); newRun(ch); render();
+    busy = false;
+    act(scriptFn('intro'), 'intro');
+  }
+  // splash：最初はタイトルと背景だけを出し、タップしたらメニューを出す
+  function showTitle(splash = false) {
+    if (R) R.over = true;
+    gen++; advance = null; scr = null; replay = null;
+    $('#scene').style.visibility = 'hidden';
+    clearStage();
+    $('#loading').hidden = true;
+    const runs = P.runs || 0;
+    const save = loadRun();
+    openOverlay(`<h1 class="vtitle">放課後の<span>わすれもの</span></h1>
+      <p class="tap-hint" id="tapHint"${splash ? '' : ' hidden'}>画面をタップしてください</p>
+      <div class="title-side${splash ? ' later' : ''}" id="titleMenu"${splash ? ' hidden' : ''}>
+        <p class="eyebrow">試作版　第一章・第二章</p>
+        ${runs ? `<p class="note">これまでの周回　${runs}</p>` : ''}
+        ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save)}</span></button>` : ''}
+        <button type="button" class="btn ${save ? '' : 'primary'}" id="tSelect">放課後を選ぶ</button>
+        ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
+        <button type="button" class="btn" id="tReset">はじめから</button>
+        <button type="button" class="btn" id="tShelf">わすれもの棚</button>
+        <button type="button" class="btn-quiet" id="tWipe">データを消去</button>
+        <p class="note">このゲームはオートセーブです。調べたり話したりするたびに、自動で記録されます。</p>
+        <p class="note">この作品には、自傷・死・いじめ・家庭での心理的虐待を示唆する表現が含まれます。</p>
+      </div>`, 'title-screen', 'ov-card title-card');
+    $('#tSelect').onclick = () => selectRoom();
+    $('#tReset').onclick = () => resetAll();
+    $('#tWipe').onclick = () => wipeAll();
+    if (save) $('#tCont').onclick = () => continueRun(save);
+    $('#tShelf').onclick = showShelf;
+    if ($('#tLoad')) $('#tLoad').onclick = () => showSlots('load');
+    if (splash) {
+      const reveal = e => {
+        if (e && e.type === 'keydown' && !['Enter', ' '].includes(e.key)) return;
+        ov.removeEventListener('click', reveal); document.removeEventListener('keydown', reveal);
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        $('#tapHint').hidden = true; $('#titleMenu').hidden = false;
+        const f = $('#titleMenu .primary'); if (f) f.focus({ preventScroll: true });
+      };
+      ov.addEventListener('click', reveal); document.addEventListener('keydown', reveal);
+    }
+  }
+  function saveLabel(d) {
+    const time = d.st === 'unraveled' ? '17:00過ぎ' : `16:${String(d.ticks * MIN_PER_TICK).padStart(2, '0')}`;
+    return `${(CHAPTERS[d.ch] || ART).room}・${time}・チャイム${d.loop}回`;
+  }
+  // 放課後を選ぶ：わすれもの棚や記録は引き継いだまま、部屋を選んで始める
+  async function selectRoom() {
+    if (loadRun()) {
+      const v = await overlayWait(`<p class="eyebrow">放課後を選ぶ</p><h2>今の放課後の続きは消えます</h2>
+        <p>新しく始めますか？ わすれもの棚や、朝を迎えた記録はそのまま残ります。</p>`, '', ['新しく始める', 'やめる']);
+      if (v !== 0) return showTitle();
+    }
+    const open = ORDER.filter(id => selectable(id)).map(id => CHAPTERS[id]);
+    const status = ch => P.shut[ch.key] ? '閉ざされた扉（最後の放課後を終えるまで選べない）' : P.cleared[ch.key] ? '朝を迎えた' : P.shelf[ch.key] ? 'わすれものあり' : 'まだ朝を迎えていない';
+    const c = await overlayWait(`<p class="eyebrow">放課後を選ぶ</p><h2>どの放課後から始めますか？</h2>
+      <p class="note">${ORDER.map(id => CHAPTERS[id]).map(ch => unlocked(ch.id) ? `${ch.label}：${status(ch)}` : '？？？（前の章で朝を迎えると開放）').join('<br>')}</p>`,
+      '', [...open.map(ch => ch.room), 'やめる']);
+    if (c >= open.length) return showTitle();
+    startRun(open[c].id);
+  }
+  // はじめから：わすれもの棚と途中の放課後を消して、最初の放課後から始める（朝を迎えた記録などの実績は残す）
+  async function resetAll() {
+    const v = await overlayWait(`<p class="eyebrow">はじめから</p><h2>最初の放課後から始めますか？</h2>
+      <p>わすれもの棚と、途中の放課後、開放した章、閉ざされた扉の記録が消えます。美術室から順番に始まります。</p>
+      <p class="note">朝を迎えた実績・見たエンディング・周回数は残ります。</p>`, '', ['はじめから始める', 'やめる']);
+    if (v !== 0) return showTitle();
+    P.shelf = {}; P.cleared = {}; P.shut = {}; saveP(); clearRun();
+    startRun('art');
+  }
+  // データを消去：実績も含めたすべてのプレイデータを消す
+  async function wipeAll() {
+    const v = await overlayWait(`<p class="eyebrow">データを消去</p><h2>すべてのプレイデータを消しますか？</h2>
+      <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
+      <p class="note">消したデータは元に戻せません。</p>`, '', ['すべて消去する', 'やめる']);
+    if (v === 0) { P.shelf = {}; P.saved = {}; P.cleared = {}; P.shut = {}; P.runs = 0; P.endings = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    showTitle();
+  }
+  // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
+  function showSlots(mode) {
+    const rows = SLOTS.map(n => {
+      const d = readSlot(n);
+      return `<div class="save-slot"><div class="info"><span class="no">ファイル ${n}</span>
+        <span>${d ? slotLabel(d) : '― 空き ―'}</span>${d ? `<span class="when">${slotDate(d.at)}</span>` : ''}</div>
+        ${mode === 'save' ? `<button type="button" class="btn" data-save="${n}">セーブ</button>` : ''}
+        <button type="button" class="btn" data-load="${n}"${d ? '' : ' disabled'}>ロード</button></div>`;
+    }).join('');
+    openOverlay(`<p class="eyebrow">${mode === 'save' ? 'セーブ／ロード' : 'ロード'}</p><h2>${mode === 'save' ? 'どのファイルに記録しますか？' : 'どのファイルから始めますか？'}</h2>
+      <div class="save-slots">${rows}</div>
+      <p class="note">記録されるのは、今の放課後の途中経過と、わすれもの棚・開放した章・閉ざされた扉の状態です。朝を迎えた記録や見たエンディングは、ロードしても消えません。</p>
+      <div class="row"><button type="button" class="btn primary" id="slotBack">${mode === 'save' ? 'ゲームに戻る' : '戻る'}</button></div>`);
+    $('#slotBack').onclick = () => mode === 'save' ? closeOverlay() : showTitle();
+    card.querySelectorAll('[data-save]').forEach(b => b.onclick = async () => {
+      const n = +b.dataset.save;
+      if (readSlot(n)) {
+        const v = await uiWait(`<p class="eyebrow">セーブ</p><h2>ファイル ${n} に上書きしますか？</h2>`, '', ['上書きする', 'やめる']);
+        if (v !== 0) return showSlots(mode);
+      }
+      const ok = writeSlot(n);
+      await uiWait(`<p class="eyebrow">セーブ</p><h2>${ok ? `ファイル ${n} に記録しました` : '記録できませんでした'}</h2>
+        ${ok ? `<p>${saveLabel(R)}${scr ? '・会話の途中' : ''}</p>` : '<p class="note">ブラウザの保存領域が使えない状態です。</p>'}`, '', ['ゲームに戻る', 'セーブ画面へ'])
+        .then(v => v === 0 ? closeOverlay() : showSlots(mode));
+    });
+    card.querySelectorAll('[data-load]').forEach(b => b.onclick = async () => {
+      const n = +b.dataset.load, d = readSlot(n);
+      if (!d) return;
+      const v = await uiWait(`<p class="eyebrow">ロード</p><h2>ファイル ${n} を読み込みますか？</h2>
+        <p>${slotLabel(d)}</p>
+        <p class="note">${mode === 'save' ? '今の放課後の、セーブしていない進み具合は消えます。' : '途中の放課後（前回のつづき）は、このファイルの内容に置きかわります。'}</p>`, '', ['読み込む', 'やめる']);
+      if (v !== 0) return showSlots(mode);
+      loadSlot(d);
+    });
+  }
+  function loadSlot(d) {
+    if (R) R.over = true;
+    gen++; advance = null;
+    P.shelf = { ...d.prog.shelf }; P.cleared = { ...d.prog.cleared }; P.shut = { ...(d.prog.shut || {}) }; saveP();
+    continueRun(d.run, d.resume);
+  }
+  async function continueRun(d, resume) {
+    closeOverlay();
+    busy = true;
+    await setChapter(d.ch);
+    R = d; busy = false;
+    render();
+    const fn = resume && scriptFn(resume.key);
+    if (fn) {
+      replay = { skip: Math.max(0, resume.lines - 1), inputs: [...(resume.inputs || [])] };
+      act(fn, resume.key);
+      return;
+    }
+    idle();
+  }
+  function showShelf() {
+    const slots = [['ヒナ', 'hina', ART], ['ソウタ', 'sota', MUSIC], ['ミオ'], ['ケイ'], ['ツムギ'], ['？？？']];
+    openOverlay(`<p class="eyebrow">わすれもの棚</p><h2>残されたもの</h2>
+      <div class="shelf">${slots.map(([who, key, ch]) => key && P.shelf[key]
+        ? `<button type="button" class="slot got" data-k="${key}"><span class="who">${who}</span>${ch.shelfItem(!!P.cleared[key]).title}</button>`
+        : `<div class="slot"><span class="who">${who}</span>？？？</div>`).join('')}</div>
+      <p class="note">誰かが消えたとき、その子のわすれものがここに並びます。その子を救えたら、わすれものも姿を変えます。</p>
+      <div class="row"><button type="button" class="btn primary" id="sBack">戻る</button></div>`);
+    $('#sBack').onclick = showTitle;
+    [['hina', ART], ['sota', MUSIC]].forEach(([k, ch]) => {
+      const b = card.querySelector(`[data-k="${k}"]`);
+      if (b) b.onclick = async () => {
+        const it = ch.shelfItem(!!P.cleared[k]);
+        await overlayWait(`<p class="eyebrow">${ch.name}のわすれもの</p><h2>${it.title}</h2>${it.body}`, '', ['戻る']);
+        showShelf();
+      };
+    });
+  }
+
+  /* ---------- ログ ---------- */
+  const LOG_MAX = 400;
+  function addLog(e) {
+    if (!R || !R.log) return;
+    const last = R.log[R.log.length - 1];
+    if (last && last.t === e.t && last.who === e.who && !e.choice) return;
+    R.log.push(e); if (R.log.length > LOG_MAX) R.log.splice(0, R.log.length - LOG_MAX);
+  }
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function showLog() {
+    const items = (R && R.log || []).map(e => e.choice
+      ? `<li class="log-choice">▶ ${esc(e.choice)}</li>`
+      : `<li>${e.who ? `<span class="log-who">${esc(e.who)}</span>` : ''}<span class="log-t">${esc(e.t)}</span></li>`).join('');
+    // 開いていた画面は、ボタンの動きごとそのまま戻す
+    const wasOpen = !ov.hidden ? [...card.childNodes] : null, wasCls = ov.className, wasCard = card.className;
+    openOverlay(`<p class="eyebrow">ログ</p><h2>これまでの放課後</h2>
+      <ol class="log" id="logList">${items || '<li class="log-empty">まだ記録はありません。</li>'}</ol>
+      <div class="row"><button type="button" class="btn primary" id="logClose">閉じる</button></div>`);
+    const list = $('#logList'); list.scrollTop = list.scrollHeight;
+    $('#logClose').onclick = () => {
+      if (wasOpen !== null) { ov.className = wasCls; card.className = wasCard; card.replaceChildren(...wasOpen); }
+      else closeOverlay();
+    };
+  }
+
+  /* ---------- wiring ---------- */
+  $('#btnLog').onclick = e => { e.stopPropagation(); showLog(); };
+  // ヒント：進み具合に合わせて1つだけ出す（時間は進まない）
+  $('#btnHint').onclick = () => act(hintScript, 'hint');
+  $('#btnWait').onclick = () => act(waitScript, 'wait');
+  $('#btnSound').onclick = () => { P.sound = !P.sound; saveP(); render(); };
+  $('#btnSkip').onclick = e => { e.stopPropagation(); P.skip = !P.skip; saveP(); render(); };
+  // メニュー：ログ・既読スキップ・音・タイトルへ をまとめたパネル
+  const menuPanel = $('#menuPanel');
+  const setMenu = open => { menuPanel.hidden = !open; $('#btnOpenMenu').setAttribute('aria-expanded', open ? 'true' : 'false'); };
+  $('#btnOpenMenu').onclick = e => { e.stopPropagation(); setMenu(menuPanel.hidden); };
+  document.addEventListener('click', e => { if (!menuPanel.hidden && !e.target.closest('.menu-wrap')) setMenu(false); }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menuPanel.hidden) setMenu(false); });
+  ['btnMenu'].forEach(id => $('#' + id).addEventListener('click', () => setMenu(false)));
+  $('#btnMenu').onclick = () => { advance = null; busy = false; showTitle(true); };
+  $('#btnSave').onclick = e => { e.stopPropagation(); if (R && !R.over && !replay) showSlots('save'); };
+
+  setChapter('art', false); newRun('art'); R.over = true; render(); idle();
+  showTitle(true);
+})();
+
+</script>
