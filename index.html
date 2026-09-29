@@ -352,8 +352,10 @@
 
   /* 既読テキスト：周回をまたいで記録し、既読スキップがONなら早送りする。
      既読は章ごとに分ける（チャイムなど章をまたいで同じ文章でも、別の章で初めて読むときは飛ばさない） */
-  const READ_KEY = 'houkago-wasuremono-read-v2';
-  try { localStorage.removeItem('houkago-wasuremono-read-v1'); } catch (e) {}
+  const READ_KEY = 'houkago-wasuremono-read-v3';
+  try { localStorage.removeItem('houkago-wasuremono-read-v1'); localStorage.removeItem('houkago-wasuremono-read-v2'); } catch (e) {}
+  let prevLine = '';  // 直前に出した文章（既読の見分けに使う）
+  const readKey = (who, t) => { const k = (C ? C.id : '') + '|' + who + '|' + t + '|' + prevLine; prevLine = who + '|' + t; return k; };
   const READ = (() => { try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]')); } catch (e) { return new Set(); } })();
   let readTimer = null;
   function markRead(k) {
@@ -416,7 +418,7 @@
         spk.textContent = who; spk.hidden = !who;
         setTalk(!!C && (who === C.name || (!who && !!face)), face);
         txt.classList.toggle('narr', !who); txt.textContent = full;
-        addLog({ who, t: full }); markRead((C ? C.id : '') + '|' + who + '|' + t);
+        addLog({ who, t: full }); markRead(readKey(who, t));
         lastSkipped = true; advance = null;
         return Promise.resolve();
       }
@@ -432,7 +434,7 @@
       chs.innerHTML = ''; more.hidden = true;
       const full = who ? `「${t}」` : t;
       addLog({ who, t: full });
-      const rk = (C ? C.id : '') + '|' + who + '|' + t, known = READ.has(rk);
+      const rk = readKey(who, t), known = READ.has(rk);
       markRead(rk);
       lastSkipped = !!(P.skip && known && !noSkip);
       if (lastSkipped) {
@@ -817,7 +819,7 @@
     R.over = true; clearRun(); render(); idle();
     overlayWait(`<p class="eyebrow">消失イベント</p><h2>${C.name}が消えた</h2>
       <p>わすれもの「${C.lost}」を、わすれもの棚にしまった。</p>
-      ${first ? `<p class="note">わすれものの記憶は、次の周回に持ち越されます。……今なら、${C.name}にかけられる言葉があるかもしれない。</p>` : ''}
+      ${first ? `<p class="note">わすれものの記憶は、次の周回に持ち越されます。……いつか、${C.name}にかけられる言葉が見つかるかもしれない。</p>` : ''}
       `, '', ['新しい放課後へ', 'タイトルへ']).then(v => v === 0 ? startRun(C.id) : showTitle(true));
   }
 
@@ -997,7 +999,7 @@
   const ART = {
     id: 'art', key: 'hina', name: 'ヒナ', room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom',
     sit: { src: 'hina_sit', style: 'left:1%;top:36.7%;height:20%' },
-    leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)',
+    leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
     faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_shadow', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry' },
     lost: '顔のないスケッチブック',
     idleFree: '（時計の針が17:00を越えた。ヒナが待っている）',
@@ -1056,7 +1058,7 @@
         if (!R.know.has('deadline')) {
           await say(['黒板の隅に、チョークの字。「県展 作品提出〆切 今週金曜」', 'その下に、手でこすって消した跡。……目を凝らすと、小さく震えた字で「描けない」と読める。']);
           R.know.add('deadline'); await tick();
-        } else await say(['「県展 作品提出〆切 今週金曜」。その下の消しかけの字は、もうほとんど読めない。']);
+        } else await say(['「県展 作品提出〆切 今週金曜」。その下には、こすって消しそこねた「描けない」の字が、まだ残っている。']);
       },
       async notice() {
         showCut('ci_notice');
@@ -1678,7 +1680,7 @@
       } else {
         await say(['「……『放課後』。ハルくんと二人で、弾くはずだった曲だよね」', 'ソウタが、はっと顔を上げた。', ['ソウタ', '……なんで知ってんの', 'surprise']]);
       }
-      await say(['答えられなかった。ソウタは、閉じた蓋に目を落とした。',
+      await say(['答えられなかった。ソウタは、鍵盤に目を落とした。',
                  ['ソウタ', '……ハルとは、幼稚園のときから同じピアノ教室だった', 'down'],
                  ['ソウタ', '発表会は、いつも二人で連弾。先生が、息がぴったりだって', 'down'],
                  ['ソウタ', '文化祭でも、弾くはずだった', 'sad'],
@@ -1756,13 +1758,17 @@
                                 ['', 'ソウタは、ピアノ椅子の空いた左側に目をやった。', 'sad'],
                                 ['ソウタ', '弾いたって、隣にあいつはいないのに', 'despair']]);
       await say([['ソウタ', '……裏？', 'surprise'],
-                 'ソウタは、鞄から自分の楽譜を取り出した。',
-                 ['ソウタ', 'あの日の昼休み、ハルが『ブレスの位置、書き込んどく』って持って帰った楽譜', 'sad'],
-                 ['ソウタ', '葬式のあと、ハルのお母さんが返してくれた。……それから一度も、開けられなかった', 'sad'],
-                 '最後のページを、そっと裏返した。']);
+                 ['ソウタ', '……なんで、お前がそんなこと知ってんだよ', 'angry'],
+                 ['ソウタ', '確かに、あれから一度も開いてないけど。……だからって', 'down'],
+                 'ソウタは、しばらく鞄を見つめていた。それから、自分の楽譜を取り出した。',
+                 ['ソウタ', 'あの日の昼休み、ハルが『ブレスの位置、書き込んどく』って持って帰った楽譜。葬式のあと、ハルのお母さんが返してくれた', 'sad'],
+                 '確かめるように、最後のページを、そっと裏返した。']);
       showCut('m_score_back');
       await say(['白紙の真ん中に、あの鉛筆の殴り書きがある。',
-                 ['ソウタ', '……仲直りしたら、続き弾こう', 'surprise'],
+                 'ソウタの手が、止まった。',
+                 ['ソウタ', '……この「し」の、はねかた', 'surprise'],
+                 ['ソウタ', 'ハルの字だ。……小学校のときから、ずっと、このくせ', 'surprise'],
+                 ['ソウタ', '……仲直りしたら、続き弾こう', 'grief'],
                  '何度も目で追ってやっと読めた字を、ソウタは一目で読んだ。',
                  'ソウタの指が、その字をなぞった。']);
       hideCut();
@@ -1818,7 +1824,7 @@
   /* ---------- 章の切り替え ---------- */
   const CHAPTERS = { art: ART, music: MUSIC };
   const ORDER = ['art', 'music'];
-  // 章は順番に開放：前の章で朝を迎えると次の章が選べる
+  // 章は順番に開放：前の章を終えると（ほどけた・追い出された）次の章が選べる
   const done = id => { const k = CHAPTERS[id].key; return !!(P.cleared[k] || P.shut[k]); };
   const unlocked = id => { const i = ORDER.indexOf(id); return i <= 0 || done(ORDER[i - 1]); };
   const selectable = id => unlocked(id) && !P.shut[CHAPTERS[id].key];
@@ -1935,7 +1941,7 @@
     const open = ORDER.filter(id => selectable(id)).map(id => CHAPTERS[id]);
     const status = ch => P.shut[ch.key] ? '閉ざされた扉（最後の放課後を終えるまで選べない）' : P.cleared[ch.key] ? '朝を迎えた' : P.shelf[ch.key] ? 'わすれものあり' : 'まだ朝を迎えていない';
     const c = await overlayWait(`<p class="eyebrow">放課後を選ぶ</p><h2>どの放課後から始めますか？</h2>
-      <p class="note">${ORDER.map(id => CHAPTERS[id]).map(ch => unlocked(ch.id) ? `${ch.label}：${status(ch)}` : '？？？（前の章で朝を迎えると開放）').join('<br>')}</p>`,
+      <p class="note">${ORDER.map(id => CHAPTERS[id]).map(ch => unlocked(ch.id) ? `${ch.label}：${status(ch)}` : '？？？（前の章を終えると開放）').join('<br>')}</p>`,
       '', [...open.map(ch => ch.room), 'やめる']);
     if (c >= open.length) return showTitle();
     startRun(open[c].id);
