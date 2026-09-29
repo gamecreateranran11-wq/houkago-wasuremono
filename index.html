@@ -99,6 +99,7 @@
   .choice:hover { border-color: var(--akane); }
 
   .overlay { position: fixed; inset: 0; background: rgba(12, 10, 16, .9); display: grid; place-items: center; padding: 16px; overflow-y: auto; z-index: 10; }
+  .ov-card > * { flex-shrink: 0; }
   .ov-card { width: 100%; max-width: 520px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 22px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; }
   .ov-card h2 { font-family: var(--serif); font-weight: 800; font-size: 22px; margin: 0; text-wrap: balance; }
   .ov-card p { margin: 0; line-height: 1.85; }
@@ -129,7 +130,7 @@
   .zoom-btn:hover { background: rgba(20, 16, 26, .85); }
   .zoom-btn svg { width: 100%; height: 100%; display: block; }
   .sign-zoom { position: absolute; right: 6px; bottom: 6px; width: 58%; z-index: 3; cursor: zoom-out; border: 2px solid #efe6d6; box-shadow: 0 6px 16px rgba(0,0,0,.55); }
-  .sign-zoom img { width: 100%; display: block; }
+  .sign-zoom img, .flip .face .sign-zoom img { width: 100%; height: auto; object-fit: contain; display: block; box-shadow: none; }
   .sketch { border-radius: 4px; }
   .cg { width: 100%; display: block; border-radius: 4px; }
   .quote { font-family: var(--serif); font-size: 17px; border-left: 2px solid var(--akane); padding-left: 12px; }
@@ -635,9 +636,21 @@
   const PIANO_VOL = 0.65;  // チャイムと聞こえ方をそろえる
   const audio = () => {
     actx = actx || new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-    if (actx.state === 'suspended') actx.resume();
+    if (actx.state !== 'running') { try { actx.resume(); } catch (e) {} }
     return actx;
   };
+  // 音の出口：全体を持ち上げ、割れないように圧縮してから鳴らす
+  let master = null;
+  function out() {
+    const a = audio();
+    if (!master) {
+      const comp = a.createDynamicsCompressor();
+      comp.threshold.value = -20; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.003; comp.release.value = 0.25;
+      master = a.createGain(); master.gain.value = 1.9;
+      master.connect(comp); comp.connect(a.destination);
+    }
+    return master;
+  }
   // スマホは「タップを離した瞬間」などでないと音を出せないので、最初の操作で音の準備をしておく
   let audioReady = false;
   // 無音の短いwav（iPhoneで、消音スイッチがオンでもゲーム音が鳴るようにする）
@@ -673,14 +686,17 @@
     if (!P.sound || replay) return;
     try {
       const a = audio();
-      const notes = [329.63, 261.63, 293.66, 196.0, 196.0, 293.66, 329.63, 261.63];
+      // 学校のチャイム（1オクターブ上げて、スマホでも聞こえるように倍音を足す）
+      const notes = [329.63, 261.63, 293.66, 196.0, 196.0, 293.66, 329.63, 261.63].map(f => f * 2);
       notes.forEach((f, i) => {
         const t = a.currentTime + i * 0.55;
-        const o = a.createOscillator(), g = a.createGain();
-        o.type = 'sine'; o.frequency.value = f;
-        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.3, t + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
-        o.connect(g).connect(a.destination); o.start(t); o.stop(t + 1.5);
+        [[1, 0.3], [2, 0.12], [3, 0.05]].forEach(([m, v]) => {
+          const o = a.createOscillator(), g = a.createGain();
+          o.type = 'sine'; o.frequency.value = f * m;
+          g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 1.4 / Math.sqrt(m));
+          o.connect(g).connect(out()); o.start(t); o.stop(t + 1.5);
+        });
       });
     } catch (e) {}
   }
@@ -690,12 +706,12 @@
     try {
       const a = audio(), t = a.currentTime + delay;
       gain *= PIANO_VOL;
-      [[1, 'triangle', 1], [2, 'sine', 0.35], [3, 'sine', 0.12]].forEach(([m, type, v]) => {
+      [[1, 'triangle', 1], [2, 'sine', 0.5], [3, 'sine', 0.18], [4, 'sine', 0.08]].forEach(([m, type, v]) => {
         const o = a.createOscillator(), g = a.createGain();
         o.type = type; o.frequency.value = freq * m;
         g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(gain * v, t + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0008, t + 1.8);
-        o.connect(g).connect(a.destination); o.start(t); o.stop(t + 1.9);
+        g.gain.exponentialRampToValueAtTime(0.0008, t + 1.8 / Math.sqrt(m));
+        o.connect(g).connect(out()); o.start(t); o.stop(t + 1.9);
       });
     } catch (e) {}
   }
@@ -1208,7 +1224,7 @@
       if (a === 0) return doom([['ヒナ', '……やめたら', 'wrist'],
                                 ['ヒナ', '苦しくなったとき、どうすればいいの。……ほかのやり方なんて、知らないのに', 'sad'],
                                 'ヒナは答えを待たずに、うつむいた。',
-                                ['ヒナ', '……それに、約束守れなかったら？', 'shadow'],
+                                ['ヒナ', '……それに、約束守れなかったら？', 'despair'],
                                 ['ヒナ', 'また、失敗作だね', 'despair']]);
       if (a === 1) {
         await say([['ヒナ', '……うん', 'wrist'],
@@ -1235,7 +1251,8 @@
                  ['ヒナ', '……それに、自分の顔なんて。見たら、きっと嫌いになる', 'down'],
                  '「嫌いになっても、いいと思う。……それでも、今のヒナの顔を、ヒナ自身に見てあげてほしい」',
                  'ヒナは、長いあいだ黙っていた。窓の外の夕焼けを見て、それから、自分の手を見た。',
-                 'ヒナの目から、ぽろりと涙がこぼれた。',
+                 'ぎゅっと鞄を抱えていた腕から、少しずつ力が抜けていく。',
+                 'こわばっていた口元がゆるんで、ヒナは、小さく息を吐いた。',
                  ['ヒナ', '……描いても、いいのかな', 'grief'],
                  ['ヒナ', 'お母さんが、嫌な顔しても', 'grief'],
                  ['ヒナ', '褒められたいからじゃなくて。……私が、描きたいから', 'grief'],
@@ -1250,9 +1267,15 @@
   async function hinaPaint() {
     R.items.delete('blue'); render();
     await say(['青い絵の具を渡すと、ヒナは新しい画用紙をイーゼルに立てかけた。', '筆が走る。迷いのない線だった。']);
+    const pre = new Image(); pre.src = 'img/sky.webp';
+    await (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {});
     const p = overlayWait(`<p class="eyebrow">ヒナの絵</p><h2>もう一度、空を</h2>${paintingSVG('blue')}
       <p>灰色だった空に、青が広がっていく。</p>`, '', ['続ける']);
-    setTimeout(() => { const g = $('#greyLayer'); if (g) g.classList.add('off'); }, 400);
+    {
+      const g = $('#greyLayer'), col = g && g.previousElementSibling;
+      const ready = [g, col].filter(Boolean).map(i => (i.decode ? i.decode() : Promise.resolve()).catch(() => {}));
+      Promise.all(ready).then(() => setTimeout(() => { if (g) g.classList.add('off'); }, 400));
+    }
     await p; closeOverlay();
     await say([['ヒナ', '……空って、こんな色だったっけ', 'smile'],
                'ヒナは筆を置くと、鞄からスケッチブックを取り出した。',
@@ -1393,7 +1416,7 @@
             done = true;
             if (duet) {
               $('#kbMsg').textContent = 'ソウタの音だけが、そのまま続いていく。';
-              $('#kbCancel').disabled = true;
+              $('#kbCancel').closest('.row').hidden = true;
               const wait = P.sound ? sotaSolo() + 600 : 1600;
               setTimeout(() => { sleep(); closeOverlay(); res(true); }, wait);
             } else setTimeout(() => { sleep(); closeOverlay(); res(true); }, 700);
@@ -1480,7 +1503,7 @@
     id: 'music', key: 'sota', name: 'ソウタ', room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room',
     sit: { src: 'sota_sit', style: 'left:54.3%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
-    faces: { normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad' },
+    faces: { normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile' },
     lost: 'ソウタのパートだけの楽譜',
     idleFree: '（時計の針が17:00を越えた。ソウタが待っている）',
     samePose: 'ピアノの前には、さっきとまったく同じ姿勢で、ソウタが座っていた。',
@@ -1692,9 +1715,9 @@
                  ['ソウタ', 'それで……『お前はいいよな、楽しててもできるんだから』って送った。そんなこと、思ってもないのに', 'sad'],
                  ['ソウタ', 'ほんとは、父さんに言い返したかった。……言えなかったぶん、全部ハルにぶつけた', 'blame'],
                  ['ソウタ', 'あいつが毎晩、予備校のあとに練習してたの、知ってたのに', 'blame'],
-                 ['ソウタ', 'あいつ、『楽しみにしてた』って。それから、『最後ってなに』って聞いてきた', 'sad'],
-                 ['ソウタ', '答えたら、ピアノやめるって言わなきゃいけない。……それだけは、言いたくなかった', 'sad'],
-                 ['ソウタ', 'どうせ取り上げられるなら、自分から手放したほうが、まだましだって……そう思ったんだ', 'sad'],
+                 ['ソウタ', 'あいつ、『楽しみにしてた』って。それから、『最後ってなに』って聞いてきた', 'down'],
+                 ['ソウタ', '答えたら、ピアノやめるって言わなきゃいけない。……それだけは、言いたくなかった', 'down'],
+                 ['ソウタ', 'どうせ取り上げられるなら、自分から手放したほうが、まだましだって……そう思ったんだ', 'down'],
                  ['ソウタ', 'あいつが『授業はじまる』って言ってきて。最後に、『ピアノも、お前も、もうどうでもいい』って送った', 'sad'],
                  ['ソウタ', '……既読はついたのに、返事はなかった', 'sad'],
                  ['ソウタ', '夜になって頭が冷えて、『ごめん』って送った。……今度は、既読もつかなかった', 'sad'],
@@ -1728,13 +1751,14 @@
                    '（何か、あと一つ足りない気がする。ハルが、最後に残した何かが）']);
         return closeHeart();
       }
-      if (a === 1) return doom([['ソウタ', '……じゃあ、どうしろって言うんだよ', 'angrySad'], ['ソウタ', '弾いたって、隣にあいつはいないのに', 'despair']]);
+      if (a === 1) return doom([['ソウタ', '……じゃあ、どうしろって言うんだよ', 'angrySad'],
+                                ['', 'ソウタの声が、途中でかすれた。握りしめていた手から、ゆっくり力が抜けていく。', 'down'],
+                                ['', 'ソウタは、ピアノ椅子の空いた左側に目をやった。', 'sad'],
+                                ['ソウタ', '弾いたって、隣にあいつはいないのに', 'despair']]);
       await say([['ソウタ', '……裏？', 'surprise'],
-                 'ソウタは、鞄から楽譜を取り出した。',
-                 ['ソウタ', '……あの日の昼休み、ここで二人で合わせたんだ', 'sad'],
-                 ['ソウタ', 'ハルが『ソウタのほうにもブレスの位置書き込んどく』って、この楽譜を持って帰って', 'sad'],
-                 ['ソウタ', '葬式のあと、ハルのお母さんが返しに来てくれた。ハルが弾き込んでたハルのパートも、一緒に', 'sad'],
-                 ['ソウタ', '……俺のほうは、ずっと開けられなかった', 'sad'],
+                 'ソウタは、鞄から自分の楽譜を取り出した。',
+                 ['ソウタ', 'あの日の昼休み、ハルが『ブレスの位置、書き込んどく』って持って帰った楽譜', 'sad'],
+                 ['ソウタ', '葬式のあと、ハルのお母さんが返してくれた。……それから一度も、開けられなかった', 'sad'],
                  '最後のページを、そっと裏返した。']);
       showCut('m_score_back');
       await say(['白紙の真ん中に、あの鉛筆の殴り書きがある。',
@@ -1771,9 +1795,9 @@
     await overlayWait(`<img class="cg" src="img/m_duet.webp" alt="夕日の音楽室で、ソウタと並んで連弾している">
       <p>ソウタの旋律に、ハルのパートが重なる。</p><p>たった4小節。それでも、二人の音が確かにひとつになった。</p><p>フレーズの終わりで手を止めると、ソウタはそのまま、ひとりで続きを弾き始めた。最後の小節まで、一度も止まらずに。</p>`, '', ['続ける']);
     closeOverlay();
-    await say([['ソウタ', '……テンポ、上げたほうがかっこいいな', 'smile'],
-               ['ソウタ', 'ハルの言うとおりだった', 'sad'],
-               ['ソウタ', '……ありがとう。最後まで弾けた', 'smile'],
+    await say([['ソウタ', '……テンポ、上げたほうがかっこいいな', 'softSmile'],
+               ['ソウタ', 'ハルの言うとおりだった', 'softSmile'],
+               ['ソウタ', '……ありがとう。最後まで弾けた', 'softSmile'],
                '音楽室の扉の向こうで、カチリと鍵の外れる音がした。']);
     await line('校門の鍵が、開いた。', false);
     await choose(['校門へ行く']);
@@ -1874,7 +1898,7 @@
         ${played() ? '<button type="button" class="btn" id="tReset">はじめから</button>' : ''}
         <button type="button" class="btn" id="tShelf">わすれもの棚</button>
         <button type="button" class="btn-quiet" id="tWipe">データを消去</button>
-        <p class="note">このゲームはオートセーブです。調べたり話したりするたびに、自動で記録されます。</p>
+        <p class="note">このゲームはオートセーブです。新しく調べたり話し終えたりするたびに、自動で記録されます。</p>
         <p class="note">この作品には、自傷・死・いじめ・家庭での心理的虐待を示唆する表現が含まれます。</p>
       </div>`, 'title-screen', 'ov-card title-card');
     $('#tSelect').onclick = () => selectRoom();
@@ -1955,8 +1979,8 @@
       }
       const ok = writeSlot(n);
       await uiWait(`<p class="eyebrow">セーブ</p><h2>${ok ? `ファイル ${n} に記録しました` : '記録できませんでした'}</h2>
-        ${ok ? `<p>${saveLabel(R)}${scr ? '・会話の途中' : ''}</p>` : '<p class="note">ブラウザの保存領域が使えない状態です。</p>'}`, '', ['ゲームに戻る', 'セーブ画面へ'])
-        .then(v => v === 0 ? closeOverlay() : showSlots(mode));
+        ${ok ? `<p>${saveLabel(R)}${scr ? '・会話の途中' : ''}</p>` : '<p class="note">ブラウザの保存領域が使えない状態です。</p>'}`, '', ['ゲームに戻る', 'セーブ画面へ', 'タイトルへ'])
+        .then(v => v === 0 ? closeOverlay() : v === 1 ? showSlots(mode) : (closeOverlay(), advance = null, busy = false, showTitle(true)));
     });
     card.querySelectorAll('[data-load]').forEach(b => b.onclick = async () => {
       const n = +b.dataset.load, d = readSlot(n);
