@@ -62,7 +62,7 @@
   .get-in img { position: static; max-width: 70%; height: auto; width: auto; max-height: min(30vh, calc((min(100vw, 760px) - 32px) / 3.4)); min-height: 0; filter: drop-shadow(0 8px 18px rgba(0,0,0,.6)) drop-shadow(0 0 22px rgba(255, 226, 180, .35)); }
   .get-label { margin: 0; font-size: 12px; letter-spacing: .3em; color: var(--gold); }
   .get-name { margin: 0; font-family: var(--serif); font-weight: 800; font-size: clamp(16px, 2.6vw, 22px); color: #f4ecdd; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
-  .scene .bg { inset: 0; width: 100%; height: 100%; object-fit: cover; transition: filter .5s ease; }
+  .scene .bg { inset: 0; width: 100%; height: 100%; object-fit: cover; transition: filter .5s ease, opacity .7s ease; }
   .scene.talk .bg, .scene.talk .sit { filter: brightness(.55) saturate(.8); }
   .sit { position: absolute; width: auto; transition: filter .5s ease; pointer-events: none; }
   .sit.gone { display: none; }
@@ -1015,15 +1015,24 @@
     if (!P.sound || replay) return;
     try {
       const a = audio(), t = a.currentTime + 0.02;
-      [[0, 1, 2350], [0.075, 0.75, 1800]].forEach(([o, k, f0]) => {
+      // 「カ」：ラッチが外れる短い金属の打音／「チッ」：ボルトが止まる、より高く鋭い打音
+      [[0, 0.8, 1], [0.045, 1, 1.35]].forEach(([o, k, up]) => {
         const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
-        s.buffer = getNoise(); f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 2.5;
-        g.gain.setValueAtTime(0.55 * k * seMul(), t + o); g.gain.exponentialRampToValueAtTime(0.001, t + o + 0.035);
-        s.connect(f).connect(g).connect(out()); s.start(t + o); s.stop(t + o + 0.05);
-        const os = a.createOscillator(), og = a.createGain(); os.type = 'triangle'; os.frequency.value = f0;
-        og.gain.setValueAtTime(0.14 * k * seMul(), t + o); og.gain.exponentialRampToValueAtTime(0.001, t + o + 0.09);
-        os.connect(og).connect(out()); os.start(t + o); os.stop(t + o + 0.1);
+        s.buffer = getNoise(); f.type = 'highpass'; f.frequency.value = 3500;
+        g.gain.setValueAtTime(0.9 * k * seMul(), t + o); g.gain.exponentialRampToValueAtTime(0.001, t + o + 0.012);
+        s.connect(f).connect(g).connect(out()); s.start(t + o); s.stop(t + o + 0.02);
+        // 金属片の鳴り：整数倍でない高い倍音を、ごく短く
+        [[3150, 0.11, 0.05], [4730, 0.08, 0.035], [6420, 0.06, 0.025], [8190, 0.04, 0.018]].forEach(([fr, v, dec]) => {
+          const os = a.createOscillator(), og = a.createGain(); os.type = 'sine'; os.frequency.value = fr * up;
+          og.gain.setValueAtTime(v * k * seMul(), t + o); og.gain.exponentialRampToValueAtTime(0.0005, t + o + dec);
+          os.connect(og).connect(out()); os.start(t + o); os.stop(t + o + dec + 0.01);
+        });
       });
+      // 錠の本体に響く、低い「コッ」
+      const b = a.createBufferSource(), bf = a.createBiquadFilter(), bg2 = a.createGain();
+      b.buffer = getNoise(); bf.type = 'bandpass'; bf.frequency.value = 900; bf.Q.value = 4;
+      bg2.gain.setValueAtTime(0.5 * seMul(), t + 0.045); bg2.gain.exponentialRampToValueAtTime(0.001, t + 0.075);
+      b.connect(bf).connect(bg2).connect(out()); b.start(t + 0.045); b.stop(t + 0.09);
     } catch (e) {}
   }
   function flash() { if (replay) return; const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
@@ -1066,7 +1075,15 @@
   async function act(fn, key) {
     if (busy || !R || R.over) return;
     busy = true; beginScript(key); syncSave();
-    try { await fn(); } finally { scr = null; replay = null; busy = false; render(); if (!R.over) idle(); }
+    try {
+      // この調べもので、その子について知るべきことがそろったら、そのまま対話に入る（途中でチャイムが鳴ったとき・対話がもう始まったときは除く）
+      const was = C && C.ready ? C.ready() : true, loop0 = R.loop, asked0 = askCount;
+      await fn();
+      if (!was && key !== 'hs:char' && !R.over && R.st === 'here' && R.loop === loop0 && askCount === asked0 && C.ready()) {
+        await say([`（……${C.name}のことが、少しわかった気がする）`]);
+        await C.talk();
+      }
+    } finally { scr = null; replay = null; busy = false; render(); if (!R.over) idle(); }
   }
   const hintScript = async () => { await say([`【ヒント】${C.hint()}`]); };
   const waitScript = async () => {
@@ -1187,7 +1204,14 @@
     closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = '';
     $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = ''; $('#leftover').style.display = 'none';
     const bg = $('#bgImg');
-    const show = async img => { bg.src = `img/${img}.webp`; try { await bg.decode(); } catch (e) {} };
+    const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+    const show = async img => {
+      if (bg.getAttribute('src') === `img/${img}.webp`) return;
+      const pre = new Image(); pre.src = `img/${img}.webp`;
+      bg.style.opacity = '0'; await Promise.all([wait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);
+      bg.src = pre.src; try { await bg.decode(); } catch (e) {}
+      bg.style.opacity = '1'; await wait(750);
+    };
     const halls = ORDER.map(id => CHAPTERS[id]).filter(ch => ch.hall);
     await show(halls[0].hall);
     await line('廊下に立って、並んだ扉を見渡した。');
@@ -1198,6 +1222,7 @@
     await line('どの扉も、もう開かない。');
     bell();
     await say(['チャイムが鳴る。何度鳴っても、誰も出てこない。', '……誰にも届かない言葉を、ずっと抱えていたのは、誰だったんだろう。']);
+    bg.style.opacity = '';
   }
   // BAD1 終わらない放課後：一度も心に触れないまま時間切れ、または「力不足」。その章のはじめから、謎解きを飛ばして再開できる
   async function bad1() {
@@ -1226,7 +1251,9 @@
 
   /* 選択肢：[文, 種類] の並び。種類＝yori（寄り添う）/ seiron（正論）/ nagu（慰める）/ oitsu（追い詰める）/ key（わすれもので出る最後の言葉）
      慰めるは2ループ目以降かつ2つ目以降の選択肢にだけ出す */
+  let askCount = 0;  // 選択肢を出した回数（対話が始まったかどうかの判定に使う）
   async function ask(opts, stage) {
+    askCount++;
     const list = opts.filter(([, k]) => k !== 'nagu' || (R.loop >= 1 && stage >= 2));
     const i = await choose(list.map(([t]) => t));
     const kind = list[i][1];
@@ -1401,6 +1428,8 @@
     faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_shadow', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry' },
     lost: '顔のないスケッチブック',
     idleFree: '（時計の針が16:30を越えた。ヒナが待っている）',
+    // 掲示板・空の絵・引き出しの中身を知ったら、対話に入れる
+    ready: () => R.know.has('notice') && R.know.has('painting') && R.know.has('drawer'),
     // 3択の「力不足」を選んだとき
     giveUp: ['ヒナは、何も言わずに窓のほうを向いた。', '伸ばしかけた手を、そのまま下ろした。'],
     // BAD2 身代わり：主人公がヒナの苦しみを引き受け、ヒナの口癖を話すようになる
@@ -1907,7 +1936,8 @@
         b.addEventListener('pointerdown', e => { if (e.button > 0) return; e.preventDefault(); press(b); });
         b.addEventListener('click', e => { if (e.detail === 0) press(b); });  // キーボード操作（Enter/Space）
       });
-      $('#kbCancel').onclick = () => { sleep(); closeOverlay(); res(false); };
+      const opened = performance.now();
+      $('#kbCancel').onclick = () => { if (performance.now() - opened < 700) return; sleep(); closeOverlay(); res(false); };
     });
   }
   function phoneView() {
@@ -1974,9 +2004,11 @@
     id: 'music', key: 'sota', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room',
     sit: { src: 'sota_sit', style: 'left:54.3%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
-    faces: { normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile' },
+    faces: { normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile' },
     lost: 'ソウタのパートだけの楽譜',
     idleFree: '（時計の針が17:00を越えた。ソウタが待っている）',
+    // 黒板・スマホを見て、ハルのパートを弾いたら、対話に入れる
+    ready: () => R.know.has('board') && R.know.has('phone') && R.know.has('played'),
     giveUp: ['ソウタは、鍵盤に目を落としたまま、何も言わなかった。', '伸ばしかけた手を、そのまま下ろした。'],
     badSubTalk: ['気づけば、空いたピアノ椅子の左側に座っていた。', '「……その重いの、こっちで持つよ」',
                  ['ソウタ', '……は？', 'surprise'], ['ソウタ', '……なんで、お前がそこまで', 'sad'],
@@ -2045,7 +2077,10 @@
         if (!R.know.has('board')) {
           await say(['黒板に、チョークの字。「文化祭 リハーサル」', 'その下に「ピアノ連弾『放課後』 ソウタ・ハル」。', '……「ハル」の名前にだけ、二本線が引かれている。']);
           R.know.add('board'); await tick();
-        } else await say(['「ソウタ・ハル」。二本線の下で、ハルの名前はまだ読める。']);
+        } else await say(['「ソウタ・ハル」。二本線の下で、ハルの名前はまだ読める。',
+                          '黒板の端に、消し忘れた小さな落書きが残っていた。',
+                          '「ソウタ　リハ遅刻すんなよ」……右上がりの、乱暴な字。',
+                          'その下に、きっちりした字で「お前がな」。']);
       },
       async phone() {
         showCut('mci_piano');
@@ -2070,7 +2105,7 @@
           await say(['グランドピアノ。鍵盤の蓋は閉じている。', ...(comboBlock('secondo') ? [] : ['……弾ける曲を、何も知らない。'])]);
           return;
         }
-        await say([R.items.has('secondo') ? 'ソウタの隣から、そっと鍵盤の蓋を開けた。' : '旋律は覚えている。ソウタの隣から、そっと鍵盤の蓋を開けた。']);
+        await line(R.items.has('secondo') ? 'ソウタの隣から、そっと鍵盤の蓋を開けた。' : '旋律は覚えている。ソウタの隣から、そっと鍵盤の蓋を開けた。', true, true);
         const ok = await keyboard(false);
         if (!ok) { await say(['……蓋を、そっと閉じた。']); return; }
         R.know.add('played'); R.seen.add('played');
@@ -2090,7 +2125,10 @@
           showCut('mci_stand');
           await say(['譜面台の板のすき間に、破れた五線譜が挟まっている。']);
           R.taken.stand = true; await gotItem('frag2'); await tick();
-        } else await say(['何も載っていない譜面台。']);
+        } else await say(['何も載っていない譜面台。',
+                          '板の裏に、プリントが一枚テープで留めてある。「数学 補習　7/1〜7/12　毎日 放課後 15:50〜17:30」',
+                          '余白に、きっちりした鉛筆の字で書き足してある。「7/9 リハ 17:40〜　補習のあと走る」',
+                          '……補習が終わったら、走ってここへ来るつもりだったらしい。']);
       },
       async shelf() {
         if (!R.taken.shelf) {
@@ -2102,21 +2140,30 @@
           closeOverlay();
           R.items.add('photo'); R.know.add('photo'); render();
           await tick();
-        } else await say(['色とりどりの楽譜ファイルが並んでいる。']);
+        } else await say(['色とりどりの楽譜ファイルが並んでいる。',
+                          '「ひまわりピアノ教室」と書かれた古いファイルに、発表会のプログラムが挟まっていた。',
+                          '「連弾　ソウタくん・ハルくん（年長さん）」',
+                          'プログラムの端に、先生の字で小さなメモ。「ハルくんは走りすぎ、ソウタくんは合わせすぎ。でも、二人の音がいちばん楽しそう」']);
       },
       async timpani() {
         if (!R.taken.timpani) {
           showCut('mci_timpani');
           await say(['ティンパニの脚と壁のあいだに、ほこりをかぶった紙切れが落ちていた。', '拾い上げると、五線譜の切れ端だった。']);
           R.taken.timpani = true; await gotItem('frag3'); await tick();
-        } else await say(['銅の胴に、夕日が映っている。']);
+        } else await say(['銅の胴に、夕日が映っている。',
+                          'ティンパニの陰に、空の紙パックが二つ、並んで置き去りになっていた。いちごオレと、ブラックコーヒー。',
+                          'コーヒーのほうに、油性ペンで「ハル　苦いの飲めるアピール中」。きっちりした字だ。',
+                          'いちごオレのほうには、右上がりの字で「ソウタのおごり（負けたので）」。']);
       },
       async trash() {
         if (!R.taken.trash) {
           showCut('mci_trash');
           await say(['丸めたプリントのあいだに、小さく折りたたまれた五線譜がまじっていた。']);
           R.taken.trash = true; await gotItem('frag4'); await tick();
-        } else await say(['丸めたプリントと、空のペットボトル。']);
+        } else await say(['丸めたプリントと、空のペットボトル。',
+                          'プリントのしわを伸ばすと、文化祭のプログラムに載せる紹介文の下書きだった。',
+                          '「相方のハルは、」……その先を、何度も書き直している。「うるさい」「いつも走る」、どれも線で消してある。',
+                          '最後に残っていたのは、小さな一行だけ。「ハルとじゃないと、弾けない曲です」']);
       },
     },
     hint() {
@@ -2207,6 +2254,7 @@
                  ['ソウタ', 'それで……『お前はいいよな、楽しててもできるんだから』って送った。そんなこと、思ってもないのに', 'sad'],
                  ['ソウタ', 'ほんとは、父さんに言い返したかった。……言えなかったぶん、全部ハルにぶつけた', 'blame'],
                  ['ソウタ', 'あいつが毎晩、予備校のあとに練習してたの、知ってたのに', 'blame'],
+                 ['', 'ソウタは、ふうっと長く息を吐いた。', 'down'],
                  ['ソウタ', 'あいつ、『楽しみにしてた』って。それから、『最後ってなに』って聞いてきた', 'down'],
                  ['ソウタ', '……やめたくなんか、なかった。自分で決めたわけでもないのに、やめさせられるのが納得できなかった', 'down'],
                  ['ソウタ', 'まだ弾きたいのに、もうどうにもならない。……答えたら、それを認めることになる気がして', 'down'],
@@ -2295,7 +2343,7 @@
                  ['ソウタ', '返事がなかったんじゃない。……ここに、書いてたのかよ', 'grief'],
                  ['ソウタ', '……あいつ、ほんとバカ。謝らなきゃいけないの、俺のほうなのに', 'grief'],
                  '泣きながら、ソウタが少しだけ笑った。',
-                 ['ソウタ', '……弾くよ。続き、最後まで', 'smile']]);
+                 ['ソウタ', '……弾くよ。続き、最後まで', 'crySmile']]);
       R.st = 'unraveled'; render(); lockClick();
       await say(['……いつもならチャイムが鳴る17:00を、時計の針が、静かに越えていった。',
                  ['ソウタ', '……最初のフレーズだけでいい。ハルのところ、弾いてくれる？', 'smile']]);
@@ -2313,7 +2361,8 @@
     await say([...(asked ? [] : [['ソウタ', '……最初のフレーズだけでいい。ハルのところ、弾いてくれる？', 'smile']]),
                ['ソウタ', '記号とか、難しいことはいい。音の順番どおりに、鍵盤を叩いてくれるだけでいいから', 'smile'],
                '小さくうなずいた。', '「……うん。弾かせて」',
-               'ソウタが、鍵盤の蓋を開けた。', '二人で並んで、椅子に座る。', ['ソウタ', '……いくよ', 'smile']]);
+               'ソウタが、鍵盤の蓋を開けた。', '二人で並んで、椅子に座る。']);
+    await line(['ソウタ', '……いくよ', 'smile'], true, true);
     bgm(null);
     const ok = await keyboard(true);
     if (!ok) { bgm('musicbox'); return say([['ソウタ', '……ゆっくりでいいよ', 'smile']]); }
