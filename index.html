@@ -1014,25 +1014,29 @@
   function lockClick() {
     if (!P.sound || replay) return;
     try {
-      const a = audio(), t = a.currentTime + 0.02;
-      // 「カ」：ラッチが外れる短い金属の打音／「チッ」：ボルトが止まる、より高く鋭い打音
-      [[0, 0.8, 1], [0.045, 1, 1.35]].forEach(([o, k, up]) => {
+      const a = audio(), t = a.currentTime + 0.02, dst = out(), rv = reverb();
+      const burst = (at, type, fr, q, vol, dur) => {
         const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
-        s.buffer = getNoise(); f.type = 'highpass'; f.frequency.value = 3500;
-        g.gain.setValueAtTime(0.9 * k * seMul(), t + o); g.gain.exponentialRampToValueAtTime(0.001, t + o + 0.012);
-        s.connect(f).connect(g).connect(out()); s.start(t + o); s.stop(t + o + 0.02);
-        // 金属片の鳴り：整数倍でない高い倍音を、ごく短く
-        [[3150, 0.11, 0.05], [4730, 0.08, 0.035], [6420, 0.06, 0.025], [8190, 0.04, 0.018]].forEach(([fr, v, dec]) => {
-          const os = a.createOscillator(), og = a.createGain(); os.type = 'sine'; os.frequency.value = fr * up;
-          og.gain.setValueAtTime(v * k * seMul(), t + o); og.gain.exponentialRampToValueAtTime(0.0005, t + o + dec);
-          os.connect(og).connect(out()); os.start(t + o); os.stop(t + o + dec + 0.01);
+        s.buffer = getNoise(); f.type = type; f.frequency.value = fr; f.Q.value = q;
+        g.gain.setValueAtTime(vol * seMul(), at); g.gain.exponentialRampToValueAtTime(0.0008, at + dur);
+        s.connect(f).connect(g); g.connect(dst); s.start(at); s.stop(at + dur + 0.01);
+      };
+      // 「カ」：ラッチが動く／「チッ」：ボルトが金具に当たって止まる
+      burst(t, 'bandpass', 2600, 1.2, 0.7, 0.012);
+      const t2 = t + 0.055;
+      burst(t2, 'highpass', 5200, 0.7, 0.8, 0.008);
+      burst(t2, 'bandpass', 1150, 3, 0.55, 0.03);
+      // 金属の鳴り：整数倍でない倍音を、少しずつずらして重ね（うなり）、長めに残して残響へも送る
+      const send = a.createGain(); send.gain.value = 0.9; send.connect(rv);
+      [[1, 0.06, 0.55], [2.32, 0.04, 0.38], [4.25, 0.022, 0.24], [6.63, 0.012, 0.14]].forEach(([r, v, dec]) => {
+        [0, 3.5].forEach(det => {
+          const os = a.createOscillator(), g = a.createGain();
+          os.type = 'sine'; os.frequency.value = 1320 * r + det;
+          g.gain.setValueAtTime(0, t2); g.gain.linearRampToValueAtTime(v * seMul() * (det ? 0.6 : 1), t2 + 0.002);
+          g.gain.exponentialRampToValueAtTime(0.0003, t2 + dec);
+          os.connect(g); g.connect(dst); g.connect(send); os.start(t2); os.stop(t2 + dec + 0.02);
         });
       });
-      // 錠の本体に響く、低い「コッ」
-      const b = a.createBufferSource(), bf = a.createBiquadFilter(), bg2 = a.createGain();
-      b.buffer = getNoise(); bf.type = 'bandpass'; bf.frequency.value = 900; bf.Q.value = 4;
-      bg2.gain.setValueAtTime(0.5 * seMul(), t + 0.045); bg2.gain.exponentialRampToValueAtTime(0.001, t + 0.075);
-      b.connect(bf).connect(bg2).connect(out()); b.start(t + 0.045); b.stop(t + 0.09);
     } catch (e) {}
   }
   function flash() { if (replay) return; const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
@@ -1080,6 +1084,7 @@
       const was = C && C.ready ? C.ready() : true, loop0 = R.loop, asked0 = askCount;
       await fn();
       if (!was && key !== 'hs:char' && !R.over && R.st === 'here' && R.loop === loop0 && askCount === asked0 && C.ready()) {
+        hideCut();
         await say([`（……${C.name}のことが、少しわかった気がする）`]);
         await C.talk();
       }
@@ -1101,7 +1106,8 @@
   async function tick() {
     if (R.st === 'unraveled' || R.over) return;
     R.ticks++; render();
-    if (R.ticks >= CHIME_AT) await chime();
+    if (R.ticks >= CHIME_AT) return chime();
+    if (C.onTick) await C.onTick();
   }
   // 17:00のチャイム：鳴っている間は夕焼け空の一枚絵に切り替え、明けたら部屋に戻す
   function setCG(on) { $('#scene').classList.toggle('cg', on); }
@@ -1428,6 +1434,18 @@
     faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_shadow', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry' },
     lost: '顔のないスケッチブック',
     idleFree: '（時計の針が16:30を越えた。ヒナが待っている）',
+    // 探索の途中、いないはずの母の視線を感じる（ループが進むほど、はっきりしていく）
+    async onTick() {
+      if (R.ticks !== 5 || R.seen.has('gaze')) return;
+      R.seen.add('gaze');
+      const lines = [
+        ['……ふと、背後から、誰かに見られている気がした。', '振り返る。扉のガラスの向こうには、誰もいない。', 'ヒナが、同じように扉のほうを見ていた。すぐに目をそらして、袖を握りしめる。'],
+        ['……また、背後に視線を感じた。', '廊下を、誰かの足音が通り過ぎていった気がする。コツ、コツと、固いヒールの音。', 'ヒナは膝を抱えて、小さく身を縮めた。'],
+        ['扉のガラスに、一瞬だけ、大人の女の人の影が映った。', 'まばたきをすると、もう誰もいなかった。', 'ヒナは両手で耳をふさいで、じっと床を見ていた。'],
+      ][Math.min(R.loop, 2)];
+      hideCut();
+      await say(lines);
+    },
     // 掲示板・空の絵・引き出しの中身を知ったら、対話に入れる
     ready: () => R.know.has('notice') && R.know.has('painting') && R.know.has('drawer'),
     // 3択の「力不足」を選んだとき
@@ -1482,6 +1500,7 @@
                    ['ヒナ', '……描かない。絵ならもうやめたから', 'angry'],
                    ['ヒナ', '放っといて', 'angry'],
                    'それきり、ヒナはまた窓の外に目を戻した。真夏なのに、長袖のカーディガンの袖を手の甲まで伸ばしている。',
+                   '袖口から、白い絆創膏の端がのぞいて、すぐに引っこめられた。',
                    '【操作】気になる場所をタップすると調べられます。この部屋の時間は30分。調べるたびに時計が3分進み、16:30になるとチャイムが鳴ります。話しかけても時間は進みません。']);
       } else {
         await say(['……また、この美術室だ。', '扉は、今度も開かない。', '16:00。窓際には、ヒナがいる。',
@@ -1635,11 +1654,16 @@
                                 ['ヒナ', '……出てって', 'reject'],
                                 'ヒナは窓のほうを向いたまま、二度とこちらを振り返らなかった。'],
                                ['扉を叩いた。返事はない。', '……扉の向こうで、紙を引き裂く音が、一度だけ聞こえた。']);
-      await say([['ヒナ', '……きれい？', 'surprise'], ['ヒナ', '……そんなふうに言われたの、初めて', 'down'], 'ヒナはしばらく黙って、窓の外の夕焼けを見ていた。', 'それから、ぽつりと言った。', ['ヒナ', '破ったのは、お母さん', 'down'], ['ヒナ', '『こんなもの描いてる暇があるなら』って。目の前で、びりびりに', 'sad'], 'ヒナの声が、少しだけ震えた。']);
+      await say([['ヒナ', '……きれい？', 'surprise'], ['ヒナ', '……そんなふうに言われたの、初めて', 'down'], 'ヒナはしばらく黙って、窓の外の夕焼けを見ていた。', 'それから、ぽつりと言った。', ['ヒナ', '破ったのは、お母さん', 'down'], ['ヒナ', '『こんなもの描いてる暇があるなら』って。目の前で、びりびりに', 'sad'], 'ヒナの声が、少しだけ震えた。',
+                 ['ヒナ', '……県展の〆切、今週の金曜なの', 'down'],
+                 ['ヒナ', '出せなかったら、画材は全部捨てるって。美術部も、やめさせるって', 'sad']]);
 
       // 2段目：県展の話から入り、何年も比べられ、母に愛されてこなかったことへつなげる
       await say([['ヒナ', '……お姉ちゃん、高3のとき、県展で金賞とったの', 'down'],
                  ['ヒナ', '昔から、なんでもできる人なの。……私とは違って', 'down'],
+                 ['ヒナ', '学校でも、先生も先輩も、私のこと『サクラの妹』って呼ぶの', 'down'],
+                 ['ヒナ', '……わかってる。みんな、悪気なんてない。お姉ちゃんの妹だって、言ってるだけ', 'down'],
+                 ['ヒナ', 'でも、そう呼ばれるたびに、頭の中でお母さんの声に変わるの。『サクラの、失敗作』って', 'sad'],
                  ['ヒナ', 'リビングには、お姉ちゃんの賞状が全部飾ってあるの。私のは一枚もない', 'sad'],
                  ['ヒナ', '一回だけ、市の絵のコンクールで賞をもらったことがあるんだ。でも見せたら、『サクラはその年、金賞だった』って', 'sad'],
                  ['ヒナ', 'その賞状、次の日にはもう、どこにもなかった', 'sad'],
@@ -1756,7 +1780,7 @@
                  ['ヒナ', '褒められたいからじゃなくて。……私が、描きたいから', 'grief'],
                  '「いいよ。空も、ヒナの顔も。……見たいな、ヒナが描いたの」',
                  'ヒナは袖で目元をこすって、それから、少しだけ笑った。']);
-      R.st = 'unraveled'; render(); lockClick();
+      R.st = 'unraveled'; render();
       bgm('unravel');
       await say(['……いつもならチャイムが鳴る16:30を、時計の針が、静かに越えていった。', ['ヒナ', 'ねえ。青い絵の具、持ってない？', 'smile']]);
       if (R.items.has('blue')) return hinaPaint();
@@ -2050,7 +2074,7 @@
         await say(['……目を覚ますと、音楽室にいた。', '窓の外は夕焼け。時計は16:30を指している。', ...locked('音楽室'), 'グランドピアノの前に、男子生徒がひとり座っていた。',
                    '鍵盤の蓋は閉じたまま。両手を膝に置いて、じっとうつむいている。……声をかけてみる。',
                    '「……ピアノ、弾くの？」',
-                   '彼が、少しだけ顔を上げた。胸の名札には「2年 井上ソウタ」とある。',
+                   '彼が、少しだけ顔を上げた。胸の名札には「2年 井上ソウタ」とある。目の下に、濃いくまが浮いていた。',
                    ['ソウタ', '……弾かない', 'down'],
                    ['ソウタ', '一人じゃ、弾けない曲だから', 'down'],
                    '「一人じゃ？」',
@@ -2247,6 +2271,7 @@
                  ['ソウタ', '家に帰ったら、父さんに言われた。『文化祭が終わったら、ピアノはやめろ』って', 'sad'],
                  ['ソウタ', '『ハルくんは予備校に通いながら、ピアノも続けてるだろ。お前は何をやってるんだ』……って', 'down'],
                  ['ソウタ', '何も言い返せなかった', 'down'],
+                 ['ソウタ', '……家のピアノも、今週末に業者が引き取りに来る。父さんが、もう決めたから', 'down'],
                  ['ソウタ', 'だから、あの連弾が最後だった。……最後くらい、ちゃんと弾きたかった', 'sad'],
                  ['ソウタ', 'ハルには、やめるって言えてなかった。言ったら、本当に終わる気がして', 'sad'],
                  ['ソウタ', '部屋に戻ったら、ハルから。テンポ上げようって。……何も知らないで、楽しそうに', 'angry'],
@@ -2344,7 +2369,7 @@
                  ['ソウタ', '……あいつ、ほんとバカ。謝らなきゃいけないの、俺のほうなのに', 'grief'],
                  '泣きながら、ソウタが少しだけ笑った。',
                  ['ソウタ', '……弾くよ。続き、最後まで', 'crySmile']]);
-      R.st = 'unraveled'; render(); lockClick();
+      R.st = 'unraveled'; render();
       await say(['……いつもならチャイムが鳴る17:00を、時計の針が、静かに越えていった。',
                  ['ソウタ', '……最初のフレーズだけでいい。ハルのところ、弾いてくれる？', 'smile']]);
       if (R.items.has('secondo') || R.know.has('melody')) return sotaDuet(true);
