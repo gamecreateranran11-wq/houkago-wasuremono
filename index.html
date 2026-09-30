@@ -43,6 +43,8 @@
   .menu-panel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 170px; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
   .bar-actions .menu-panel button { text-align: left; border-color: transparent; padding: 8px 10px; }
   .bar-actions .menu-panel button:hover { border-color: var(--akane); }
+  .menu-panel .vol { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; font-size: 13px; }
+  .menu-panel .vol input { width: 110px; accent-color: var(--akane); }
 
   .scene-wrap { flex: 0 0 auto; min-height: 160px; display: flex; align-items: flex-start; justify-content: center; }
   .scene { position: relative; width: 100%; max-width: calc(58vh * 1.5); aspect-ratio: 3 / 2; margin: 0 auto; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background: #1c1620; }
@@ -254,7 +256,8 @@
         <button id="btnOpenMenu" type="button" aria-expanded="false" aria-controls="menuPanel">メニュー</button>
         <div id="menuPanel" class="menu-panel" hidden>
           <button id="btnSkip" type="button" aria-pressed="true">既読スキップ</button>
-          <button id="btnSound" type="button" aria-pressed="true">音あり</button>
+          <label class="vol">BGM<input id="volBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
+          <label class="vol">効果音<input id="volSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label>
           <button id="btnMenu" type="button">タイトルへ</button>
         </div>
       </div>
@@ -606,7 +609,7 @@
         <circle cx="${cx}" cy="${cy}" r="11" fill="#2b221b"/><circle cx="${cx - 3}" cy="${cy - 3}" r="3" fill="#6a5846"/>
       </svg>`;
   }
-  const moodNow = () => !R || R.over ? null : (R.st === 'unraveled' ? 'unravel' : 'explore');
+  const moodNow = () => !R || R.over ? null : (R.st === 'unraveled' ? (C.unravelMood || 'unravel') : 'explore');
   function idle() {
     bgm(moodNow());
     $('#scene').classList.remove('story');
@@ -649,6 +652,11 @@
   /* ---------- sound ---------- */
   let actx = null;
   const PIANO_VOL = 0.65;  // チャイムと聞こえ方をそろえる
+  // 音量（0〜1）。音のオン・オフの代わりにバーで調整する
+  P.sound = true;
+  if (P.bgmVol === undefined) P.bgmVol = 0.7;
+  if (P.seVol === undefined) P.seVol = 0.8;
+  const seMul = () => P.seVol / 0.8;
   const audio = () => {
     actx = actx || new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
     if (actx.state !== 'running') { try { actx.resume(); } catch (e) {} }
@@ -705,7 +713,7 @@
       const notes = [329.63, 261.63, 293.66, 196.0, 196.0, 293.66, 329.63, 261.63].map(f => f * 2);
       notes.forEach((f, i) => {
         const t = a.currentTime + i * 0.55;
-        [[1, 0.3], [2, 0.12], [3, 0.05]].forEach(([m, v]) => {
+        [[1, 0.3 * seMul()], [2, 0.12 * seMul()], [3, 0.05 * seMul()]].forEach(([m, v]) => {
           const o = a.createOscillator(), g = a.createGain();
           o.type = 'sine'; o.frequency.value = f * m;
           g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + 0.02);
@@ -720,7 +728,8 @@
     if (!P.sound) return;
     try {
       const a = audio(), t = a.currentTime + delay;
-      gain *= PIANO_VOL;
+      gain *= PIANO_VOL * seMul();
+      if (gain <= 0) return;
       [[1, 'triangle', 1], [2, 'sine', 0.5], [3, 'sine', 0.18], [4, 'sine', 0.08]].forEach(([m, type, v]) => {
         const o = a.createOscillator(), g = a.createGain();
         o.type = type; o.frequency.value = freq * m;
@@ -730,43 +739,102 @@
       });
     } catch (e) {}
   }
-  /* ---------- BGM：その場で音を組み立てて鳴らす（6種類） ---------- */
-  const BGM_VOL = 0.55;
+  /* ---------- BGM：その場で音を組み立てて鳴らす ---------- */
   let bgmName = null, bgmGain = null, bgmTimer = null, bgmNext = 0, bgmStep = 0;
+  const bgmLevel = () => 0.8 * P.bgmVol;
   const nf = n => 440 * Math.pow(2, (n - 69) / 12);  // MIDI番号→周波数
-  function tone(freq, t, dur, vol, type = 'sine', attack = 0.02) {
+  // 1音：立ち上がり attack、持続、release で消える。lp＝こもらせる周波数、vib＝ビブラート
+  function voice(freq, t, dur, vol, { type = 'sine', attack = 0.02, release = null, lp = 0, vib = 0, vibRate = 5 } = {}) {
+    if (vol <= 0) return;
     const a = audio(), o = a.createOscillator(), g = a.createGain();
     o.type = type; o.frequency.value = freq;
+    let node = o;
+    if (lp) { const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; f.Q.value = 0.5; o.connect(f); node = f; }
+    if (vib) { const l = a.createOscillator(), lg = a.createGain(); l.frequency.value = vibRate; lg.gain.value = freq * vib; l.connect(lg).connect(o.frequency); l.start(t); l.stop(t + dur + 0.1); }
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + attack);
-    g.gain.exponentialRampToValueAtTime(0.0005, t + dur);
-    o.connect(g).connect(bgmGain); o.start(t); o.stop(t + dur + 0.05);
+    if (release) { g.gain.setValueAtTime(vol * 0.85, Math.max(t + attack, t + dur - release)); g.gain.linearRampToValueAtTime(0.0001, t + dur); }
+    else g.gain.exponentialRampToValueAtTime(0.0005, t + dur);
+    node.connect(g).connect(bgmGain); o.start(t); o.stop(t + dur + 0.05);
   }
+  const tone = (freq, t, dur, vol, type = 'sine', attack = 0.02) => voice(freq, t, dur, vol, { type, attack });
   const pad = (notes, t, dur, vol) => notes.forEach(n => { tone(nf(n), t, dur, vol, 'sine', dur * 0.3); tone(nf(n) * 1.003, t, dur, vol * 0.5, 'triangle', dur * 0.3); });
   const pluck = (n, t, vol, dur = 2.4) => { tone(nf(n), t, dur, vol, 'triangle', 0.01); tone(nf(n) * 2, t, dur * 0.6, vol * 0.35, 'sine', 0.01); };
+  // 楽器
+  const cello = (n, t, dur, vol) => { voice(nf(n), t, dur, vol, { type: 'sawtooth', attack: 0.22, release: 0.5, lp: 1000, vib: 0.004, vibRate: 5 }); voice(nf(n), t, dur, vol * 0.5, { type: 'sine', attack: 0.2, release: 0.5 }); };
+  const flute = (n, t, dur, vol) => { voice(nf(n), t, dur, vol, { attack: 0.09, release: 0.3, vib: 0.005, vibRate: 5.5 }); voice(nf(n) * 2, t, dur, vol * 0.12, { type: 'triangle', attack: 0.09, release: 0.3, lp: 3000 }); };
+  const orgel = (n, t, vol, dur = 1.8) => { voice(nf(n), t, dur, vol, { attack: 0.003 }); voice(nf(n) * 2.76, t, dur * 0.35, vol * 0.18, { attack: 0.003 }); voice(nf(n) * 4.07, t, dur * 0.2, vol * 0.08, { attack: 0.002 }); };
+  const piano = (n, t, vol, dur = 1.6) => { voice(nf(n), t, dur, vol, { type: 'triangle', attack: 0.006 }); voice(nf(n) * 2, t, dur * 0.55, vol * 0.4, { attack: 0.006 }); voice(nf(n) * 3, t, dur * 0.3, vol * 0.12, { attack: 0.005 }); };
+  const guitar = (n, t, vol, dur = 2) => { voice(nf(n), t, dur, vol, { type: 'triangle', attack: 0.004, lp: 2400 }); voice(nf(n) * 2, t, dur * 0.5, vol * 0.3, { attack: 0.004 }); voice(nf(n) * 3, t, dur * 0.25, vol * 0.1, { attack: 0.003 }); };
+  const brass = (n, t, dur, vol) => { voice(nf(n), t, dur, vol, { type: 'sawtooth', attack: 0.5, release: 0.8, lp: 850, vib: 0.003, vibRate: 4.5 }); };
+  // 音符の並び [音, 長さ] を、tick 秒刻みで鳴らす
+  const seq = (notes, t, tick, fn) => { let x = t; notes.forEach(([n, len]) => { if (n) fn(n, x, len * tick); x += len * tick; }); };
   // 各曲：1小節ぶんの音を t から並べ、次の小節までの秒数を返す
   const BGM = {
-    // 探索と会話：夕方の静かなアルペジオ（Am7 - Fmaj7 - C - G）
-    explore(t, i) {
-      const ch = [[57, 60, 64, 67], [53, 57, 60, 64], [48, 52, 55, 60], [55, 59, 62, 67]][i % 4], sp = 0.62;
-      ch.concat([ch[2] + 12, ch[1] + 12]).forEach((n, k) => pluck(n + 12, t + k * sp, 0.05));
-      tone(nf(ch[0] - 12), t, sp * 6, 0.05, 'sine', 0.05);
-      return sp * 6;
+    // タイトル：誰もいない放課後。アコースティックギターと、遠くで練習する吹奏楽の長い音
+    title(t, i) {
+      const ch = [[48, 55, 64, 67], [52, 55, 59, 64], [45, 52, 57, 60], [41, 48, 57, 60]][i % 4], e = 0.42, d = e * 8;
+      [0, 1, 2, 3, 2, 1, 3, 2].forEach((k, j) => guitar(ch[k] + (k ? 0 : 0), t + j * e, j ? 0.035 : 0.05, 2.4));
+      brass(ch[1] + 12, t, d, 0.012); brass(ch[3], t, d, 0.009);
+      if (i % 4 === 1) brass([72, 71, 69, 72][(i >> 2) % 4], t + e * 2, e * 5, 0.018);
+      return d;
     },
-    // 核心の場面：低く沈んだ和音（Dm - B♭ - Gm - A）
+    // 探索と会話：謎めいた夏の夕方。やわらかな和音にアルペジオと、ときどき高い鈴の音
+    explore(t, i) {
+      const ch = [[53, 57, 60, 64, 67], [52, 55, 59, 62, 67], [50, 53, 57, 60, 64], [43, 55, 59, 64, 67]][i % 4], sp = 0.55, d = sp * 7;
+      pad(ch.slice(1, 4).map(n => n + 12), t, d + 0.6, 0.011);
+      tone(nf(ch[0] - 12), t, d, 0.045, 'sine', 0.08);
+      [1, 2, 3, 4, 3, 2, 4].forEach((k, j) => pluck(ch[k] + 12, t + j * sp, 0.04));
+      if (i % 2 === 1) orgel(ch[4] + 24, t + sp * 5, 0.02, 2.4);
+      return d;
+    },
+    // 核心の場面：落ち着いて、少し悲しげな、チェロとフルート（Am - F - Dm - E）
     core(t, i) {
+      const q = 1.2, bar = i % 4;
+      const bass = [[45, 52], [41, 48], [50, 45], [40, 47]][bar], chord = [[57, 60, 64], [57, 60, 65], [57, 62, 65], [56, 59, 64]][bar];
+      cello(bass[0], t, q * 2, 0.045); cello(bass[1], t + q * 2, q * 2, 0.04);
+      pad(chord, t, q * 4 + 0.4, 0.008);
+      const mel = [[[76, 1], [74, 1], [72, 2]], [[69, 1], [72, 1], [77, 2]], [[77, 1], [76, 0.5], [74, 0.5], [69, 2]], [[71, 1], [68, 1], [64, 2]]][bar];
+      if ((i >> 2) % 2 === 1 || bar % 2 === 0) seq(mel, t, q, (n, x, len) => flute(n, x, len * 0.95, 0.03));
+      return q * 4;
+    },
+    // 重い核心（温存）：低く沈んだ和音
+    coreHeavy(t, i) {
       const ch = [[50, 53, 57], [46, 50, 53], [43, 46, 50], [45, 49, 52]][i % 4], d = 5.2;
       pad(ch, t, d + 0.8, 0.028); tone(nf(ch[0] - 12), t, d, 0.05, 'sine', 0.4);
       if (i % 2 === 0) pluck(ch[2] + 24, t + 2.6, 0.03, 3);
       return d;
     },
-    // ソウタの演奏：『放課後』の旋律と伴奏
+    // 切ない場面：オルゴールの旋律（Am - F - C - E）
+    musicbox(t, i) {
+      const e = 0.36, bar = i % 4;
+      const chord = [[57, 64, 72], [53, 60, 69], [48, 55, 64], [52, 59, 68]][bar];
+      const mel = [[[88, 2], [86, 1], [84, 1], [83, 2], [84, 2]], [[81, 2], [84, 1], [88, 1], [89, 3], [88, 1]],
+                   [[88, 2], [86, 1], [84, 1], [79, 2], [84, 2]], [[83, 3], [80, 1], [76, 4]]][bar];
+      seq(mel, t, e, (n, x) => orgel(n, x, 0.05, 2.2));
+      [0, 1, 2, 1, 0, 1, 2, 1].forEach((k, j) => orgel(chord[k], t + j * e, 0.022, 1.4));
+      return e * 8;
+    },
+    // ソウタの演奏：『放課後』の主題を速く、ドラマチックに。3オクターブ以上にわたり、2周目は旋律を1オクターブ上げて重ねる
     sota(t, i) {
-      const mel = [64, 67, 69, 67, 65, 64, 62, 60], bass = [[48, 55], [53, 57], [55, 59], [48, 55]], q = 0.78;
-      const bar = i % 4;
-      [mel[bar * 2], mel[bar * 2 + 1]].forEach((n, k) => pluck(n + 12, t + k * q, 0.07, 2.2));
-      bass[bar].forEach((n, k) => pluck(n, t + k * q, 0.05, 2.6));
-      [0, 1, 2, 3].forEach(k => pluck(bass[bar][1] + 12, t + k * q / 2 + q / 4, 0.02, 1.2));
-      return q * 2;
+      const e = 0.2, bar = i % 8, cyc = (i >> 3) % 2;
+      const roots = [48, 53, 55, 48, 45, 53, 55, 48];
+      const chords = [[60, 64, 67], [60, 65, 69], [59, 62, 67], [60, 64, 67], [60, 64, 69], [60, 65, 69], [59, 62, 67], [60, 64, 67]];
+      const mels = [[[76, 2], [79, 2], [81, 1], [79, 1], [76, 2]], [[77, 2], [76, 1], [74, 1], [72, 2], [69, 2]],
+                    [[74, 1], [76, 1], [77, 1], [79, 1], [83, 2], [86, 2]], [[84, 4], [79, 2], [76, 2]],
+                    [[81, 2], [84, 2], [88, 1], [86, 1], [84, 2]], [[89, 2], [88, 1], [86, 1], [84, 2], [81, 2]],
+                    [[83, 1], [84, 1], [86, 1], [88, 1], [91, 2], [89, 1], [86, 1]], [[88, 6], [84, 1], [79, 1]]];
+      const up = cyc && bar >= 4 ? 12 : 0;
+      // 右手：旋律と、1オクターブ下の重ね
+      seq(mels[bar], t, e, (n, x, len) => { piano(n + up, x, 0.06, Math.max(0.5, len * 1.4)); piano(n + up - 12, x, 0.03, Math.max(0.5, len * 1.2)); });
+      // 左手：ベースのオクターブと、分散和音
+      const r = roots[bar];
+      piano(r - 12, t, 0.05, 1.6); piano(r, t, 0.035, 1.4); piano(r - 12, t + e * 4, 0.04, 1.2);
+      [1, 2, 3, 2, 1, 2, 3].forEach((k, j) => piano(k === 1 ? chords[bar][0] - 12 : chords[bar][k - 1], t + (j + 1) * e, 0.022, 0.8));
+      // 2周目：内声の和音を重ねる
+      if (cyc) chords[bar].forEach(n => piano(n, t + e * 2, 0.015, 1.2));
+      // 区切りの小節：駆け上がるアルペジオ（16分音符）
+      if (bar === 3 || bar === 7) [60, 64, 67, 72, 76, 79, 84, 88].forEach((n, j) => piano(n + (bar === 7 && cyc ? 12 : 0) - 12, t + e * 4 + j * e / 2, 0.028, 0.6));
+      return e * 8;
     },
     // ほどけたとき：あたたかい長調（C - Am - F - G）
     unravel(t, i) {
@@ -801,7 +869,7 @@
     clearInterval(bgmTimer); bgmGain = null;
     if (!name) return;
     bgmGain = a.createGain(); bgmGain.gain.value = 0; bgmGain.connect(out());
-    bgmGain.gain.setTargetAtTime(BGM_VOL, a.currentTime, 0.8);
+    bgmGain.gain.setTargetAtTime(bgmLevel(), a.currentTime, 0.8);
     bgmNext = a.currentTime + 0.15; bgmStep = 0;
     const fn = BGM[name];
     const pump = () => { try { while (bgmNext < a.currentTime + 1.5) { bgmNext += fn(bgmNext, bgmStep++); } } catch (e) {} };
@@ -821,10 +889,10 @@
     $('#btnHint').disabled = R.over;
     syncSave();
     $('#btnLog').disabled = !R.log || !R.log.length;
-    $('#btnSound').textContent = P.sound ? '音あり' : '音なし';
+
     $('#btnSkip').textContent = P.skip ? '既読スキップ ON' : '既読スキップ OFF';
     $('#btnSkip').setAttribute('aria-pressed', P.skip ? 'true' : 'false');
-    $('#btnSound').setAttribute('aria-pressed', P.sound ? 'true' : 'false');
+
     if (!C) return;
     $('#sitFig').classList.toggle('gone', R.st === 'vanished' || R.st === 'shut');
     $('#leftover').style.display = R.st === 'vanished' ? '' : 'none';
@@ -870,6 +938,10 @@
   // 17:00のチャイム：鳴っている間は夕焼け空の一枚絵に切り替え、明けたら部屋に戻す
   function setCG(on) { $('#scene').classList.toggle('cg', on); }
   async function chime() {
+    // 3回目のチャイムの直前：心に触れていた子は、この先を示す言葉を残す
+    if (R.loop + 1 >= 3 && R.st !== 'unraveled' && !R.doom && R.touched && C.lastWords) {
+      bgm('vanish'); await say(C.lastWords); R.late = true;
+    }
     R.loop++; R.ticks = 0; R.cons = 0; bgm(null); bell(); flash(); render();
     const last = R.loop >= 3 && R.st !== 'unraveled';
     // 3回目のチャイム：心に触れていれば「間に合わなかった」消失、一度も触れていなければBAD1
@@ -913,6 +985,7 @@
   async function vanish() {
     bgm('vanish');
     await C.vanishScene();
+    if (R.late) { closeOverlay(); await say([`……${C.name}には、もう時間がなかったんだ。`, '間に合わなかった。そのことだけが、はっきりわかった。']); }
     const first = !P.shelf[C.key];
     if (first) { P.shelf[C.key] = true; P.shelfRun[C.key] = P.runNo; }
     R.over = true; clearRun(); render(); idle();
@@ -942,7 +1015,7 @@
     const v = keys.filter(k => res[k] === 'vanished').length, sh = keys.filter(k => res[k] === 'shut').length;
     let end;
     if (v >= 3) end = ['BAD5', '空席の教室', ['机の上に、わすれものだけが並んでいた。', 'チャイムも鳴らない。夕焼けだけが、音もなく教室を染めている。', '返事をする人は、もう誰もいなかった。'], 'vanish'];
-    else if (v >= 1) end = ['BAD6', 'わすれものの重さ', ['屋上へ続く階段の途中で、足が止まった。', '踊り場に、自分と同じ顔をした誰かが立っている。', '「救えなかったくせに」', '差し出されたわすれものは、両腕で抱えきれないほど重かった。'], 'vanish'];
+    else if (v >= 1) end = ['BAD6', 'わすれものの重さ', ['屋上へ続く階段の途中で、足が止まった。', '踊り場に、自分と同じ顔をした誰かが立っている。', '「救えなかったくせに」', '差し出されたわすれものは、どれも紙切れのように軽いはずなのに、両腕で抱えきれないほど重く感じた。'], 'vanish'];
     else if (sh === keys.length) end = ['BAD4', '閉ざされた校舎', ['廊下に立って、並んだ扉を見渡した。', 'どの扉も、もう開かない。ノックをしても、名前を呼んでも、返事はない。', 'チャイムが鳴る。何度鳴っても、誰も出てこない。', '……誰にも届かない言葉を、ずっと抱えていたのは、誰だったんだろう。'], 'shut'];
     else if (sh >= 1) end = ['NORMAL', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。', '振り返ると、閉ざされた扉の教室には、まだ明かりがついていた。', '門の手前で、足が止まる。まだ、ここは通れない。'], 'unravel'];
     else end = ['GOOD', '送り出した屋上', ['全員の背中を、校門の向こうへ見送った。', '夕焼けの屋上に、一人で立つ。', '足もとに、生徒手帳が一冊、落ちていた。'], 'unravel'];
@@ -996,13 +1069,14 @@
     if (!hasKey(C.key)) return closeHeart();
     await line('（……こんな時、どうすれば……）', false);
     const t = await choose([`わからない……。けど、${C.who}を放っておけない`, '今の自分じゃ力不足だ。……ごめんなさい', '辛いなら、ずっとそばにいるよ']);
-    if (t === 0) return chapterBad('BAD2', '身代わり', C.badSub, 'core');
+    if (t === 0) { bgm('coreHeavy'); await say(C.badSubTalk); return chapterBad('BAD2', '身代わり', C.badSub, 'coreHeavy'); }
     if (t === 1) { await say(C.giveUp); return bad1(); }
+    bgm('vanish'); await say(C.badDepTalk);
     return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'vanish');
   }
   async function closeHeart() {
     // 心を閉ざしたら、その場でチャイムの時間まで飛ばす
-    await say(C.closeLines);
+    await say(typeof C.closeLines === 'function' ? C.closeLines() : C.closeLines);
     R.ticks = CHIME_AT - 1; await tick();
   }
   async function doom(lines) {
@@ -1159,16 +1233,22 @@
     // 3択の「力不足」を選んだとき
     giveUp: ['「……ごめん。今の自分じゃ、何もしてあげられない」', 'ヒナは、何も言わずに窓のほうを向いた。', '伸ばしかけた手を、そのまま下ろした。'],
     // BAD2 身代わり：主人公がヒナの苦しみを引き受け、ヒナの口癖を話すようになる
-    badSub: ['気づけば、ヒナの手首を、長袖の上から包むように握っていた。', '「……その痛み、こっちにちょうだい」',
-             'ヒナは驚いた顔をして、それから、ゆっくり立ち上がった。扉が、ヒナの前でだけ開いた。',
+    badSubTalk: ['気づけば、ヒナの手首を、長袖の上から包むように握っていた。', '「……その痛み、こっちにちょうだい」',
+                 ['ヒナ', '……え？', 'surprise'], ['ヒナ', '……なんで、あんたがそこまで', 'sad'],
+                 '「いいから。……ヒナは、もう行っていいよ」',
+                 'ヒナは驚いた顔のまま、ゆっくり立ち上がった。扉が、ヒナの前でだけ開いた。', ['ヒナ', '……ありがとう', 'sad']],
+    badSub: ['ヒナの足音が、廊下の向こうへ遠ざかっていった。',
              '窓際の椅子に、ひとりで座る。袖が、手の甲まで伸びていた。', '誰かが扉の外から声をかける。「……ここで何してるの？」',
              '「来てるだけ。……ほかに、行くとこないし」', '口が勝手に、そう答えていた。'],
     // BAD3 ふたりきりの放課後
-    badDep: ['チャイムが鳴っても、ヒナは扉のほうを見なかった。', 'イーゼルの影に、二人で並んで座る。',
+    badDepTalk: [['ヒナ', '……ほんとに？ ずっと？', 'surprise'], 'うなずくと、ヒナは安心したように笑って、こちらの袖をつまんだ。',
+                 ['ヒナ', '……じゃあ、ここにいて。どこにも行かないで', 'sad'], 'イーゼルの影に、二人で並んで座りこんだ。'],
+    badDep: ['チャイムが鳴っても、ヒナは扉のほうを見なかった。',
              '「ここにいれば、誰にも比べられないね」', 'ヒナが笑う。つられて、笑った。',
              '扉は、どちらからも開けようとしなかった。夕焼けは、ずっと同じ色のままだった。'],
     samePose: '窓際には、さっきとまったく同じ姿勢で、ヒナが座っていた。',
     loopReply: [['ヒナ', '……は？ チャイムなんて鳴ってないけど', 'angry'], ['ヒナ', 'ていうか、誰？', 'angry']],
+    lastWords: [['ヒナ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ヒナ', '……お母さんの声が、聞こえないところ', 'despair']],
     closeLines: ['ヒナは膝を抱えたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。'],
     hotspots: [
       ['sink', '流し', 'left:83.3%;top:37.5%;width:16.7%;height:45.8%'],
@@ -1443,10 +1523,12 @@
                  'ヒナは、スケッチブックの入った鞄を、胸にぎゅっと抱えた。',
                  ['ヒナ', '……それに、自分の顔なんて。見たら、きっと嫌いになる', 'down'],
                  '「嫌いになっても、いいと思う。……それでも、今のヒナの顔を、ヒナ自身に見てあげてほしい」',
-                 'ヒナは、長いあいだ黙っていた。窓の外の夕焼けを見て、それから、自分の手を見た。',
-                 'ぎゅっと鞄を抱えていた腕から、少しずつ力が抜けていく。',
-                 'こわばっていた口元がゆるんで、ヒナは、小さく息を吐いた。',
-                 ['ヒナ', '……描いても、いいのかな', 'grief'],
+                 'ヒナは、長いあいだ黙っていた。窓の外の夕焼けを見て、それから、自分の手を見た。']);
+      bgm(null);  // チェロとフルートを消して、しばらく音のない時間
+      await say(['ぎゅっと鞄を抱えていた腕から、少しずつ力が抜けていく。',
+                 'こわばっていた口元がゆるんで、ヒナは、小さく息を吐いた。']);
+      bgm('musicbox');
+      await say([['ヒナ', '……描いても、いいのかな', 'grief'],
                  ['ヒナ', 'お母さんが、嫌な顔しても', 'grief'],
                  ['ヒナ', '褒められたいからじゃなくて。……私が、描きたいから', 'grief'],
                  '「いいよ。空も、ヒナの顔も。……見たいな、ヒナが描いたの」',
@@ -1700,17 +1782,25 @@
     faces: { normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile' },
     lost: 'ソウタのパートだけの楽譜',
     idleFree: '（時計の針が17:00を越えた。ソウタが待っている）',
-    giveUp: ['「……ごめん。今の自分じゃ、何もしてあげられない」', 'ソウタは、閉じた鍵盤の蓋に目を落としたまま、何も言わなかった。', '伸ばしかけた手を、そのまま下ろした。'],
-    badSub: ['気づけば、空いたピアノ椅子の左側に座っていた。', '「……その重いの、こっちで持つよ」',
-             'ソウタは驚いた顔をして、それから、ゆっくり立ち上がった。扉が、ソウタの前でだけ開いた。',
+    giveUp: ['「……ごめん。今の自分じゃ、何もしてあげられない」', 'ソウタは、鍵盤に目を落としたまま、何も言わなかった。', '伸ばしかけた手を、そのまま下ろした。'],
+    badSubTalk: ['気づけば、空いたピアノ椅子の左側に座っていた。', '「……その重いの、こっちで持つよ」',
+                 ['ソウタ', '……は？', 'surprise'], ['ソウタ', '……なんで、お前がそこまで', 'sad'],
+                 '「いいから。……ソウタは、もう行っていいよ」',
+                 'ソウタは驚いた顔のまま、ゆっくり立ち上がった。扉が、ソウタの前でだけ開いた。', ['ソウタ', '……悪い', 'sad']],
+    badSub: ['ソウタの足音が、廊下の向こうへ遠ざかっていった。',
              'ひとりになった音楽室で、閉じた鍵盤の蓋を見下ろす。', '誰かが扉の外から声をかける。「……ピアノ、弾くの？」',
              '「……弾かない。一人じゃ、弾けない曲だから」', '口が勝手に、そう答えていた。'],
-    badDep: ['チャイムが鳴っても、ソウタは扉のほうを見なかった。', '長いピアノ椅子に、二人で並んで座る。',
-             '「……ここにいれば、もう誰にも取り上げられないな」', '鍵盤の蓋は、閉じたままだった。',
+    badDepTalk: [['ソウタ', '……ずっと？', 'surprise'], ['ソウタ', '……じゃあ、ここにいろよ。ハルの席、空いてるから', 'sad'],
+                 '長いピアノ椅子の左側に、そっと腰を下ろした。'],
+    badDep: ['チャイムが鳴っても、ソウタは扉のほうを見なかった。',
+             '「……ここにいれば、もう誰にも取り上げられないな」', '鍵盤には、どちらも触れなかった。',
              '扉は、どちらからも開けようとしなかった。夕焼けは、ずっと同じ色のままだった。'],
     samePose: 'ピアノの前には、さっきとまったく同じ姿勢で、ソウタが座っていた。',
     loopReply: [['ソウタ', '……チャイム？ 鳴ってないだろ', 'angry'], ['ソウタ', 'ていうか、誰', 'angry']],
-    closeLines: ['ソウタは閉じた鍵盤の蓋に額をつけたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。'],
+    lastWords: [['ソウタ', '……そろそろ、行かないと', 'down'], '「行くって、どこへ？」', ['ソウタ', '決まってるだろ。……ハルのところだよ', 'despair']],
+    unravelMood: 'musicbox',
+    // 先にピアノを弾いていたら、蓋は開いたまま
+    closeLines: () => [R.seen.has('played') ? 'ソウタは開いたままだった鍵盤の蓋をそっと閉じて、その上に額をつけた。もう何も言わなかった。' : 'ソウタは閉じた鍵盤の蓋に額をつけたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。'],
     hotspots: [
       ['window', '窓', 'left:0;top:0;width:18%;height:52%'],
       ['board', '黒板', 'left:32.8%;top:28.7%;width:33.9%;height:19%'],
@@ -1918,7 +2008,8 @@
                  ['ソウタ', 'ほんとは、父さんに言い返したかった。……言えなかったぶん、全部ハルにぶつけた', 'blame'],
                  ['ソウタ', 'あいつが毎晩、予備校のあとに練習してたの、知ってたのに', 'blame'],
                  ['ソウタ', 'あいつ、『楽しみにしてた』って。それから、『最後ってなに』って聞いてきた', 'down'],
-                 ['ソウタ', '答えたら、ピアノやめるって言わなきゃいけない。……それだけは、言いたくなかった', 'down'],
+                 ['ソウタ', '……やめたくなんか、なかった。自分で決めたわけでもないのに、やめさせられるのが納得できなかった', 'down'],
+                 ['ソウタ', 'まだ弾きたいのに、もうどうにもならない。……答えたら、それを認めることになる気がして', 'down'],
                  ['ソウタ', 'どうせ取り上げられるなら、自分から手放したほうが、まだましだって……そう思ったんだ', 'down'],
                  ['ソウタ', 'あいつが『授業はじまる』って言ってきて。最後に、『ピアノも、お前も、もうどうでもいい』って送った', 'sad'],
                  ['ソウタ', '……既読はついたのに、返事はなかった', 'sad'],
@@ -1932,7 +2023,7 @@
       await line(['ソウタ', '……ハルが最後に読んだ俺の言葉が、あれなんだよ', 'grief'], false);
       a = await ask([['事故は、ソウタのメッセージとは関係ないよ', 'seiron'], ['……謝りたかったんだね。ハルくんに', 'yori'],
                      ['ソウタのせいじゃないよ', 'nagu'], ['ハルくんの分まで、頑張らなきゃ', 'oitsu']], 2);
-      if (a === 'seiron') { await say([['ソウタ', '……知ってるよ', 'angry'], ['ソウタ', '関係ないのなんて、わかってる。……そういう話じゃないんだよ', 'angrySad'], 'ソウタは鍵盤の蓋に拳を置いたまま、黙り込んだ。', '正しい言葉ほど、今のソウタには届かないのかもしれない。']); return closeHeart(); }
+      if (a === 'seiron') { await say([['ソウタ', '……知ってるよ', 'angry'], ['ソウタ', '関係ないのなんて、わかってる。……そういう話じゃないんだよ', 'angrySad'], R.seen.has('played') ? 'ソウタは開いたままの鍵盤の蓋をそっと閉じて、その上に拳を置いたまま、黙り込んだ。' : 'ソウタは鍵盤の蓋に拳を置いたまま、黙り込んだ。', '正しい言葉ほど、今のソウタには届かないのかもしれない。']); return closeHeart(); }
       if (a === 'oitsu') return doom([['ソウタ', '……ハルの分まで？', 'surprise'], ['ソウタ', '俺が、あいつの代わりに生きてるってこと？', 'shadow'], ['ソウタ', '……無理だよ、そんなの', 'despair']]);
       if (a === 'nagu') {
         R.cons++;
@@ -1942,7 +2033,7 @@
                    '（……うなずいてしまったら、何かを間違える気がした）']);
       } else {
         await say([['ソウタ', '……うん', 'grief'], ['ソウタ', 'ほんとは、ちゃんと顔見て謝りたかった。……次の日のリハで言えばいいって、思ってた', 'grief'],
-                   'ソウタの目から、ぽたりと一粒、鍵盤の蓋に落ちた。']);
+                   R.seen.has('played') ? 'ソウタの目から、ぽたりと一粒、鍵盤の上に落ちた。' : 'ソウタの目から、ぽたりと一粒、鍵盤の蓋に落ちた。']);
       }
 
       // 3段目
@@ -1987,9 +2078,11 @@
                  ['ソウタ', 'あの日の昼休み、ハルが『ブレスの位置、書き込んどく』って持って帰った楽譜。葬式のあと、ハルのお母さんが返してくれた', 'sad'],
                  '確かめるように、最後のページを、そっと裏返した。']);
       showCut('m_score_back');
-      await say(['白紙の真ん中に、あの鉛筆の殴り書きがある。',
-                 'ソウタの手が、止まった。',
-                 ['ソウタ', '……この「し」の、はねかた', 'surprise'],
+      await say(['白紙の真ん中に、あの鉛筆の殴り書きがある。']);
+      bgm(null);
+      await say(['ソウタの手が、止まった。']);
+      bgm('musicbox');
+      await say([['ソウタ', '……この「し」の、はねかた', 'surprise'],
                  ['ソウタ', 'ハルの字だ。……小学校のときから、ずっと、このくせ', 'surprise'],
                  ['ソウタ', '……仲直りしたら、続き弾こう', 'grief'],
                  '何度も目で追ってやっと読めた字を、ソウタは一目で読んだ。',
@@ -2001,7 +2094,7 @@
                  ['ソウタ', '……あいつ、ほんとバカ。謝らなきゃいけないの、俺のほうなのに', 'grief'],
                  '泣きながら、ソウタが少しだけ笑った。',
                  ['ソウタ', '……弾くよ。続き、最後まで', 'smile']]);
-      R.st = 'unraveled'; render(); bgm('unravel');
+      R.st = 'unraveled'; render();
       await say(['……いつもならチャイムが鳴る17:00を、時計の針が、静かに越えていった。',
                  ['ソウタ', '……最初のフレーズだけでいい。ハルのところ、弾いてくれる？', 'smile']]);
       if (R.items.has('secondo') || R.know.has('melody')) return sotaDuet(true);
@@ -2021,7 +2114,7 @@
                'ソウタが、鍵盤の蓋を開けた。', '二人で並んで、椅子に座る。', ['ソウタ', '……いくよ', 'smile']]);
     bgm(null);
     const ok = await keyboard(true);
-    if (!ok) { bgm('unravel'); return say([['ソウタ', '……ゆっくりでいいよ', 'smile']]); }
+    if (!ok) { bgm('musicbox'); return say([['ソウタ', '……ゆっくりでいいよ', 'smile']]); }
     bgm('sota');
     await overlayWait(`<img class="cg" src="img/m_duet.webp" alt="夕日の音楽室で、ソウタと並んで連弾している">
       <p>ソウタの旋律に、ハルのパートが重なる。</p><p>たった4小節。それでも、二人の音が確かにひとつになった。</p><p>フレーズの終わりで手を止めると、ソウタはそのまま、ひとりで続きを弾き始めた。最後の小節まで、一度も止まらずに。</p>`, '', ['続ける']);
@@ -2132,7 +2225,7 @@
         <p class="note">この作品には、自傷・死・いじめ・家庭での心理的虐待を示唆する表現が含まれます。</p>
       </div>`, 'title-screen', 'ov-card title-card');
     ov.style.setProperty('--dusk', Object.keys(P.cur.results).length);
-    bgm(null);
+    bgm('title');
     $('#tSelect').onclick = () => selectRoom();
     if ($('#tReset')) $('#tReset').onclick = () => resetAll();
     $('#tWipe').onclick = () => wipeAll();
@@ -2298,7 +2391,14 @@
   // ヒント：進み具合に合わせて1つだけ出す（時間は進まない）
   $('#btnHint').onclick = () => act(hintScript, 'hint');
   $('#btnWait').onclick = () => act(waitScript, 'wait');
-  $('#btnSound').onclick = () => { P.sound = !P.sound; saveP(); render(); const n = bgmName; bgmName = undefined; bgm(P.sound ? (n || moodNow()) : null); };
+  // 音量バー：BGMはすぐに反映、効果音は試しに1音鳴らす
+  $('#volBgm').value = Math.round(P.bgmVol * 100); $('#volSe').value = Math.round(P.seVol * 100);
+  $('#volBgm').addEventListener('input', e => {
+    P.bgmVol = e.target.value / 100; saveP();
+    if (bgmGain) { try { bgmGain.gain.setTargetAtTime(bgmLevel(), audio().currentTime, 0.1); } catch (er) {} }
+  });
+  $('#volSe').addEventListener('input', e => { P.seVol = e.target.value / 100; saveP(); });
+  $('#volSe').addEventListener('change', () => pianoNote(523.25, 0.2));
   $('#btnSkip').onclick = e => { e.stopPropagation(); P.skip = !P.skip; saveP(); render(); };
   // メニュー：ログ・既読スキップ・音・タイトルへ をまとめたパネル
   const menuPanel = $('#menuPanel');
