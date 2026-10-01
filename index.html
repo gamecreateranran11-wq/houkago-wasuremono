@@ -600,8 +600,10 @@
   // 時計のカットイン：針のない時計の絵に、今の時刻の針を重ねる（座標は ci_clock 画像 1536×1024 基準）
   function clockSVG() {
     const min = chStart() + (R.st === 'unraveled' ? SPAN + 1 : R.ticks * MIN_PER_TICK);
-    const cx = 781, cy = 433;
+    const ck = (C && C.clock) || { img: 'ci_clock', cx: 781, cy: 433, s: 1 };
+    const cx = ck.cx, cy = ck.cy, k = ck.s;
     const hand = (deg, len, tail, w) => {
+      len *= k; tail *= k; w *= k;
       const t = deg * Math.PI / 180, sx = Math.sin(t), sy = -Math.cos(t);
       const px = -sy * w / 2, py = sx * w / 2;
       const tipX = cx + sx * len, tipY = cy + sy * len, bX = cx - sx * tail, bY = cy - sy * tail;
@@ -609,11 +611,11 @@
     };
     const hAng = (16 * 30 + min * 0.5) % 360, mAng = (min * 6) % 360;
     const hands = `<polygon points="${hand(hAng, 150, 26, 16)}"/><polygon points="${hand(mAng, 232, 34, 10)}"/>`;
-    return `<img src="img/ci_clock.webp" alt="壁の時計">
+    return `<img src="img/${ck.img}.webp" alt="壁の時計">
       <svg class="clock-hands" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
         <g fill="#000" opacity=".28" transform="translate(7 9)">${hands}</g>
         <g fill="#231b16">${hands}</g>
-        <circle cx="${cx}" cy="${cy}" r="11" fill="#2b221b"/><circle cx="${cx - 3}" cy="${cy - 3}" r="3" fill="#6a5846"/>
+        <circle cx="${cx}" cy="${cy}" r="${11 * k}" fill="#2b221b"/><circle cx="${cx - 3 * k}" cy="${cy - 3 * k}" r="${3 * k}" fill="#6a5846"/>
       </svg>`;
   }
   const moodNow = () => !R || R.over ? null : (R.st === 'unraveled' ? (C.unravelMood || 'unravel') : 'explore');
@@ -836,6 +838,8 @@
   };
   const piano = (n, t, vol, dur = 1.6) => { voice(nf(n), t, dur, vol, { type: 'triangle', attack: 0.006 }); voice(nf(n) * 2, t, dur * 0.55, vol * 0.4, { attack: 0.006 }); voice(nf(n) * 3, t, dur * 0.3, vol * 0.12, { attack: 0.005 }); voice(nf(n) * 1.001, t, dur, vol * 0.3, { attack: 0.006 }); };
   const guitar = (n, t, vol, dur = 2) => { voice(nf(n), t, dur, vol, { type: 'triangle', attack: 0.004, lp: 2400 }); voice(nf(n) * 2, t, dur * 0.5, vol * 0.3, { attack: 0.004 }); voice(nf(n) * 3, t, dur * 0.25, vol * 0.1, { attack: 0.003 }); voice(nf(n) * 1.002, t, dur * 0.8, vol * 0.3, { type: 'sine', attack: 0.004 }); };
+  // グロッケン（鉄琴）：澄んだ高い音。整数倍でない倍音が早く消え、基音だけが長く残る
+  const glock = (n, t, vol) => { voice(nf(n), t, 2.6, vol, { attack: 0.002 }); voice(nf(n) * 2.71, t, 0.5, vol * 0.25, { attack: 0.002 }); voice(nf(n) * 5.15, t, 0.15, vol * 0.08, { attack: 0.001 }); };
   const brass = (n, t, dur, vol) => { voice(nf(n), t, dur, vol, { type: 'sawtooth', attack: 0.45, release: 0.8, lp: 850, det: [-5, 5], vib: 0.003, vibRate: 4.5, vibDelay: 0.6 }); };
   // 心臓の音：低い「ドクン」を2つ。スマホでも聞こえるよう、少し上の倍音を足す
   const heart = (t, vol) => [[0, 1], [0.3, 0.6]].forEach(([o, k]) => {
@@ -966,6 +970,10 @@
       const mel = [[[74, 2], [72, 1], [69, 1]], [[70, 3], [69, 1]], [[67, 1], [70, 1], [74, 1], [72, 1]], [[69, 4]],
                    [[77, 2], [76, 1], [74, 1]], [[74, 1], [72, 1], [70, 2]], [[70, 1], [69, 1], [67, 1], [65, 1]], [[73, 2], [69, 2]]][bar];
       contrabass(root - 12, t, q * 4 + 0.3, 0.02);
+      // グロッケン：重い低音の上で、高く儚い音が、旋律の終わりをそっとなぞる
+      const gl = [[[86, 2.6]], [[82, 2.2], [86, 3.4]], [[79, 2.6]], [[81, 1.2], [85, 2.4], [88, 3.4]],
+                  [[89, 2.6]], [[86, 2.2], [82, 3.4]], [[82, 1.6], [79, 2.8]], [[85, 2.2], [81, 3.4]]][bar];
+      gl.forEach(([n, beat]) => glock(n, t + beat * q, 0.022));
       if (cyc && bar < 4) {
         // 2周目の前半：クラリネットが旋律を低く受け継ぎ、リコーダーは黙る
         seq(mel, t, q, (n, x, len) => clarinet(n - 12, x, len * 0.98, 0.03));
@@ -1021,28 +1029,59 @@
     if (!P.sound || replay) return;
     try {
       const a = audio(), t = a.currentTime + 0.02, dst = out(), rv = reverb();
-      const burst = (at, type, fr, q, vol, dur) => {
+      const send = a.createGain(); send.gain.value = 1.1; send.connect(rv);
+      const burst = (at, type, fr, q, vol, dur, rev = false) => {
         const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
         s.buffer = getNoise(); f.type = type; f.frequency.value = fr; f.Q.value = q;
         g.gain.setValueAtTime(vol * seMul(), at); g.gain.exponentialRampToValueAtTime(0.0008, at + dur);
-        s.connect(f).connect(g); g.connect(dst); s.start(at); s.stop(at + dur + 0.01);
+        s.connect(f).connect(g); g.connect(dst); if (rev) g.connect(send); s.start(at); s.stop(at + dur + 0.01);
       };
-      // 「カ」：ラッチが動く／「チッ」：ボルトが金具に当たって止まる
-      burst(t, 'bandpass', 2600, 1.2, 0.7, 0.012);
-      const t2 = t + 0.055;
-      burst(t2, 'highpass', 5200, 0.7, 0.8, 0.008);
-      burst(t2, 'bandpass', 1150, 3, 0.55, 0.03);
-      // 金属の鳴り：整数倍でない倍音を、少しずつずらして重ね（うなり）、長めに残して残響へも送る
-      const send = a.createGain(); send.gain.value = 0.9; send.connect(rv);
-      [[1, 0.06, 0.55], [2.32, 0.04, 0.38], [4.25, 0.022, 0.24], [6.63, 0.012, 0.14]].forEach(([r, v, dec]) => {
-        [0, 3.5].forEach(det => {
+      const thump = (at, f0, vol, dur) => {
+        const o = a.createOscillator(), g = a.createGain(); o.type = 'sine';
+        o.frequency.setValueAtTime(f0, at); o.frequency.exponentialRampToValueAtTime(f0 * 0.6, at + dur);
+        g.gain.setValueAtTime(vol * seMul(), at); g.gain.exponentialRampToValueAtTime(0.0008, at + dur);
+        o.connect(g); g.connect(dst); o.start(at); o.stop(at + dur + 0.01);
+      };
+      // 1) 錠の中で、重い部品がいくつも動く低い音（ガ、コ、ゴッ）
+      [[0, 140, 0.5], [0.025, 210, 0.35], [0.05, 95, 0.45]].forEach(([o, f0, v]) => thump(t + o, f0, v, 0.09));
+      [[0, 320, 0.45], [0.02, 520, 0.35], [0.045, 260, 0.4], [0.07, 700, 0.3]].forEach(([o, fr, v]) => burst(t + o, 'bandpass', fr, 3, v, 0.05));
+      // 2) ボルトが止まる、鋭い金属の打音
+      const t2 = t + 0.11;
+      burst(t2, 'highpass', 4200, 0.7, 0.75, 0.01, true);
+      thump(t2, 180, 0.3, 0.06);
+      // 3) 高い金属の鳴り：少しずつずらして重ね、長い余韻を残響へ
+      [[2480, 0.05, 0.9], [3720, 0.035, 0.7], [5310, 0.022, 0.5], [7050, 0.012, 0.32]].forEach(([fr, v, dec]) => {
+        [0, 4].forEach(det => {
           const os = a.createOscillator(), g = a.createGain();
-          os.type = 'sine'; os.frequency.value = 1320 * r + det;
-          g.gain.setValueAtTime(0, t2); g.gain.linearRampToValueAtTime(v * seMul() * (det ? 0.6 : 1), t2 + 0.002);
-          g.gain.exponentialRampToValueAtTime(0.0003, t2 + dec);
+          os.type = 'sine'; os.frequency.value = fr + det;
+          g.gain.setValueAtTime(0, t2); g.gain.linearRampToValueAtTime(v * seMul() * (det ? 0.6 : 1), t2 + 0.003);
+          g.gain.exponentialRampToValueAtTime(0.0002, t2 + dec);
           os.connect(g); g.connect(dst); g.connect(send); os.start(t2); os.stop(t2 + dec + 0.02);
         });
       });
+    } catch (e) {}
+  }
+  // 足音（記憶の演出）。kind='run'：子ども二人が駆けていく／'heel'：固いヒールの音がゆっくり通り過ぎる
+  function footsteps(kind) {
+    if (!P.sound || replay) return;
+    try {
+      const a = audio(), t0 = a.currentTime + 0.05, dst = out(), rv = reverb();
+      const send = a.createGain(); send.gain.value = 0.8; send.connect(rv);
+      const step = (at, fr, q, vol, dur) => {
+        const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+        s.buffer = getNoise(); f.type = 'bandpass'; f.frequency.value = fr; f.Q.value = q;
+        g.gain.setValueAtTime(vol * seMul(), at); g.gain.exponentialRampToValueAtTime(0.0008, at + dur);
+        s.connect(f).connect(g); g.connect(dst); g.connect(send); s.start(at); s.stop(at + dur + 0.01);
+      };
+      if (kind === 'heel') {
+        for (let k = 0; k < 7; k++) { const at = t0 + k * 0.55, v = 0.35 * Math.sin(Math.PI * (k + 0.5) / 7); step(at, 2600, 2, v, 0.03); step(at, 420, 3, v * 0.6, 0.06); }
+      } else {
+        for (let k = 0; k < 12; k++) {
+          const fade = 0.4 * (1 - k / 13);
+          step(t0 + k * 0.17, 900, 1.5, fade, 0.05);
+          step(t0 + 0.08 + k * 0.19, 700, 1.5, fade * 0.8, 0.05);
+        }
+      }
     } catch (e) {}
   }
   function flash() { if (replay) return; const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
@@ -1161,7 +1200,8 @@
   }
 
   // 全章共通：その子の放課後が終わるまで、部屋の扉は開かない
-  const locked = room => ['扉に手をかけた。……開かない。鍵穴もないのに、びくともしない。',
+  const locked = room => ['扉に手をかけた。……開かない。',
+                          '内側のつまみは、鍵が開いている向きを指している。回してみても、扉はびくともしない。まるで、向こう側から誰かに押さえられているみたいに。',
                           `（この放課後が終わるまで、${room}からは出られない気がする）`];
   async function vanish() {
     bgm('vanish');
@@ -1195,7 +1235,7 @@
     const res = P.cur.results, keys = ORDER.map(id => CHAPTERS[id].key);
     const v = keys.filter(k => res[k] === 'vanished').length, sh = keys.filter(k => res[k] === 'shut').length;
     let end;
-    if (v >= 3) end = ['BAD5', '空席の教室', ['机の上に、わすれものだけが並んでいた。', 'チャイムも鳴らない。夕焼けだけが、音もなく教室を染めている。', '返事をする人は、もう誰もいなかった。'], 'vanish'];
+    if (v >= 3) end = ['BAD5', '空席の教室', [], 'vanish'];
     else if (v >= 1) end = ['BAD6', 'わすれものの重さ', ['屋上へ続く階段の途中で、足が止まった。', '踊り場に、自分と同じ顔をした誰かが立っている。', '「救えなかったくせに」', '差し出されたわすれものは、どれも紙切れのように軽いはずなのに、両腕で抱えきれないほど重く感じた。'], 'vanish'];
     else if (sh === keys.length) end = ['BAD4', '閉ざされた校舎', [], 'shut'];
     else if (sh >= 1) end = ['NORMAL', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。', '振り返ると、閉ざされた扉の教室には、まだ明かりがついていた。', '門の手前で、足が止まる。まだ、ここは通れない。'], 'unravel'];
@@ -1204,12 +1244,40 @@
     bgm(end[3]);
     finishRun(true);
     if (end[0] === 'BAD4') await closedSchool();
+    if (end[0] === 'BAD5') await emptySeats(ORDER.map(id => CHAPTERS[id]).filter(ch => res[ch.key] === 'vanished'));
     overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
         ${end[2].map(l => `<p>${l}</p>`).join('')}
         <p class="eyebrow">${end[0] === 'NORMAL' || end[0] === 'GOOD' ? end[0] : 'BAD END'}「${end[1]}」</p></div>
       ${TRIAL(ORDER.length) ? `<p class="note">試作版は第二章までのため、2章の結果で判定しています。${end[0] === 'GOOD' ? '（屋上への道は、製品版で開きます）' : ''}</p>` : ''}
       <p class="note">この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。</p>`,
       end[0] === 'NORMAL' || end[0] === 'GOOD' ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
+  }
+  // BAD5 空席の教室：消えた子の教室を順に映し（席にはわすれものだけ）、最後はチャイムの鳴らない夕焼けに一人
+  async function emptySeats(chs) {
+    closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = '';
+    $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = '';
+    const bg = $('#bgImg'), lo = $('#leftover');
+    const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+    const show = async (img, ch) => {
+      const pre = new Image(); pre.src = `img/${img}.webp`;
+      bg.style.opacity = '0'; lo.style.transition = 'opacity .7s ease'; lo.style.opacity = '0';
+      await Promise.all([wait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);
+      bg.src = pre.src; try { await bg.decode(); } catch (e) {}
+      if (ch) {
+        if (ch.leftoverImg) { lo.innerHTML = `<img src="img/${ch.leftoverImg}.webp" alt="" style="width:100%;height:100%;display:block">`; lo.setAttribute('style', 'inset:0;width:100%;height:100%;background:none;box-shadow:none'); }
+        else { lo.innerHTML = ''; lo.setAttribute('style', ch.leftover); }
+        lo.style.opacity = '1';
+      } else lo.style.display = 'none';
+      bg.style.opacity = '1'; await wait(750);
+    };
+    for (const ch of chs) {
+      await show(ch.bg, ch);
+      await line(`${ch.room}。${ch.name}の座っていた場所に、${ch.lost}だけが残っている。`);
+    }
+    await line('机の上に、わすれものだけが並んでいた。');
+    await show('chime_sky', null);
+    await say(['夕焼けの空の下で、ひとり立ち尽くしていた。', '……チャイムは、もう鳴らない。', '夕焼けだけが、音もなく校舎を染めている。', '返事をする人は、もう誰もいなかった。']);
+    bg.style.opacity = '';
   }
   // BAD4 閉ざされた校舎：全員に閉め出されたあと、それぞれの教室の前の廊下を順に歩く
   async function closedSchool() {
@@ -1442,15 +1510,15 @@
     idleFree: '（時計の針が16:30を越えた。ヒナが待っている）',
     // 探索の途中、いないはずの母の視線を感じる（ループが進むほど、はっきりしていく）
     async onTick() {
-      if (R.ticks !== 5 || R.seen.has('gaze')) return;
+      if (R.st !== 'here' || R.seen.has('gaze') || R.ticks < (R.loop ? 2 : 4)) return;
       R.seen.add('gaze');
       const lines = [
         ['……ふと、背後から、誰かに見られている気がした。', '振り返る。扉のガラスの向こうには、誰もいない。', 'ヒナが、同じように扉のほうを見ていた。すぐに目をそらして、袖を握りしめる。'],
-        ['……また、背後に視線を感じた。', '廊下を、誰かの足音が通り過ぎていった気がする。コツ、コツと、固いヒールの音。', 'ヒナは膝を抱えて、小さく身を縮めた。'],
+        ['……また、背後に視線を感じた。', () => footsteps('heel'), '廊下を、誰かの足音が通り過ぎていった気がする。コツ、コツと、固いヒールの音。', 'ヒナは膝を抱えて、小さく身を縮めた。'],
         ['扉のガラスに、一瞬だけ、大人の女の人の影が映った。', 'まばたきをすると、もう誰もいなかった。', 'ヒナは両手で耳をふさいで、じっと床を見ていた。'],
       ][Math.min(R.loop, 2)];
       hideCut();
-      await say(lines);
+      for (const l of lines) { if (typeof l === 'function') l(); else await line(l); }
     },
     // 掲示板・空の絵・引き出しの中身を知ったら、対話に入れる
     ready: () => R.know.has('notice') && R.know.has('painting') && R.know.has('drawer'),
@@ -1782,9 +1850,10 @@
                  'こわばっていた口元がゆるんで、ヒナは、小さく息を吐いた。']);
       bgm('musicbox');
       await say([['ヒナ', '……描いても、いいのかな', 'grief'],
-                 ['ヒナ', 'お母さんが、嫌な顔しても', 'grief'],
-                 ['ヒナ', '褒められたいからじゃなくて。……私が、描きたいから', 'grief'],
-                 '「いいよ。空も、ヒナの顔も。……見たいな、ヒナが描いたの」',
+                 ['ヒナ', 'お母さんが嫌な顔しても。……自分のこと、こんなに傷つけてる私でも', 'grief'],
+                 ['ヒナ', '褒められるためじゃなくて。……こんな私の顔を、私が、大事に描いてあげても', 'grief'],
+                 '「いいよ。……ヒナの顔は、ヒナが大事にしていいんだ」',
+                 '「空も、ヒナの顔も。……見たいな、ヒナが描いたの」',
                  'ヒナは袖で目元をこすって、それから、少しだけ笑った。']);
       R.st = 'unraveled'; render();
       bgm('unravel');
@@ -2034,9 +2103,26 @@
     id: 'music', key: 'sota', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room',
     sit: { src: 'sota_sit', style: 'left:54.3%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
-    faces: { normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile' },
+    faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile' },
     lost: 'ソウタのパートだけの楽譜',
     idleFree: '（時計の針が17:00を越えた。ソウタが待っている）',
+    // 探索の途中、ソウタの記憶にまつわる音が聞こえる（ほどけた後は鳴らない）
+    async onTick() {
+      if (R.st !== 'here' || R.seen.has('memory') || R.ticks < (R.loop ? 2 : 4)) return;
+      R.seen.add('memory'); hideCut();
+      if (R.loop === 0) {
+        if (P.sound && !replay) MELODY.forEach((n, k) => pianoNote(FREQ[n], 0.045, 0.3 + k * 0.42));
+        await say(['……どこかから、ピアノの音が聞こえた気がした。', 'ミ、ソ、ラ、ソ……。遠くて、少しだけ走りぎみの音。',
+                   R.seen.has('played') ? 'ソウタは、開いたままの鍵盤を見つめていた。' : 'ソウタは、閉じた鍵盤の蓋を、じっと見つめていた。']);
+      } else if (R.loop === 1) {
+        footsteps('run');
+        await say(['廊下を、ふたり分の足音が駆けていった。', '『ソウタ、遅い！』『お前が速すぎるんだよ』……小さな男の子の声が、笑いながら遠ざかっていく。',
+                   'ソウタが、一瞬だけ扉のほうを振り向いた。']);
+      } else {
+        await say(['……低く、静かな男の人の声が、どこからか聞こえた。', '『ピアノは、文化祭で終わりにしなさい。……お前のためだ』',
+                   'ソウタは、膝の上で両手を固く握りしめた。']);
+      }
+    },
     // 黒板・スマホを見て、ハルのパートを弾いたら、対話に入れる
     ready: () => R.know.has('board') && R.know.has('phone') && R.know.has('played'),
     giveUp: ['ソウタは、鍵盤に目を落としたまま、何も言わなかった。', '伸ばしかけた手を、そのまま下ろした。'],
@@ -2256,8 +2342,8 @@
       let a = await ask([['……ハルくんって、どんなふうに弾く人だったの？', 'yori'], ['一人でも弾けるように練習すればいいよ', 'seiron'], ['もう忘れたほうが、楽になるよ', 'oitsu']], 1);
       if (a === 'seiron') { await say([['ソウタ', '……連弾だよ。一人で弾いたら、意味ないんだ', 'angry'], 'ソウタはそれきり、口を閉ざした。']); return closeHeart(); }
       if (a === 'oitsu') return shutOut([['ソウタ', '……忘れる？', 'surprise'],
-                                   'ソウタの顔から、すっと表情が消えた。',
-                                   ['ソウタ', '……お前に、何がわかるんだよ', 'angry'],
+                                   ['', 'ソウタの顔から、すっと表情が消えた。', 'blank'],
+                                   ['ソウタ', '……お前に、何がわかるんだよ', 'blank'],
                                    'ソウタが立ち上がった。ピアノの椅子が倒れて、乾いた音が響く。',
                                    ['ソウタ', '今日会ったばっかりのやつが、わかったみたいなこと言うなよ', 'angry'],
                                    ['ソウタ', '忘れたら、ハルが本当にいなくなるだろ！', 'angrySad'],
@@ -2277,7 +2363,8 @@
                  ['ソウタ', '家に帰ったら、父さんに言われた。『文化祭が終わったら、ピアノはやめろ』って', 'sad'],
                  ['ソウタ', '『ハルくんは予備校に通いながら、ピアノも続けてるだろ。お前は何をやってるんだ』……って', 'down'],
                  ['ソウタ', '何も言い返せなかった', 'down'],
-                 ['ソウタ', '……家のピアノも、今週末に業者が引き取りに来る。父さんが、もう決めたから', 'down'],
+                 ['ソウタ', '……家のピアノ、レンタルなんだ。父さんが解約して、今週末に返すことになってる', 'down'],
+                 ['ソウタ', '予備校のお金に回すんだって。……父さん、それ以上は何も言わなかった', 'down'],
                  ['ソウタ', 'だから、あの連弾が最後だった。……最後くらい、ちゃんと弾きたかった', 'sad'],
                  ['ソウタ', 'ハルには、やめるって言えてなかった。言ったら、本当に終わる気がして', 'sad'],
                  ['ソウタ', '部屋に戻ったら、ハルから。テンポ上げようって。……何も知らないで、楽しそうに', 'angry'],
@@ -2460,9 +2547,12 @@
   const LIBRARY = {
     id: 'library', key: 'mio', name: 'ミオ', who: 'この子', startMin: 60, room: '図書室', hall: 'hall_library', label: '第三章「図書室」', bg: 'library',
     sit: { src: 'mio_sit', style: 'left:11%;top:42%;height:47%' },
-    leftover: 'left:29%;top:52%;width:5%;height:2.2%;transform:rotate(-3deg)',
-    faces: { normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_shadow', crySmile: 'mio_crysmile' },
+    // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
+    leftover: '', leftoverImg: 'l_left',
+    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_shadow', crySmile: 'mio_crysmile' },
     lost: '返却期限の過ぎた一冊',
+    // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:771, cy:438, s:0.94）、保健室は ci_clock_infirmary（cx:777, cy:420, s:0.89）を使う
+    clock: { img: 'ci_clock_library', cx: 770, cy: 414, s: 0.97 },
     idleFree: '（時計の針が17:30を越えた。ミオが待っている）',
     // 貸出記録・縦読み・学級日誌を知ったら、対話に入れる
     ready: () => R.know.has('ledger') && R.know.has('acrostic') && R.know.has('diary'),
@@ -2521,7 +2611,7 @@
     },
     // 探索の途中、伏せたスマホが震え続ける（ループが進むほど、通知が増える）
     async onTick() {
-      if (R.ticks !== 4 || R.seen.has('buzz')) return;
+      if (R.st !== 'here' || R.seen.has('buzz') || R.ticks < (R.loop ? 2 : 4)) return;
       R.seen.add('buzz'); hideCut();
       await say([['……ミオのスマホが、また震えた。', 'ミオは画面を見ないまま、スマホをもっと奥へ押しやった。'],
                  ['スマホが、続けざまに震えている。止まらない。', 'ミオは両手で本を抱きしめて、じっと耐えていた。'],
@@ -2648,8 +2738,8 @@
       let a = await ask([['……本、好きなんだね。ここ、落ち着く？', 'yori'], ['人を避けてばかりじゃ、何も変わらないよ', 'seiron'], ['黒板のあれ、書いたのはミオさんだよね', 'oitsu']], 1);
       if (a === 'seiron') { await say([['ミオ', '……わかってる。そんなの', 'angry'], 'ミオは、本で顔を隠すようにうつむいた。', 'それきり、ミオは口を閉ざした。']); return closeHeart(); }
       if (a === 'oitsu') return shutOut([['ミオ', '……え', 'surprise'],
-                                  'ミオの顔から、すっと血の気が引いた。',
-                                  ['ミオ', '……なんで。誰から聞いたの', 'reject'],
+                                  ['', 'ミオの顔から、すっと血の気が引いた。', 'pale'],
+                                  ['ミオ', '……なんで。誰から聞いたの', 'pale'],
                                   ['ミオ', '……やっぱり、みんな知ってるんだ', 'reject'],
                                   ['ミオ', '……出てって。お願いだから、出てって', 'reject']],
                                  ['扉を叩いた。返事はない。', '……扉の向こうで、本が床に落ちる音が、一度だけ聞こえた。']);
