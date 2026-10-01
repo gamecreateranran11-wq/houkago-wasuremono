@@ -140,8 +140,15 @@
   .dial { display: flex; gap: 14px; justify-content: center; }
   .poem { font-family: var(--serif); font-size: 17px; line-height: 2.1; background: #f1ebdf; color: #2a2327; padding: 14px 18px; border-radius: 3px; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
   .poem .t { font-size: 13px; color: #6b5f58; margin-bottom: 4px; }
-  .poem .c { display: inline-block; border: 1.5px solid #7a5a4c; border-radius: 50%; width: 1.25em; height: 1.25em; line-height: 1.15em; text-align: center; margin: 0 1px; }
-  .poem.draft { background: #e9e4da; transform: rotate(-.6deg); }
+  .poem .gr { font-size: min(15px, 3.7vw); line-height: 1; border-top: 1px solid #cdbca5; border-left: 1px solid #cdbca5; width: max-content; max-width: 100%; margin: 6px 0; }
+  .poem .gr .pr { display: flex; flex-wrap: nowrap; }
+  .poem .gr span { position: relative; width: 1.3em; height: 1.55em; display: flex; align-items: center; justify-content: center; border-right: 1px solid #cdbca5; border-bottom: 1px solid #cdbca5; }
+  .poem .gr i { font-style: normal; }
+  .poem.p-draft .gr i { opacity: .1; filter: blur(1.7px); }
+  .poem .gr span.m::after { content: ''; position: absolute; inset: 1px; border: 1.6px solid #b8423c; border-radius: 50%; }
+  .poem.p-overlay .gr span:not(.m) i { opacity: .35; }
+  .poem.p-overlay .gr span.m i { font-weight: 700; color: #8f2f2a; }
+  .poem.p-draft { background: #e9e4da; transform: rotate(-.6deg); }
   .poem s { color: #8a7d74; }
   .wheel { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .wheel button { width: 48px; height: 36px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
@@ -973,7 +980,8 @@
       // グロッケン：重い低音の上で、高く儚い音が、旋律の終わりをそっとなぞる
       const gl = [[[86, 2.6]], [[82, 2.2], [86, 3.4]], [[79, 2.6]], [[81, 1.2], [85, 2.4], [88, 3.4]],
                   [[89, 2.6]], [[86, 2.2], [82, 3.4]], [[82, 1.6], [79, 2.8]], [[85, 2.2], [81, 3.4]]][bar];
-      gl.forEach(([n, beat]) => glock(n, t + beat * q, 0.022));
+      // 鳴り始めはチャイムの余韻に紛れないよう、鉄琴は3小節目から
+      if (i >= 2) gl.forEach(([n, beat]) => glock(n, t + beat * q, 0.022));
       if (cyc && bar < 4) {
         // 2周目の前半：クラリネットが旋律を低く受け継ぎ、リコーダーは黙る
         seq(mel, t, q, (n, x, len) => clarinet(n - 12, x, len * 0.98, 0.03));
@@ -1024,43 +1032,8 @@
     const pump = () => { try { while (bgmGain === gain && bgmNext < a.currentTime + 1.5) { bgmNext += fn(bgmNext, bgmStep++); } } catch (e) {} };
     pump(); bgmTimer = setInterval(pump, 400);
   }
-  // 鍵の外れる「カチリ」
-  function lockClick() {
-    if (!P.sound || replay) return;
-    try {
-      const a = audio(), t = a.currentTime + 0.02, dst = out(), rv = reverb();
-      const send = a.createGain(); send.gain.value = 1.1; send.connect(rv);
-      const burst = (at, type, fr, q, vol, dur, rev = false) => {
-        const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
-        s.buffer = getNoise(); f.type = type; f.frequency.value = fr; f.Q.value = q;
-        g.gain.setValueAtTime(vol * seMul(), at); g.gain.exponentialRampToValueAtTime(0.0008, at + dur);
-        s.connect(f).connect(g); g.connect(dst); if (rev) g.connect(send); s.start(at); s.stop(at + dur + 0.01);
-      };
-      const thump = (at, f0, vol, dur) => {
-        const o = a.createOscillator(), g = a.createGain(); o.type = 'sine';
-        o.frequency.setValueAtTime(f0, at); o.frequency.exponentialRampToValueAtTime(f0 * 0.6, at + dur);
-        g.gain.setValueAtTime(vol * seMul(), at); g.gain.exponentialRampToValueAtTime(0.0008, at + dur);
-        o.connect(g); g.connect(dst); o.start(at); o.stop(at + dur + 0.01);
-      };
-      // 1) 錠の中で、重い部品がいくつも動く低い音（ガ、コ、ゴッ）
-      [[0, 140, 0.5], [0.025, 210, 0.35], [0.05, 95, 0.45]].forEach(([o, f0, v]) => thump(t + o, f0, v, 0.09));
-      [[0, 320, 0.45], [0.02, 520, 0.35], [0.045, 260, 0.4], [0.07, 700, 0.3]].forEach(([o, fr, v]) => burst(t + o, 'bandpass', fr, 3, v, 0.05));
-      // 2) ボルトが止まる、鋭い金属の打音
-      const t2 = t + 0.11;
-      burst(t2, 'highpass', 4200, 0.7, 0.75, 0.01, true);
-      thump(t2, 180, 0.3, 0.06);
-      // 3) 高い金属の鳴り：少しずつずらして重ね、長い余韻を残響へ
-      [[2480, 0.05, 0.9], [3720, 0.035, 0.7], [5310, 0.022, 0.5], [7050, 0.012, 0.32]].forEach(([fr, v, dec]) => {
-        [0, 4].forEach(det => {
-          const os = a.createOscillator(), g = a.createGain();
-          os.type = 'sine'; os.frequency.value = fr + det;
-          g.gain.setValueAtTime(0, t2); g.gain.linearRampToValueAtTime(v * seMul() * (det ? 0.6 : 1), t2 + 0.003);
-          g.gain.exponentialRampToValueAtTime(0.0002, t2 + dec);
-          os.connect(g); g.connect(dst); g.connect(send); os.start(t2); os.stop(t2 + dec + 0.02);
-        });
-      });
-    } catch (e) {}
-  }
+  // 鍵の外れる音：合成音では自然に聞こえなかったため、鳴らさない（呼び出し側はそのまま）
+  function lockClick() {}
   // 足音（記憶の演出）。kind='run'：子ども二人が駆けていく／'heel'：固いヒールの音がゆっくり通り過ぎる
   function footsteps(kind) {
     if (!P.sound || replay) return;
@@ -1235,22 +1208,35 @@
     const res = P.cur.results, keys = ORDER.map(id => CHAPTERS[id].key);
     const v = keys.filter(k => res[k] === 'vanished').length, sh = keys.filter(k => res[k] === 'shut').length;
     let end;
+    // [タグ, 題, ストーリーの文章, BGM, 背景]
     if (v >= 3) end = ['BAD5', '空席の教室', [], 'vanish'];
-    else if (v >= 1) end = ['BAD6', 'わすれものの重さ', ['屋上へ続く階段の途中で、足が止まった。', '踊り場に、自分と同じ顔をした誰かが立っている。', '「救えなかったくせに」', '差し出されたわすれものは、どれも紙切れのように軽いはずなのに、両腕で抱えきれないほど重く感じた。'], 'vanish'];
+    else if (v >= 1) end = ['BAD6', 'わすれものの重さ', ['屋上へ続く階段の途中で、足が止まった。', '踊り場に、自分と同じ顔をした誰かが立っている。', '「救えなかったくせに」', '差し出されたわすれものは、どれも紙切れのように軽いはずなのに、両腕で抱えきれないほど重く感じた。'], 'vanish', 'stairs'];
     else if (sh === keys.length) end = ['BAD4', '閉ざされた校舎', [], 'shut'];
-    else if (sh >= 1) end = ['NORMAL', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。', '振り返ると、閉ざされた扉の教室には、まだ明かりがついていた。', '門の手前で、足が止まる。まだ、ここは通れない。'], 'unravel'];
-    else end = ['GOOD', '送り出した屋上', ['全員の背中を、校門の向こうへ見送った。', '夕焼けの屋上に、一人で立つ。', '足もとに、生徒手帳が一冊、落ちていた。'], 'unravel'];
+    else if (sh >= 1) end = ['NORMAL', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。', '振り返ると、閉ざされた扉の教室には、まだ明かりがついていた。', '門の手前で、足が止まる。まだ、ここは通れない。'], 'unravel', 'chime_sky'];
+    else end = ['GOOD', '送り出した屋上', ['全員の背中を、校門の向こうへ見送った。', '夕焼けの屋上に、一人で立つ。', '足もとに、生徒手帳が一冊、落ちていた。'], 'unravel', 'chime_sky'];
     P.endings[end[0]] = true;
     bgm(end[3]);
     finishRun(true);
     if (end[0] === 'BAD4') await closedSchool();
     if (end[0] === 'BAD5') await emptySeats(ORDER.map(id => CHAPTERS[id]).filter(ch => res[ch.key] === 'vanished'));
+    if (end[2].length) { await endScene(end[4]); await say(end[2]); $('#bgImg').style.opacity = ''; }
     overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
-        ${end[2].map(l => `<p>${l}</p>`).join('')}
         <p class="eyebrow">${end[0] === 'NORMAL' || end[0] === 'GOOD' ? end[0] : 'BAD END'}「${end[1]}」</p></div>
-      ${TRIAL(ORDER.length) ? `<p class="note">試作版は第二章までのため、2章の結果で判定しています。${end[0] === 'GOOD' ? '（屋上への道は、製品版で開きます）' : ''}</p>` : ''}
+      ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。${end[0] === 'GOOD' ? '（屋上への道は、製品版で開きます）' : ''}</p>` : ''}
       <p class="note">この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。</p>`,
       end[0] === 'NORMAL' || end[0] === 'GOOD' ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
+  }
+  // エンディングの場面に切り替える。人物や調べる場所を消し、背景をフェードアウト→フェードインで差し替える
+  async function endScene(img) {
+    closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = '';
+    $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = ''; $('#leftover').style.display = 'none';
+    const bg = $('#bgImg');
+    if (bg.getAttribute('src') === `img/${img}.webp`) return;
+    const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+    const pre = new Image(); pre.src = `img/${img}.webp`;
+    bg.style.opacity = '0'; await Promise.all([wait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);
+    bg.src = pre.src; try { await bg.decode(); } catch (e) {}
+    bg.style.opacity = '1'; await wait(750);
   }
   // BAD5 空席の教室：消えた子の教室を順に映し（席にはわすれものだけ）、最後はチャイムの鳴らない夕焼けに一人
   async function emptySeats(chs) {
@@ -1307,11 +1293,11 @@
   // BAD1 終わらない放課後：一度も心に触れないまま時間切れ、または「力不足」。その章のはじめから、謎解きを飛ばして再開できる
   async function bad1() {
     bgm('shut');
+    hideCut(); setTalk(false);
+    await say(['チャイムを数えるのを、いつのまにかやめていた。', '誰の心にも、手が届かないまま。夕焼けは少しも動かない。',
+               '自分の名前を、思い出せなくなっていた。……それでも、放課後は終わらなかった。']);
     R.over = true; clearRun(); P.endings.BAD1 = true; saveP(); render(); idle();
     const v = await overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
-        <p>チャイムを数えるのを、いつのまにかやめていた。</p>
-        <p>誰の心にも、手が届かないまま。夕焼けは少しも動かない。</p>
-        <p>自分の名前を、思い出せなくなっていた。……それでも、放課後は終わらなかった。</p>
         <p class="eyebrow">BAD END「終わらない放課後」</p></div>
       <p class="note">${C.room}のはじめから、やり直せます。調べてわかったことは覚えているので、謎解きは飛ばせます。</p>`,
       '', [`${C.room}のはじめから`, 'タイトルへ']);
@@ -1320,10 +1306,13 @@
   // 章の途中で周回が終わるBAD（身代わり・ふたりきりの放課後）。周回には数えない
   async function chapterBad(tag, title, lines, mood) {
     bgm(mood);
+    hideCut(); setTalk(false);
+    // 身代わりでは、その子はもう部屋を出ている
+    if (tag === 'BAD2') $('#sitFig').classList.add('gone');
+    await say(lines);
     R.over = true; clearRun(); P.endings[tag] = true; saveP(); render(); idle();
     finishRun(false);
     const v = await overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
-        ${lines.map(l => `<p>${l}</p>`).join('')}
         <p class="eyebrow">BAD END「${title}」</p></div>
       <p class="note">この放課後は、ここで終わった。</p>`, '', ['放課後をやり直す', 'タイトルへ']);
     if (v === 0) startRun(ORDER[0]); else showTitle(true);
@@ -2113,7 +2102,7 @@
       if (R.loop === 0) {
         if (P.sound && !replay) MELODY.forEach((n, k) => pianoNote(FREQ[n], 0.045, 0.3 + k * 0.42));
         await say(['……どこかから、ピアノの音が聞こえた気がした。', 'ミ、ソ、ラ、ソ……。遠くて、少しだけ走りぎみの音。',
-                   R.seen.has('played') ? 'ソウタは、開いたままの鍵盤を見つめていた。' : 'ソウタは、閉じた鍵盤の蓋を、じっと見つめていた。']);
+                   R.seen.has('lid') ? 'ソウタは、開いたままの鍵盤を見つめていた。' : 'ソウタは、閉じた鍵盤の蓋を、じっと見つめていた。']);
       } else if (R.loop === 1) {
         footsteps('run');
         await say(['廊下を、ふたり分の足音が駆けていった。', '『ソウタ、遅い！』『お前が速すぎるんだよ』……小さな男の子の声が、笑いながら遠ざかっていく。',
@@ -2148,7 +2137,8 @@
     lastWords: [['ソウタ', '……そろそろ、行かないと', 'down'], '「行くって、どこへ？」', ['ソウタ', '決まってるだろ。……ハルのところだよ', 'despair']],
     unravelMood: 'musicbox',
     // 先にピアノを弾いていたら、蓋は開いたまま
-    closeLines: () => [R.seen.has('played') ? 'ソウタは開いたままだった鍵盤の蓋をそっと閉じて、その上に額をつけた。もう何も言わなかった。' : 'ソウタは閉じた鍵盤の蓋に額をつけたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。'],
+    closeLines: () => { const open = R.seen.has('lid'); R.seen.delete('lid');
+      return [open ? 'ソウタは開いたままだった鍵盤の蓋をそっと閉じて、その上に額をつけた。もう何も言わなかった。' : 'ソウタは閉じた鍵盤の蓋に額をつけたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。']; },
     hotspots: [
       ['window', '窓', 'left:0;top:0;width:18%;height:52%'],
       ['board', '黒板', 'left:32.8%;top:28.7%;width:33.9%;height:19%'],
@@ -2218,12 +2208,16 @@
       async piano() {
         if (R.st === 'unraveled') return sotaDuet();
         if (!R.items.has('secondo') && !R.know.has('melody')) {
-          await say(['グランドピアノ。鍵盤の蓋は閉じている。', ...(comboBlock('secondo') ? [] : ['……弾ける曲を、何も知らない。'])]);
+          await say([R.seen.has('lid') ? 'グランドピアノ。鍵盤の蓋は開いたままだ。' : 'グランドピアノ。鍵盤の蓋は閉じている。', ...(comboBlock('secondo') ? [] : ['……弾ける曲を、何も知らない。'])]);
           return;
         }
-        await line(R.items.has('secondo') ? 'ソウタの隣から、そっと鍵盤の蓋を開けた。' : '旋律は覚えている。ソウタの隣から、そっと鍵盤の蓋を開けた。', true, true);
+        // 同じ放課後で一度弾いていれば、蓋は開いたまま
+        const lidOpen = R.seen.has('lid');
+        await line(lidOpen ? (R.items.has('secondo') ? 'ソウタの隣で、開いたままの鍵盤に指をのせた。' : '旋律は覚えている。ソウタの隣で、開いたままの鍵盤に指をのせた。')
+                           : (R.items.has('secondo') ? 'ソウタの隣から、そっと鍵盤の蓋を開けた。' : '旋律は覚えている。ソウタの隣から、そっと鍵盤の蓋を開けた。'), true, true);
+        R.seen.add('lid');
         const ok = await keyboard(false);
-        if (!ok) { await say(['……蓋を、そっと閉じた。']); return; }
+        if (!ok) { R.seen.delete('lid'); await say(['……蓋を、そっと閉じた。']); return; }
         R.know.add('played'); R.seen.add('played');
         if (R.know.has('doremi') && !R.seen.has('doremiThanks')) {
           R.seen.add('doremiThanks');
@@ -2389,7 +2383,7 @@
       await line(['ソウタ', '……ハルが最後に読んだ俺の言葉が、あれなんだよ', 'grief'], false);
       a = await ask([['事故は、ソウタのメッセージとは関係ないよ', 'seiron'], ['……謝りたかったんだね。ハルくんに', 'yori'],
                      ['ソウタのせいじゃないよ', 'nagu'], ['ハルくんの分まで、頑張らなきゃ', 'oitsu']], 2);
-      if (a === 'seiron') { await say([['ソウタ', '……知ってるよ', 'angry'], ['ソウタ', '関係ないのなんて、わかってる。……そういう話じゃないんだよ', 'angrySad'], R.seen.has('played') ? 'ソウタは開いたままの鍵盤の蓋をそっと閉じて、その上に拳を置いたまま、黙り込んだ。' : 'ソウタは鍵盤の蓋に拳を置いたまま、黙り込んだ。', '正しい言葉ほど、今のソウタには届かないのかもしれない。']); return closeHeart(); }
+      if (a === 'seiron') { await say([['ソウタ', '……知ってるよ', 'angry'], ['ソウタ', '関係ないのなんて、わかってる。……そういう話じゃないんだよ', 'angrySad'], R.seen.has('lid') ? 'ソウタは開いたままの鍵盤の蓋をそっと閉じて、その上に拳を置いたまま、黙り込んだ。' : 'ソウタは鍵盤の蓋に拳を置いたまま、黙り込んだ。', '正しい言葉ほど、今のソウタには届かないのかもしれない。']); R.seen.delete('lid'); return closeHeart(); }
       if (a === 'oitsu') return doom([['ソウタ', '……ハルの分まで？', 'surprise'], ['ソウタ', '俺が、あいつの代わりに生きてるってこと？', 'shadow'], ['ソウタ', '……無理だよ、そんなの', 'despair']]);
       if (a === 'nagu') {
         R.cons++;
@@ -2401,7 +2395,7 @@
                    '（……うなずいてしまったら、何かを間違える気がした）']);
       } else {
         await say([['ソウタ', '……うん', 'grief'], ['ソウタ', 'ほんとは、ちゃんと顔見て謝りたかった。……次の日のリハで言えばいいって、思ってた', 'grief'],
-                   R.seen.has('played') ? 'ソウタの目から、ぽたりと一粒、鍵盤の上に落ちた。' : 'ソウタの目から、ぽたりと一粒、鍵盤の蓋に落ちた。']);
+                   R.seen.has('lid') ? 'ソウタの目から、ぽたりと一粒、鍵盤の上に落ちた。' : 'ソウタの目から、ぽたりと一粒、鍵盤の蓋に落ちた。']);
       }
 
       // 3段目
@@ -2479,7 +2473,8 @@
     await say([...(asked ? [] : [['ソウタ', '……最初のフレーズだけでいい。ハルのところ、弾いてくれる？', 'smile']]),
                ['ソウタ', '記号とか、難しいことはいい。音の順番どおりに、鍵盤を叩いてくれるだけでいいから', 'smile'],
                '小さくうなずいた。', '「……うん。弾かせて」',
-               'ソウタが、鍵盤の蓋を開けた。', '二人で並んで、椅子に座る。']);
+               R.seen.has('lid') ? 'ソウタが、開いたままの鍵盤の前に座り直した。' : 'ソウタが、鍵盤の蓋を開けた。', '二人で並んで、椅子に座る。']);
+    R.seen.add('lid');
     await line(['ソウタ', '……いくよ', 'smile'], true, true);
     bgm(null);
     const ok = await keyboard(true);
@@ -2504,25 +2499,35 @@
   /* ================================================================
      第三章　図書室（ミオ）
      ================================================================ */
-  // 図書だより「今月のおすすめ」。各行の頭の字で「つむぎへ」、終わりの字で「ごめんね」になる（沓冠）
-  const POEM = ['つめたい雨の、午後', 'むかいの席で、ひらいた二冊め', 'ぎこちなく差し出された、あの本', 'へいきなふりで読んでも、泣いちゃうね'];
-  function poemHTML(draft) {
-    const line = t => draft ? `<span class="c">${t[0]}</span>${t.slice(1, -1)}<span class="c">${t.slice(-1)}</span>` : t;
-    return `<div class="poem${draft ? ' draft' : ''}"><p class="t">図書だより7月号　今月のおすすめ『ひとりぶんの椅子』　紹介：図書委員 2年 ミオ</p>
-      ${POEM.map(t => `<p>${line(t)}</p>`).join('')}
-      ${draft ? '<p class="t"><s>気づかれませんように</s>　<s>気づいてほしい</s></p>' : ''}</div>`;
+  // 図書だより「今月のおすすめ」。マス目に書いた紹介文で、下書きの赤い丸のマスを重ねると「つむぎへ　ごめんね」になる
+  // 掲示板の紹介文だけでも、字の消された下書きだけでも読めない
+  const POEM = ['椅子がひとつだけの、つめたい部屋。', 'ある日、むかいに椅子が置かれる。', '最初はぎこちない、二人の会話。',
+                '読んだら、大切な人へ貸したくなる。', '昼休みのごはんのお供にも。', 'ためいきが出るほど、やさしい結末。', 'みなさんも、ぜひ読んでみてね。'];
+  const POEM_MARKS = [[0, 10], [1, 4], [2, 3], [3, 9], [4, 4], [5, 1], [6, 3], [6, 13]];
+  const POEM_COLS = 17;
+  // mode: 'post'＝貼り出された紹介文、'draft'＝下書き（字は消され、丸だけ残る）、'overlay'＝丸の位置に紹介文を重ねたもの
+  function poemHTML(mode) {
+    const marked = (r, c) => mode !== 'post' && POEM_MARKS.some(([a, b]) => a === r && b === c);
+    const rows = POEM.map((t, r) => `<div class="pr">${Array.from({ length: POEM_COLS }, (_, c) =>
+      `<span class="${marked(r, c) ? 'm' : ''}"><i>${t[c] || ''}</i></span>`).join('')}</div>`).join('');
+    const head = mode === 'draft' ? '図書だより7月号　「今月のおすすめ」下書き' : '図書だより7月号　今月のおすすめ『ひとりぶんの椅子』　紹介：図書委員 2年 水野';
+    return `<div class="poem p-${mode}"><p class="t">${head}</p><div class="gr">${rows}</div>
+      ${mode === 'draft' ? '<p class="t"><s>気づかれませんように</s>　<s>気づいてほしい</s></p>' : ''}</div>`;
   }
   async function viewDraft() {
     if (!R.know.has('dayori')) {
-      await overlayWait(`<p class="eyebrow">持ち物</p><h2>図書だよりの下書き</h2>${poemHTML(false)}
-        <p>何度も書き直した跡がある。……掲示板に貼り出されたものと、見比べてみたい。</p>`, '', ['閉じる']);
+      await overlayWait(`<p class="eyebrow">持ち物</p><h2>図書だよりの下書き</h2>${poemHTML('draft')}
+        <p>清書したあとに消しゴムをかけたのか、鉛筆の字はほとんど読めない。マス目のところどころに、赤ペンの丸だけが残っている。</p>
+        <p class="note">……このマス目と同じ形の紙が、どこかに貼り出されているのかもしれない。</p>`, '', ['閉じる']);
       closeOverlay(); return;
     }
-    await overlayWait(`<p class="eyebrow">持ち物</p><h2>図書だよりの下書き</h2>${poemHTML(true)}
-      <p>貼り出された紹介文と同じ文。けれど下書きには、各行の最初の字と最後の字に、鉛筆で丸がついている。</p>`, '', ['見比べる']);
+    await overlayWait(`<p class="eyebrow">持ち物</p><h2>図書だよりの下書き</h2>${poemHTML('draft')}
+      <p>字の消されたマス目に、赤ペンの丸だけが残っている。マス目の数は、掲示板の図書だよりとまったく同じだ。</p>`, '', ['掲示板の図書だよりと重ねる']);
+    closeOverlay();
+    await overlayWait(`<p class="eyebrow">見比べる</p><h2>丸の位置に、図書だよりの字を重ねる</h2>${poemHTML('overlay')}`, '', ['丸のついた字を読む']);
     closeOverlay();
     if (!R.know.has('acrostic')) {
-      await say(['最初の字を、縦に読む。……つ、む、ぎ、へ。', '最後の字を、縦に読む。……ご、め、ん、ね。', '……「ツムギへ　ごめんね」。']);
+      await say(['丸のついたマス目の字を、上から順に拾っていく。', '……つ、む、ぎ、へ。……ご、め、ん、ね。', '……「ツムギへ　ごめんね」。']);
       R.know.add('acrostic'); R.seen.add('acrostic');
     } else await say(['「ツムギへ　ごめんね」。貼り出された紹介文の中に、ずっと隠れていた言葉。']);
   }
@@ -2549,10 +2554,10 @@
     sit: { src: 'mio_sit', style: 'left:11%;top:42%;height:47%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
-    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_shadow', crySmile: 'mio_crysmile' },
+    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile' },
     lost: '返却期限の過ぎた一冊',
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:771, cy:438, s:0.94）、保健室は ci_clock_infirmary（cx:777, cy:420, s:0.89）を使う
-    clock: { img: 'ci_clock_library', cx: 770, cy: 414, s: 0.97 },
+    clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
     idleFree: '（時計の針が17:30を越えた。ミオが待っている）',
     // 貸出記録・縦読み・学級日誌を知ったら、対話に入れる
     ready: () => R.know.has('ledger') && R.know.has('acrostic') && R.know.has('diary'),
@@ -2627,8 +2632,8 @@
         if (!R.know.has('ledger')) {
           await say(['貸出カウンターに、貸出記録のノートが開いたままになっている。',
                      '同じ本の名前が、何度も並んでいる。『ひとりぶんの椅子』　請求記号「913.6 ヒ」',
-                     '借りた人の欄には、ずっと同じ名前。「ツムギ」。',
-                     '……最後の一行だけ、借りた人が「ミオ」になっていて、返却日の欄が空いている。日付は、6月10日。']);
+                     '借りた人の欄には、ずっと同じ名前。「白石ツムギ」。',
+                     '……最後の一行だけ、借りた人が「水野ミオ」になっていて、返却日の欄が空いている。日付は、6月10日。']);
           R.know.add('ledger'); await tick();
         } else await say(['貸出記録のノート。『ひとりぶんの椅子』、913.6 ヒ。最後の返却欄だけが空いている。',
                           'ページの端に、小さな落書きが二つ並んでいた。丸い字の「また明日」と、細い字の「またね」。',
@@ -2641,18 +2646,18 @@
           R.know.add('shelf'); await tick();
         } else await say(['913の棚の、一冊ぶんのすき間。',
                           '棚の奥に、色あせた紙切れが挟まっていた。手書きの当番表の切れ端だ。',
-                          '「図書委員　1年　ツムギ・ミオ」。二人の名前が、同じ枠に並んでいる。']);
+                          '「図書委員　1年　白石・水野」。二人の名字が、同じ枠に並んでいる。']);
       },
       async notice() {
         showCut('lci_notice');
         await say(['掲示板に、図書だより7月号が貼られている。']);
-        await overlayWait(`<p class="eyebrow">掲示板</p><h2>図書だより7月号</h2>${poemHTML(false)}`, '', ['閉じる']);
+        await overlayWait(`<p class="eyebrow">掲示板</p><h2>図書だより7月号</h2>${poemHTML('post')}`, '', ['閉じる']);
         closeOverlay();
         if (!R.know.has('dayori')) {
           R.know.add('dayori');
-          await say([R.items.has('draft') ? '……ゴミ箱の下書きと、同じ文だ。' : '短い紹介文。どの行も、少しだけ言葉の選び方がぎこちない。']);
+          await say([R.items.has('draft') ? '……ゴミ箱の下書きと、マス目の形がまったく同じだ。' : 'マス目の原稿用紙に、丁寧な字で書かれた紹介文。']);
           await tick();
-        } else await say(['隣の当番表では、「ミオ」の名前だけが、黒いペンで塗りつぶされていた。']);
+        } else await say(['隣の当番表では、「水野」の名前だけが、黒いペンで塗りつぶされていた。']);
       },
       async trash() {
         if (!R.taken.trash) {
@@ -2680,7 +2685,7 @@
                      '残った部分に、担任の字。「朝、黒板にいたずら書き。書いた者は名乗り出ること」',
                      '書かれていた言葉は、ページの余白に、誰かの細い字で小さく写してあった。',
                      '「いてもいなくても同じ」',
-                     'ページの間に、図書室の貸出カードが一枚、しおりのように挟まっている。借りた人は「ミオ」。']);
+                     'ページの間に、図書室の貸出カードが一枚、しおりのように挟まっている。借りた人は「水野ミオ」。']);
           R.know.add('diary'); R.seen.add('diary'); await tick();
         } else { await say(['ブッ、と低い音。錠は開かない。']); await tick(); }
       },
@@ -2699,7 +2704,7 @@
       if (!R.know.has('ledger')) return '部屋の中で、気になる場所を調べてみましょう。本の貸し借りの記録が、どこかにありそうです。';
       if (!R.items.has('draft') && !R.know.has('acrostic')) return '捨てられた物の中に、何か残っていないでしょうか。';
       if (!R.know.has('dayori')) return '掲示板も調べてみましょう。';
-      if (!R.know.has('acrostic')) return '持ち物の「図書だよりの下書き」を開いて、貼り出された紹介文と見比べてみましょう。丸のついた字を、縦に読むと……。';
+      if (!R.know.has('acrostic')) return '持ち物の「図書だよりの下書き」を開いて、掲示板の図書だよりと重ねてみましょう。赤い丸のついたマス目の字を、順に読むと……。';
       if (!R.know.has('diary')) return '奥の扉の番号は4桁です。貸出記録にあった、本の請求記号を思い出してみましょう。';
       return 'ミオに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
     },
@@ -2707,10 +2712,10 @@
       await say(['閲覧机の端に、ミオの姿はなかった。', '机の上に、本が一冊だけ残っている。']);
       await overlayWait(`<p class="eyebrow">わすれもの</p><h2>返却期限の過ぎた一冊</h2><img class="cg" src="img/l_book.webp" alt="『ひとりぶんの椅子』。ページのあいだから、しおりがのぞいている">
         <p>『ひとりぶんの椅子』。背のラベルは「913.6 ヒ」。返却期限は、6月の日付のままだ。</p>`, '', ['しおりを開く']);
-      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>しおりの手紙</h2><img class="cg" src="img/l_letter.webp" alt="折りたたんだ便箋のしおりに、細い字で手紙が書かれている">
+      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>しおりの手紙</h2><img class="cg" src="img/l_letter.webp" alt="折りたたんだ便箋のしおりに、ていねいな手書きの字で手紙が書かれている">
         <p>「一年のとき、この本を教えてくれてありがとう。一人で座っていた私に、最初に話しかけてくれたのは、ツムギだった。」</p>
         <p>「黒板の字を書いたのは、私です。ごめんなさい。いてもいなくても同じなんかじゃない。」</p>
-        <p class="note">宛名の字だけが、何度もなぞられて濃くなっていた。</p>`, '', ['閉じる']);
+        <p class="note">一文字ずつ、ていねいに書かれた字。書いては折りたたみ、また開いたのか、便箋の折り目だけがくたびれていた。</p>`, '', ['閉じる']);
     },
     shelfItem(saved) {
       return saved
@@ -2728,12 +2733,19 @@
         await say(['（貸出記録も、紹介文に隠れた言葉も、黒板の一言も、もう知っている）']);
       }
 
-      // 1段目
+      // 1段目：向かいの椅子に座り、本の話から少しずつ近づく
+      await say(['閲覧机の向かいの椅子を、音を立てないように引いた。', 'ミオがびくりと顔を上げて、本を抱え直す。',
+                 ['ミオ', '……話しかけないでって、言ったのに', 'reject'],
+                 '「ごめん。……その本のことが、気になって」',
+                 '「カウンターの貸出記録を見たんだ。『ひとりぶんの椅子』。同じ名前が、何度も並んでた」',
+                 'ミオの腕に、ぎゅっと力がこもった。']);
       if (R.seen.has('acrostic')) {
-        await say(['「……図書だよりの紹介文、読んだよ。下書きも」', ['ミオ', '……え', 'surprise'], ['ミオ', '……捨てたのに', 'surprise']]);
+        await say(['「掲示板の図書だよりも読んだ。……ゴミ箱に、下書きもあった」', ['ミオ', '……え', 'surprise'], ['ミオ', '……捨てたのに', 'surprise'],
+                   'ミオは本で口もとを隠すように、うつむいた。', ['ミオ', '……誰にも、気づかれないと思ってた', 'down']]);
       } else {
-        await say(['「……『ひとりぶんの椅子』。ツムギさんが、何度も借りてた本だよね」', ['ミオ', '……なんで、知ってるの', 'surprise']]);
+        await say(['「……ツムギさんが、何度も借りてた本だよね」', ['ミオ', '……なんで、知ってるの', 'surprise']]);
       }
+      await say(['「……ここで、いつもひとりで読んでるの？」', ['ミオ', '……当番のない日も、来てる。教室には、いたくないから', 'down']]);
       await line(['ミオ', '……ここは、静かだから好き。誰も、私のこと見ないから', 'down'], false);
       let a = await ask([['……本、好きなんだね。ここ、落ち着く？', 'yori'], ['人を避けてばかりじゃ、何も変わらないよ', 'seiron'], ['黒板のあれ、書いたのはミオさんだよね', 'oitsu']], 1);
       if (a === 'seiron') { await say([['ミオ', '……わかってる。そんなの', 'angry'], 'ミオは、本で顔を隠すようにうつむいた。', 'それきり、ミオは口を閉ざした。']); return closeHeart(); }
@@ -2750,7 +2762,8 @@
                  'ミオは、本の表紙をそっと撫でた。']);
 
       // 2段目
-      await say([['ミオ', '……その子、ツムギっていうの', 'down'],
+      await say(['表紙を撫でていたミオの指が、ふと止まった。', ['ミオ', '……でも、もう、一緒には読めないの', 'sad'], '「……どうして？」',
+                 ['ミオ', '……その子、ツムギっていうの', 'down'],
                  ['ミオ', '二年になって、クラスのグループが、ツムギを……', 'sad'],
                  ['ミオ', '最初は、無視するだけだった。上履きを隠したり、机を離したり', 'sad'],
                  ['ミオ', '私、止めなかった。止めたら、次は私だって、わかってたから', 'down'],
@@ -2758,9 +2771,9 @@
                  ['ミオ', '……黒板に、書いた。『いてもいなくても同じ』って', 'grief'],
                  ['ミオ', 'ツムギ、それを見て、何も言わないで帰った。……次の日から、教室に来なくなった', 'grief'],
                  '窓の外の夕日が、ミオの横顔を赤く染めていた。',
-                 ['ミオ', '……今日、机の写真が送られてきたの。明日の終業式から、次は私なんだって', 'despair'],
-                 ['ミオ', 'それにね。さっき、保健室の前で、先生たちが話してるの聞いちゃった。ツムギ、病気がまた悪くなって、来週から入院するって', 'despair']]);
-      await line(['ミオ', '……私のせいだ。全部', 'despair'], false);
+                 ['ミオ', '……今日、机の写真が送られてきたの。明日の終業式から、次は私なんだって', 'sad'],
+                 ['ミオ', 'それにね。さっき、保健室の前で、先生たちが話してるの聞いちゃった。ツムギ、病気がまた悪くなって、来週から入院するって', 'grief']]);
+      await line(['ミオ', '……私のせいだ。全部', 'grief'], false);
       a = await ask([['やったことは消えないよ。ちゃんと謝らなきゃ', 'seiron'], ['……怖かったんだね。次は自分だって', 'yori'],
                      ['ミオさんは悪くないよ。仕方なかったんだから', 'nagu'], ['今さら後悔しても、ツムギさんは戻ってこないよ', 'oitsu']], 2);
       if (a === 'seiron') { await say([['ミオ', '……わかってる。わかってるの', 'angry'], ['ミオ', '謝って済むなら、とっくにそうしてる', 'angry'], 'ミオは本を抱きしめたまま、動かなくなった。', '正しい言葉ほど、今のミオには重すぎるのかもしれない。']); return closeHeart(); }
