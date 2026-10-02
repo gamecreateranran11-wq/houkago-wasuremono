@@ -3139,7 +3139,7 @@
 
   /* ---------- 章の切り替え ---------- */
   const CHAPTERS = { art: ART, music: MUSIC, library: LIBRARY };
-  const ORDER = ['art', 'music', ...(/[?&]ch3\b/.test(location.search) ? ['library'] : [])];
+  const ORDER = ['art', 'music', 'library'];
   // 章は順番に開放：前の章を終えると（ほどけた・追い出された）次の章が選べる
   // 章は1章から順に進む。この周回で終えた章には戻れず、次の章だけが選べる
   const done = id => !!P.cur.results[CHAPTERS[id].key];
@@ -3210,7 +3210,7 @@
     openOverlay(`<h1 class="vtitle">放課後の<span>わすれもの</span></h1>
       <p class="tap-hint" id="tapHint"${splash ? '' : ' hidden'}>画面をタップしてください</p>
       <div class="title-side${splash ? ' later' : ''}" id="titleMenu"${splash ? ' hidden' : ''}>
-        <p class="eyebrow">試作版　第一章・第二章</p>
+        <p class="eyebrow">試作版　第一章〜第三章</p>
         ${runs ? `<p class="note">これまでの周回　${runs}</p>` : ''}
         ${Object.keys(P.cur.results).length ? `<p class="note">第${P.runNo}周　${Object.keys(P.cur.results).length}章まで終えた</p>` : ''}
         ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save)}</span></button>` : ''}
