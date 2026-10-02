@@ -151,7 +151,7 @@
   .poem.p-draft { background: #e9e4da; transform: rotate(-.6deg); }
   .poem s { color: #8a7d74; }
   .wheel { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-  .wheel button { width: 48px; height: 36px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+  .wheel button { touch-action: manipulation; user-select: none; -webkit-user-select: none; width: 48px; height: 36px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
   .wheel output { font-family: var(--serif); font-weight: 800; font-size: 34px; width: 48px; text-align: center; background: #120f17; border: 1px solid var(--line); border-radius: 4px; font-variant-numeric: tabular-nums; }
 
   .title-screen { --dusk: 0; background: linear-gradient(rgba(60, 14, 40, calc(var(--dusk) * .09)), rgba(10, 6, 20, calc(var(--dusk) * .1))), linear-gradient(90deg, rgba(12, 9, 16, .9) 0%, rgba(12, 9, 16, .55) 45%, rgba(12, 9, 16, .1) 100%), url("img/title.webp") center / cover no-repeat, var(--ground); justify-items: start; padding-left: max(16px, 6vw); }
@@ -1112,7 +1112,7 @@
     // 1章は30分。調べるたびに MIN_PER_TICK 分進む
     const min = R.ticks * MIN_PER_TICK;
     const free = R.st === 'unraveled';
-    $('#clock').textContent = free ? hm(chEnd() + 1) : hm(chStart() + min);
+    $('#clock').textContent = hm(chStart() + min);
     $('#remain').textContent = free || R.over ? '' : `チャイムまで あと${SPAN - min}分`;
     $('#bells').innerHTML = [0, 1, 2].map(i => `<i class="${i < R.loop ? 'on' : ''}"></i>`).join('');
     $('#btnWait').disabled = R.over || R.st === 'unraveled';
@@ -1144,7 +1144,7 @@
   // key：どのストーリーかを表す名前（会話の途中セーブから再開するときに、同じストーリーを呼び直すのに使う）
   async function act(fn, key) {
     if (busy || !R || R.over) return;
-    busy = true; beginScript(key); syncSave();
+    busy = true; beginScript(key); syncSave(); $('#btnWait').disabled = true;
     try {
       // この調べもので、その子について知るべきことがそろったら、そのまま対話に入る（途中でチャイムが鳴ったとき・対話がもう始まったときは除く）
       const was = C && C.ready ? C.ready() : true, loop0 = R.loop, asked0 = askCount;
@@ -1436,6 +1436,7 @@
   // ほどけたら開くのは、その部屋の扉。一枚絵はその子の行き先（下校する子は校門、ミオは保健室へ続く渡り廊下）
   // stop：主人公が足を止める場所（主人公は、まだ放課後の外へは出られない）
   function ending({ lines, img, alt, stop = '門の手前で、足が止まる。まだ、ここは通れない。' }) {
+    const now = chStart() + R.ticks * MIN_PER_TICK;
     R.over = true; clearRun(); P.saved[C.key] = true; saveP(); render(); idle(); bgm('unravel');
     const next = recordResult('saved');
     overlayWait(`<img class="cg" src="img/${img}.webp" alt="${alt}">
@@ -1445,7 +1446,7 @@
         <p>振り返ると、ほかの教室には、まだ明かりがついていた。</p>
         <p class="eyebrow">${C.label}　${C.name}の心がほどけた</p>
       </div>
-      <p class="note">時計の針は、次の30分へ進む。</p>`,
+      <p class="note">${hm(now)}。チャイムは、まだ鳴っていない。${next ? `鳴る前に、明かりのついた${next.room}へ向かう。` : ''}</p>`,
       'dawn', [next ? `次の章に進む（${hm((next.startMin || 0))}）` : '放課後の終わりへ', 'タイトルへ']).then(v => v === 0 ? goNext(next) : showTitle(true));
   }
 
@@ -1460,7 +1461,7 @@
     },
     async clock() {
       showCut('clock');
-      await say([R.st === 'unraveled' ? `時計の針は、${hm(chEnd())}を越えている。`
+      await say([R.st === 'unraveled' ? `壁の時計は、${$('#clock').textContent}を指している。チャイムは、まだ鳴らない。`
         : `壁の時計は、${$('#clock').textContent}を指している。${hm(chEnd())}まで、あと${SPAN - R.ticks * MIN_PER_TICK}分。`]);
     },
     char: () => C.talk(),
@@ -1480,8 +1481,11 @@
           <output id="dg${i}">0</output>
           <button type="button" data-i="${i}" data-d="-1" aria-label="${i + 1}桁目を下げる">▼</button></div>`).join('')}</div>
         <div class="row"><button type="button" class="btn primary" id="dOpen">開ける</button><button type="button" class="btn" id="dCancel">やめる</button></div>`);
-      card.querySelectorAll('.wheel button').forEach(b => b.onclick = () => {
-        const i = +b.dataset.i; d[i] = (d[i] + +b.dataset.d + 10) % 10; $('#dg' + i).textContent = d[i];
+      // ピアノの鍵盤と同じく、指が触れた瞬間に1つ動かす（クリックを待たないので、速く押してもダブルタップの拡大にならない）
+      const step = b => { const i = +b.dataset.i; d[i] = (d[i] + +b.dataset.d + 10) % 10; $('#dg' + i).textContent = d[i]; };
+      card.querySelectorAll('.wheel button').forEach(b => {
+        b.addEventListener('pointerdown', e => { if (e.button > 0) return; e.preventDefault(); step(b); });
+        b.onclick = e => { if (e.detail === 0) step(b); };  // キーボードで押したときだけ
       });
       $('#dOpen').onclick = () => { closeOverlay(); res(d.join('')); };
       $('#dCancel').onclick = () => { closeOverlay(); res(null); };
@@ -1546,7 +1550,7 @@
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
     faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry' },
     lost: '顔のないスケッチブック',
-    idleFree: '（時計の針が16:30を越えた。ヒナが待っている）',
+    idleFree: '（ヒナが待っている。チャイムが鳴る前に）',
     // 探索の途中、いないはずの母の視線を感じる（ループが進むほど、はっきりしていく）
     async onTick() {
       if (R.st !== 'here' || R.seen.has('gaze') || R.ticks < (R.loop ? 2 : 4)) return;
@@ -1902,7 +1906,7 @@
                  'ヒナは袖で目元をこすって、それから、少しだけ笑った。']);
       R.st = 'unraveled'; render();
       bgm('unravel');
-      await say(['……いつもならチャイムが鳴る16:30を、時計の針が、静かに越えていった。', ['ヒナ', 'ねえ。青い絵の具、持ってない？', 'smile']]);
+      await say([`……張りつめていた部屋の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ヒナ', 'ねえ。青い絵の具、持ってない？', 'smile']]);
       if (R.items.has('blue')) return hinaPaint();
       await say(['（流しに、青い絵の具があったはずだ）']);
     },
@@ -2150,7 +2154,7 @@
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
     faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile' },
     lost: 'ソウタのパートだけの楽譜',
-    idleFree: '（時計の針が17:00を越えた。ソウタが待っている）',
+    idleFree: '（ソウタが待っている。チャイムが鳴る前に）',
     // 探索の途中、ソウタの記憶にまつわる音が聞こえる（ほどけた後は鳴らない）
     async onTick() {
       if (R.st !== 'here' || R.seen.has('memory') || R.ticks < (R.loop ? 2 : 4)) return;
@@ -2197,7 +2201,10 @@
              '扉は、どちらからも開けようとしなかった。夕焼けは、ずっと同じ色のままだった。'],
     samePose: 'ピアノの前には、さっきとまったく同じ姿勢で、ソウタが座っていた。',
     loopReply: [['ソウタ', '……チャイム？ 鳴ってないだろ', 'angry'], ['ソウタ', 'ていうか、誰', 'angry']],
-    lastWords: [['ソウタ', '……そろそろ、行かないと', 'down'], '「行くって、どこへ？」', ['ソウタ', '決まってるだろ。……ハルのところだよ', 'despair']],
+    lastWords: [['ソウタ', '……そろそろ、行かないと', 'down'], '「行くって、どこへ？」', ['ソウタ', '決まってるだろ。……ハルのところだよ', 'despair'],
+                ['ソウタ', 'もうじき、ピアノも失うんだ。俺にはもう……何も残らない', 'despair'],
+                ['ソウタ', '毎晩、眠れないまま、白んでいく空を眺めるのなんて……もうこりごりだ', 'despair'],
+                ['ソウタ', '頼むから、眠らせてくれ……ハルの隣で', 'despair']],
     unravelMood: 'musicbox',
     // 先にピアノを弾いていたら、蓋は開いたまま
     closeLines: () => { const open = R.seen.has('lid'); R.seen.delete('lid');
@@ -2216,10 +2223,10 @@
     ],
     async intro(rem) {
       if (!rem) {
-        await say(['……目を覚ますと、音楽室にいた。', '窓の外は夕焼け。時計は16:30を指している。', ...locked('音楽室'), 'グランドピアノの前に、男子生徒がひとり座っていた。',
+        await say(['……気がつくと、音楽室にいた。', '窓の外は夕焼け。時計は16:30を指している。', ...locked('音楽室'), 'グランドピアノの前に、男子生徒がひとり座っていた。',
                    '鍵盤の蓋は閉じたまま。両手を膝に置いて、じっとうつむいている。……声をかけてみる。',
                    '「……ピアノ、弾くの？」',
-                   '彼が、少しだけ顔を上げた。胸の名札には「2年 井上ソウタ」とある。目の下に、濃いくまが浮いていた。',
+                   '彼が、少しだけ顔を上げた。胸の名札には「2年 井上ソウタ」とある。目の下に、濃いくまが浮いていた。', '焦点の合わない目。座っているだけなのに、上体がときどき、ふらりと揺れる。',
                    ['ソウタ', '……弾かない', 'down'],
                    ['ソウタ', '一人じゃ、弾けない曲だから', 'down'],
                    '「一人じゃ？」',
@@ -2442,7 +2449,9 @@
                  ['ソウタ', '次の朝、母さんに起こされた。ハルのお母さんから、電話があったって', 'sad'],
                  ['ソウタ', 'ハルは、あの夜……予備校から帰る途中で、車に……', 'grief'],
                  'ソウタは、そこで言葉を切った。',
-                 ['ソウタ', '……あの『ごめん』には、今も既読がつかないんだ', 'grief']]);
+                 ['ソウタ', '……あの『ごめん』には、今も既読がつかないんだ', 'grief'],
+                 ['ソウタ', 'あれから、ほとんど眠れてない。目を閉じると、既読のつかない画面が浮かぶんだ', 'down'],
+                 ['ソウタ', '……もう、何日寝てないのか、わからない', 'down']]);
       await line(['ソウタ', '……ハルが最後に読んだ俺の言葉が、あれなんだよ', 'grief'], false);
       a = await ask([['事故は、ソウタのメッセージとは関係ないよ', 'seiron'], ['……謝りたかったんだね。ハルくんに', 'yori'],
                      ['ソウタのせいじゃないよ', 'nagu'], ['ハルくんの分まで、頑張らなきゃ', 'oitsu']], 2);
@@ -2520,7 +2529,7 @@
                  '泣きながら、ソウタが少しだけ笑った。',
                  ['ソウタ', '……弾くよ。続き、最後まで', 'crySmile']]);
       R.st = 'unraveled'; render();
-      await say(['……いつもならチャイムが鳴る17:00を、時計の針が、静かに越えていった。',
+      await say([`……張りつめていた部屋の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`,
                  ['ソウタ', '……最初のフレーズだけでいい。ハルのところ、弾いてくれる？', 'smile']]);
       if (R.items.has('secondo') || R.know.has('melody')) return sotaDuet(true);
       await say([['ソウタ', '……あ。ハルのパートは、破いちゃったんだ', 'sad'],
@@ -2595,15 +2604,24 @@
       R.know.add('acrostic'); R.seen.add('acrostic');
     } else await say(['「ツムギへ　ごめんね」。貼り出された紹介文の中に、ずっと隠れていた言葉。']);
   }
+  // ツムギは昨日、保健室から（養護の先生を通して）この本を予約していた。ミオが借りたままでは、ツムギに届かない
+  // ミオは自分の貸出を返却し、当番として予約の本を保健室へ届けに行く
   async function mioStamp() {
-    await say(['カウンターのペンを渡すと、ミオは本のポケットから貸出カードを取り出した。',
+    await say(['カウンターのペンを渡すと、ミオはカウンターの引き出しから、小さな紙を一枚取り出した。',
+               '予約票。「『ひとりぶんの椅子』　2年3組　白石ツムギ　受け取り：保健室」。日付は昨日、7月14日。字は、保健室の先生のものだ。',
+               ['ミオ', '……昨日、保健室の先生が持ってきたの。ツムギが、この本をもう一回読みたいって', 'sad'],
+               ['ミオ', '入院するとき、持っていきたいんだって', 'sad'],
+               ['ミオ', 'もういらないって、返されたんだと思ってた。……違ったのかな', 'crySmile'],
+               ['ミオ', '私が借りたままじゃ、ツムギに届かない。わかってたのに、ずっと返せなかった', 'down'],
+               'ミオは本のポケットから貸出カードを取り出した。',
                '6月10日、2-3 水野。返却日の欄だけが、ずっと空いたままだった。',
                'ミオは、そこに今日の日付を、一文字ずつ書き込んだ。']);
     await overlayWait(`<p class="eyebrow">貸出カード</p><h2>『ひとりぶんの椅子』</h2><img class="cg" src="img/l_card.webp" alt="貸出カードの最後の行の返却日の欄に、今日の日付「7/15」が手書きで書かれている">
       <p>白石、白石、白石……。並んだ名前のいちばん下に、空いていた欄がひとつ、埋まった。</p>`, '', ['続ける']);
     closeOverlay();
-    await say([['ミオ', '……今日、返しに行く', 'smile'],
-               ['ミオ', '保健室。……ツムギ、今日も来てるはずだから', 'smile'],
+    await say(['それから、貸出記録のノートの新しい行に、ていねいな字で書き込む。「7/15　ひとりぶんの椅子　913.6 ヒ　白石ツムギ（保健室）」',
+               ['ミオ', '予約の本を保健室に届けるのも、当番の仕事だから', 'smile'],
+               ['ミオ', '……今日、届けに行く。ツムギ、今日も保健室に来てるはずだから', 'smile'],
                ['ミオ', '許してもらえなくても、いい。……ちゃんと、顔を見て言う', 'crySmile']]);
     lockClick();
     await say(['図書室の扉の向こうで、カチリと鍵の外れる音がした。']);
@@ -2624,7 +2642,7 @@
     lost: '返却期限の過ぎた一冊',
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:771, cy:438, s:0.94）、保健室は ci_clock_infirmary（cx:777, cy:420, s:0.89）を使う
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
-    idleFree: '（時計の針が17:30を越えた。ミオが待っている）',
+    idleFree: '（ミオが待っている。チャイムが鳴る前に）',
     // 貸出記録・縦読み・学級日誌を知ったら、対話に入れる
     ready: () => R.know.has('ledger') && R.know.has('acrostic') && R.know.has('diary'),
     giveUp: ['ミオは、本に顔をうずめるようにして、小さくうなずいた。', '伸ばしかけた手を、そのまま下ろした。'],
@@ -2652,7 +2670,9 @@
              '扉は、どちらからも開けようとしなかった。夕焼けは、ずっと同じ色のままだった。'],
     samePose: '閲覧机の端には、さっきとまったく同じ姿勢で、ミオが本を抱えて座っていた。',
     loopReply: [['ミオ', '……チャイム？ まだ、鳴ってないと思う', 'surprise'], ['ミオ', '……あの。どなたですか', 'reject']],
-    lastWords: [['ミオ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ミオ', '……ツムギさんも、こんな気持ちだったのかな', 'despair']],
+    lastWords: [['ミオ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ミオ', '……誰も、椅子を運んでこないところ', 'despair'],
+                ['ミオ', '私、最低だよね……人間、失格だ。こんな私に、椅子を運んでもらう資格なんてない', 'despair'],
+                ['ミオ', '……ツムギさんも、こんな気持ちだったのかな', 'despair']],
     closeLines: ['ミオは本を抱えたまま、もう顔を上げなかった。', '沈黙のまま、時計の針だけが17:30へ近づいていった。'],
     hotspots: [
       ['window', '窓', 'left:0;top:0;width:18%;height:40%'],
@@ -2667,7 +2687,7 @@
     ],
     async intro(rem) {
       if (!rem) {
-        await say(['……目を覚ますと、図書室にいた。', '窓の外は夕焼け。時計は17:00を指している。', ...locked('図書室'), '閲覧机の端に、女子生徒がひとり座っていた。',
+        await say(['……気がつくと、図書室にいた。', '窓の外は夕焼け。時計は17:00を指している。', ...locked('図書室'), '閲覧机の端に、女子生徒がひとり座っていた。',
                    '一冊の本を、両腕で抱えるようにして。……声をかけてみる。',
                    '「あの……ここ、図書室だよね」',
                    '彼女は、びくりと肩を震わせてこちらを見た。胸の名札には「2年 水野ミオ」とある。',
@@ -2813,7 +2833,7 @@
     },
     shelfItem(saved) {
       return saved
-        ? { title: '返しに行った本', body: `<img class="cg" src="img/l_card.webp" alt="貸出カードに手書きされた今日の日付"><p>空いていた返却日の欄に、ミオの字で今日の日付。ミオは、この本を持って保健室へ向かった。</p>` }
+        ? { title: '返しに行った本', body: `<img class="cg" src="img/l_card.webp" alt="貸出カードに手書きされた今日の日付"><p>空いていた返却日の欄に、ミオの字で今日の日付。ミオは、予約していたツムギにこの本を届けるため、保健室へ向かった。</p>` }
         : { title: '返却期限の過ぎた一冊', body: `<img class="cg" src="img/l_letter.webp" alt="しおりの手紙"><p>しおりの手紙。「いてもいなくても同じなんかじゃない」</p>` };
     },
     async talk() {
@@ -2882,7 +2902,7 @@
       a = await ask([['やったことは消えないよ。ちゃんと謝らなきゃ', 'seiron'], ['……怖かったんだね。次は自分だって', 'yori'],
                      ['ミオさんは悪くないよ。仕方なかったんだから', 'nagu'], ['今さら後悔しても、ツムギさんは戻ってこないよ', 'oitsu']], 2);
       if (a === 'seiron') { await say([['ミオ', '……わかってる。わかってるの', 'angry'], ['ミオ', '謝って済むなら、とっくにそうしてる', 'angry'], 'ミオは本を抱きしめたまま、動かなくなった。', '正しい言葉ほど、今のミオには重すぎるのかもしれない。']); return closeHeart(); }
-      if (a === 'oitsu') return doom([['ミオ', '……うん。知ってる', 'despair'], ['ミオ', '戻ってこないし、戻っちゃいけないんだよ。私のいる教室になんか', 'shadow'], ['ミオ', '……いてもいなくても同じなのは、私のほうだったね', 'despair']]);
+      if (a === 'oitsu') return doom([['ミオ', '……うん。知ってる', 'despair'], ['ミオ', '戻ってこないし、戻っちゃいけないんだよ。私のいる教室になんか', 'shadow'], ['ミオ', '私、最低だよね……人間、失格だ', 'despair'], ['ミオ', '……いてもいなくても同じなのは、私のほうだったね', 'despair']]);
       if (a === 'nagu') {
         R.cons++;
         await say([['ミオ', '……仕方、なかった？', 'surprise'],
@@ -2927,6 +2947,7 @@
       }
       if (a === 'oitsu') return doom([['ミオ', '……何もしないのが、いちばん迷惑かけないでしょ', 'shadow'],
                                 ['ミオ', '私がいなくなれば、グループも、ツムギも……', 'despair'],
+                                ['ミオ', '……こんな私に、椅子を運んでもらう資格なんてない', 'despair'],
                                 ['ミオ', '……ツムギさんも、こんな気持ちだったのかな', 'despair']]);
       await say([['ミオ', '……え', 'surprise'], ['ミオ', 'なんで。……そんなこと、誰にも', 'surprise'],
                  '答えられなかった。ただ、あのしおりの手紙を覚えていた。',
@@ -2939,11 +2960,11 @@
       bgm(null);
       await say(['ぎゅっと抱えていた本を、ミオは、ゆっくりと膝の上に下ろした。']);
       bgm('musicbox');
-      await say([['ミオ', '……返さなきゃ。この本', 'grief'],
-                 ['ミオ', 'ツムギに、ちゃんと返して。……それから、あの黒板の字は、私が書いたって、言う', 'grief'],
+      await say([['ミオ', '……届けなきゃ。この本', 'grief'],
+                 ['ミオ', 'ツムギのところに。……それから、あの黒板の字は、私が書いたって、言う', 'grief'],
                  ['ミオ', '許してもらえなくても。……言わなきゃいけないこと、だから', 'crySmile']]);
       R.st = 'unraveled'; render();
-      await say(['……いつもならチャイムが鳴る17:30を、時計の針が、静かに越えていった。', ['ミオ', '……ねえ。カウンターのペン、取ってくれる？', 'smile']]);
+      await say([`……張りつめていた部屋の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ミオ', '……ねえ。カウンターのペン、取ってくれる？', 'smile']]);
     },
   };
 
