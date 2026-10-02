@@ -166,6 +166,9 @@
   .title-screen { cursor: pointer; }
   .btn-quiet { align-self: flex-start; background: none; border: none; padding: 2px 0; font-size: 12px; color: var(--muted); text-decoration: underline; cursor: pointer; }
   .btn-quiet:hover { color: var(--ink); }
+  /* プレイデータのリセット：見落とさないよう、ほかの控えめなボタンより一回り大きく、赤い枠で目立たせる */
+  .btn-reset { align-self: flex-start; background: transparent; border: 1px solid var(--akane); border-radius: 4px; padding: 8px 14px; font-size: 14px; color: var(--akane); cursor: pointer; }
+  .btn-reset:hover { background: var(--akane); color: #fff; }
   .title-side .btn .sub { display: block; font-size: 12px; font-weight: 400; opacity: .8; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
   .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -1503,12 +1506,18 @@
       if (!R.know.has('window')) {
         await say(['窓の外は、ずっと同じ夕焼け。校庭には誰もいない。', windowLine()]);
         R.know.add('window'); await tick();
+      } else if (C.window2 && !R.know.has('window2')) {
+        // 2回目：その章だけの、窓まわりの新しい情報
+        R.know.add('window2'); await say(C.window2); await tick();
       } else await say(['夕焼けは、少しも動かない。']);
     },
     async clock() {
       showCut('clock');
       await say([R.st === 'unraveled' ? `壁の時計は、${$('#clock').textContent}を指している。チャイムは、まだ鳴らない。`
         : `壁の時計は、${$('#clock').textContent}を指している。${hm(chEnd())}まで、あと${SPAN - R.ticks * MIN_PER_TICK}分。`]);
+      // 2回目：その章だけの、時計まわりの新しい情報（時間は進まない）
+      if (C.clock2 && R.seen.has('clock1') && !R.know.has('clock2')) { R.know.add('clock2'); await say(C.clock2); }
+      R.seen.add('clock1');
     },
     char: () => C.talk(),
   };
@@ -1591,6 +1600,8 @@
   }
 
   const ART = {
+    window2: ['窓ガラスに、自分の顔がうっすら映っている。', '……ヒナは窓の外だけを見ていた。ガラスに映る自分の顔からは、目をそらすように。'],
+    clock2: ['時計の下に、美術部の今月の予定表が貼ってある。', '「7/18　県展 搬入」の欄にだけ、赤い丸が何重にも描かれて、紙が毛羽立っていた。'],
     id: 'art', key: 'hina', name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom',
     sit: { src: 'hina_sit', style: 'left:1%;top:36.7%;height:20%' },
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
@@ -1697,7 +1708,14 @@
         if (!R.know.has('deadline')) {
           await say(['黒板の隅に、チョークの字。「県展 作品提出〆切 今週金曜」', 'その下に、手でこすって消した跡。……目を凝らすと、小さく震えた字で「描けない」と読める。']);
           R.know.add('deadline'); await tick();
-        } else await say(['「県展 作品提出〆切 今週金曜」。その下には、こすって消しそこねた「描けない」の字が、まだ残っている。']);
+        } else {
+          if (!R.know.has('boardDate')) {
+            // 2回目：日直の欄
+            R.know.add('boardDate');
+            await say(['黒板の右端の、日付と日直の欄。「7月15日（火）　日直　春日」', '……チョークの「春日」の字だけ、小さく、ほとんど消えかけている。誰かに見られるのを嫌がるみたいに。']);
+            await tick();
+          } else await say(['「県展 作品提出〆切 今週金曜」。その下には、こすって消しそこねた「描けない」の字が、まだ残っている。']);
+        }
       },
       async notice() {
         showCut('ci_notice');
@@ -1737,7 +1755,17 @@
           await say(['画材棚。いちばん上の引き出しに、3桁のダイヤル錠がかかっている。', '……棚の下に、紙切れが挟まっている。引き抜くと、絵の切れ端だった。']);
           R.taken.scrap = true; await gotItem('pieceB'); await tick(); return;
         }
-        if (R.drawerOpen) { showCut('ci_drawer'); await say(['開いた引き出し。空の絆創膏の箱と、長袖のカーディガン。']); return; }
+        if (R.drawerOpen) {
+          showCut('ci_drawer');
+          if (!R.know.has('pencils')) {
+            // 2回目：カーディガンの下に、姉からもらった色鉛筆の箱（家に置いておけず、ここに隠している）
+            R.know.add('pencils');
+            await say(['開いた引き出し。カーディガンを持ち上げると、その下に、細長い箱がしまってあった。',
+                       '色鉛筆の箱だ。リボンがかかったまま、一度もほどかれていない。', '箱の隅に、小さなメッセージカード。「ヒナへ　サクラ」']);
+            await tick(); return;
+          }
+          await say(['開いた引き出し。空の絆創膏の箱と、長袖のカーディガン。', 'その下に、リボンをほどいていない色鉛筆の箱。']); return;
+        }
         showCut(R.taken.scrap ? 'ci_shelf_empty' : 'ci_shelf');
         if (!combined('painting') && !R.know.has('painting')) {
           await say(['3桁のダイヤル錠。番号の手がかりが、まだ見つからない。']);
@@ -2197,6 +2225,8 @@
   }
 
   const MUSIC = {
+    window2: ['窓際の机に、ソウタの鞄が置いてある。開いた口から、紙が一枚のぞいていた。', '模試の結果だ。「第一志望　E判定」。……何度も握りつぶしたように、しわだらけになっている。'],
+    clock2: ['時計の針の音が、やけに大きく聞こえる。', '……ソウタは、時計のほうを見ないようにしているみたいだった。17:00。リハーサルが始まるはずだった時間を。'],
     id: 'music', key: 'sota', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room',
     sit: { src: 'sota_sit', style: 'left:54.3%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
@@ -2315,6 +2345,12 @@
           closeOverlay();
           await say(['……白い菊は、お供えの花だ。']);
           R.know.add('phone'); R.seen.add('phone'); await tick();
+        } else if (!R.know.has('pickup')) {
+          // 2回目：家のピアノの引き取りの通知
+          R.know.add('pickup'); R.seen.add('phone');
+          await say(['白い菊と、伏せたスマホ。', '画面のいちばん上に、通知が一件だけ残っていた。',
+                     '「みずほ楽器レンタル：ピアノお引き取りのご案内　7/19（土）10:00〜」', '……今週末。ソウタの家のピアノのことだろうか。']);
+          await tick();
         } else {
           R.seen.add('phone');
           await say(['白い菊と、伏せたスマホ。', '画面に触れると、あのメッセージがまた開いた。']);
@@ -2326,6 +2362,13 @@
       async piano() {
         if (R.st === 'unraveled') return sotaDuet();
         if (!R.items.has('secondo') && !R.know.has('melody')) {
+          if (R.seen.has('piano1') && !R.know.has('pianoMark')) {
+            // 2回目：譜面立ての小さな落書き
+            R.know.add('pianoMark');
+            await say(['譜面立ての裏に、鉛筆の小さな書き込みがある。', 'きっちりした字で「7/9 リハ　ここ走らない！」。', 'その下に、右上がりの乱暴な字で「走る」。……さらにその下に、きっちりした字で「走るな」。']);
+            await tick(); return;
+          }
+          R.seen.add('piano1');
           await say([R.seen.has('lid') ? 'グランドピアノ。鍵盤の蓋は開いたままだ。' : 'グランドピアノ。鍵盤の蓋は閉じている。', ...(comboBlock('secondo') ? [] : ['……弾ける曲を、何も知らない。'])]);
           return;
         }
@@ -2682,6 +2725,8 @@
   }
 
   const LIBRARY = {
+    window2: ['窓の外、渡り廊下の向こうに、本校舎の一階が見える。', '……ほかの教室はみんな暗いのに、保健室の窓にだけ、まだ明かりがついていた。'],
+    clock2: ['時計の下に、開館時間の札。「放課後　〜17:30」。', 'その下に、小さな付箋が貼ってある。「7/15　当番　水野」。……今日の当番は、ミオひとりだけらしい。'],
     id: 'library', key: 'mio', name: 'ミオ', who: 'この子', startMin: 60, room: '図書室', hall: 'hall_library', label: '第三章「図書室」', bg: 'library',
     sit: { src: 'mio_sit', style: 'left:11%;top:42%;height:47%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
@@ -2807,9 +2852,19 @@
         if (!R.know.has('shelf')) {
           await say(['文学の書架。「913」の棚に、一冊ぶんのすき間があいている。', '……貸出中の札も、差さっていない。']);
           R.know.add('shelf'); await tick();
-        } else await say(['913の棚の、一冊ぶんのすき間。',
-                          '棚の奥に、色あせた紙切れが挟まっていた。手書きの当番表の切れ端だ。',
-                          '「図書委員　1年　白石・水野」。二人の名字が、同じ枠に並んでいる。']);
+        } else if (!R.know.has('notebook')) {
+          // 2回目：あの本があるはずのすき間に、ミオのノート。空想に耽る癖で書いた『ひとりぶんの椅子』の、逆の結末の続き
+          // 物を大切にするので、本には一文字も書き込まず、自分のノートにだけ書いている
+          R.know.add('notebook');
+          await say(['913の棚の、一冊ぶんのすき間。……奥に、大学ノートが一冊、差しこまれていた。表紙には何も書かれていない。',
+                     '開くと、細い字で物語が書かれていた。……『ひとりぶんの椅子』の、続きのようだ。',
+                     '「椅子を運んでくれた人は、ある日から、来なくなった。」',
+                     '「わたしは、もうひとつの椅子を、部屋のすみに片づけた。それから、扉に鍵をかけた。」',
+                     '「これで、だれも来ない。だれも、傷つけない。」',
+                     '最後のページの隅に、小さな字で一行。「ごめんね。あなたの椅子を、片づけてしまって」',
+                     '……あの本には、一文字も書き込まれていなかった。結末を変えたのは、このノートの中だけだ。']);
+          await tick();
+        } else await say(['913の棚の、一冊ぶんのすき間。', '奥には、椅子を片づけてしまう物語のノートが、そのまま差しこまれている。']);
       },
       async notice() {
         showCut('lci_notice');
@@ -2841,11 +2896,28 @@
         showCut('lci_door');
         if (R.know.has('diary')) {
           if (!R.seen.has('diary')) { R.seen.add('diary'); await say(['番号は覚えている。9・1・3・6。']); lockClick(); }
+          if (R.seen.has('diaryAgain') && !R.know.has('dutyList')) {
+            // 開けたあとの2回目：段ボールの上の、去年の委員会ファイル
+            R.know.add('dutyList');
+            await say(['段ボールの上に、去年の図書委員会のファイルが置いてあった。', '挟まっていた手書きの当番表。「図書委員　1年　白石・水野」。',
+                       '二人の名字が、同じ枠に並んでいる。……どの曜日も、ずっと二人一緒だった。']);
+            await tick(); return;
+          }
+          R.seen.add('diaryAgain');
           await say(['閉架書庫の中。段ボールの学級日誌。6月9日のページだけが、途中まで破られている。',
                      '余白に写された言葉。「いてもいなくても同じ」']);
           return;
         }
-        if (!R.know.has('ledger')) { await say(['「閉架書庫」の扉。4桁の番号を押す錠がついている。', '……番号の手がかりが、まだない。']); return; }
+        if (!R.know.has('ledger')) {
+          if (R.seen.has('door1') && !R.know.has('doorNote')) {
+            // 手がかりがないうちの2回目：扉の横の貼り紙（番号は本に関係あるらしい）
+            R.know.add('doorNote');
+            await say(['扉の横に、手書きの貼り紙がある。', '「閉架書庫　番号は、この部屋でいちばん借りられている本の“住所”です　図書委員会」', '……本の住所。背のラベルの番号のことだろうか。']);
+            await tick(); return;
+          }
+          R.seen.add('door1');
+          await say(['「閉架書庫」の扉。4桁の番号を押す錠がついている。', '……番号の手がかりが、まだない。']); return;
+        }
         const code = await dial(4, '閉架書庫の扉', '4桁の番号錠');
         if (code === null) return;
         if (code === '9136') {
@@ -2872,18 +2944,7 @@
           await say(['伏せたスマホが、また光った。今度は、クラスのグループじゃない。', '「お母さん：今日も遅くなるね。夕飯は冷蔵庫に入ってるよ。ユキちゃんによろしく」',
                      '既読はついているのに、返事は打たれていない。', '……明日から自分が標的になることを、ミオは家でも言えずにいるのかもしれない。']);
           await tick();
-        } else if (!R.know.has('notebook')) {
-          // 空想に耽る癖で、好きな本の続きを書いていた。物を大切にするので、本には一文字も書き込まず、自分のノートにだけ書く
-          R.know.add('notebook');
-          await say(['閲覧机の下の棚に、大学ノートが一冊、差しこまれていた。表紙には何も書かれていない。',
-                     '開くと、細い字で物語が書かれていた。……『ひとりぶんの椅子』の、続きのようだ。',
-                     '「椅子を運んでくれた人は、ある日から、来なくなった。」',
-                     '「わたしは、もうひとつの椅子を、部屋のすみに片づけた。それから、扉に鍵をかけた。」',
-                     '「これで、だれも来ない。だれも、傷つけない。」',
-                     '最後のページの隅に、小さな字で一行。「ごめんね。あなたの椅子を、片づけてしまって」',
-                     '……あの本には、一文字も書き込まれていなかった。結末を変えたのは、このノートの中だけだ。']);
-          await tick();
-        } else await say(['伏せたスマホ。通知の数だけが、増え続けている。', '棚には、椅子を片づけてしまう物語のノートが、そのまま差しこまれている。']);
+        } else await say(['伏せたスマホ。通知の数だけが、増え続けている。母親からの「夕飯は冷蔵庫に」にも、返事はないままだ。']);
       },
     },
     hint() {
@@ -3135,7 +3196,7 @@
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${played() ? '<button type="button" class="btn" id="tReset">はじめから</button>' : ''}
         <button type="button" class="btn" id="tShelf">わすれもの棚</button>
-        <button type="button" class="btn-quiet" id="tWipe">データを消去</button>
+        <button type="button" class="btn-reset" id="tWipe">プレイデータをリセット</button>
         <p class="note">このゲームはオートセーブです。新しく調べたり話し終えたりするたびに、自動で記録されます。</p>
         <p class="note">この作品には、自傷・死・いじめ・家庭での心理的虐待を示唆する表現が含まれます。</p>
       </div>`, 'title-screen', 'ov-card title-card');
@@ -3192,11 +3253,11 @@
     P.shelf = {}; P.shelfRun = {}; P.cur = { results: {} }; P.runNo = (P.runNo || 1) + 1; saveP(); clearRun();
     startRun('art');
   }
-  // データを消去：実績も含めたすべてのプレイデータを消す
+  // プレイデータをリセット：実績も含めたすべてのプレイデータを消す
   async function wipeAll() {
-    const v = await overlayWait(`<p class="eyebrow">データを消去</p><h2>すべてのプレイデータを消しますか？</h2>
+    const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
-      <p class="note">消したデータは元に戻せません。</p>`, '', ['すべて消去する', 'やめる']);
+      <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
     if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
