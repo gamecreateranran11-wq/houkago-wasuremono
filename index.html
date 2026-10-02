@@ -181,6 +181,21 @@
   .save-slot .btn:disabled { opacity: .35; cursor: default; }
   .slot { background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 12px 8px; min-height: 76px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; font-size: 13px; text-align: left; }
   .slot .who { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
+  /* わすれもの棚：画像つきのカード */
+  .shelf .slot { position: relative; padding: 6px; min-height: 0; gap: 4px; justify-content: flex-start; }
+  .slot .thumb { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 3px; display: block; }
+  .slot .thumb-empty { width: 100%; aspect-ratio: 3 / 2; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #4a4152; background: repeating-linear-gradient(135deg, #17131d 0 6px, #1b1622 6px 12px); }
+  .slot .ttl { font-size: 11.5px; line-height: 1.35; }
+  .slot.saved { border-color: var(--akane); box-shadow: 0 0 0 1px var(--akane) inset; }
+  .slot .tag { position: absolute; top: 9px; left: 9px; font-size: 10px; letter-spacing: .08em; padding: 1px 5px; border-radius: 2px; background: var(--akane); color: #fff; }
+  .slot.new { animation: shelfGlow 1.4s ease-in-out 3; }
+  @keyframes shelfGlow { 50% { box-shadow: 0 0 0 3px rgba(227, 135, 92, .55), 0 0 18px rgba(227, 135, 92, .45); } }
+  .shelf-count { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); }
+  .shelf-count b { color: var(--ink); font-size: 15px; }
+  .shelf-bar { position: relative; height: 6px; border-radius: 3px; background: #120f17; overflow: hidden; }
+  .shelf-bar i { position: absolute; left: 0; top: 0; height: 100%; background: var(--gold); transition: width .6s ease; }
+  .shelf-bar i.sv { background: var(--akane); }
+  @media (prefers-reduced-motion: reduce) { .slot.new { animation: none; box-shadow: 0 0 0 2px rgba(227, 135, 92, .6); } }
   .slot.got { border-color: var(--gold); cursor: pointer; }
   .slot.got:hover { background: var(--panel2); }
 
@@ -1817,8 +1832,8 @@
     },
     shelfItem(saved) {
       return saved
-        ? { title: '顔のあるスケッチブック', body: `${SKETCH_FACE}<p>真っ白だった顔に、ヒナが自分で線を引いた。震えていて、泣きそうで、少しだけ笑っている。</p>` }
-        : { title: '顔のないスケッチブック', body: `${SKETCH}<p>最後のページの自画像。顔だけが、何度も消されて真っ白になっている。</p>` };
+        ? { thumb: 'sketchbook_face', title: '顔のあるスケッチブック', body: `${SKETCH_FACE}<p>真っ白だった顔に、ヒナが自分で線を引いた。震えていて、泣きそうで、少しだけ笑っている。</p>` }
+        : { thumb: 'sketchbook', title: '顔のないスケッチブック', body: `${SKETCH}<p>最後のページの自画像。顔だけが、何度も消されて真っ白になっている。</p>` };
     },
     async talk() {
       if (R.st === 'vanished') return say(['椅子の上には、スケッチブックだけが残っている。']);
@@ -2461,8 +2476,8 @@
     },
     shelfItem(saved) {
       return saved
-        ? { title: '最後まで弾いた楽譜', body: `<img class="cg" src="img/m_duet.webp" alt="夕日の音楽室で、ソウタと並んで連弾している"><p>はじめのフレーズだけ、二人で。続きは、ソウタがひとりで最後まで弾いた。</p>` }
-        : { title: 'ソウタのパートだけの楽譜', body: `<img class="cg" src="img/m_score_back.webp" alt="楽譜の裏の書き込み"><p>最後のページの裏に、ハルの字で「仲直りしたら、続き弾こう。」</p>` };
+        ? { thumb: 'm_duet', title: '最後まで弾いた楽譜', body: `<img class="cg" src="img/m_duet.webp" alt="夕日の音楽室で、ソウタと並んで連弾している"><p>はじめのフレーズだけ、二人で。続きは、ソウタがひとりで最後まで弾いた。</p>` }
+        : { thumb: 'm_score', title: 'ソウタのパートだけの楽譜', body: `<img class="cg" src="img/m_score_back.webp" alt="楽譜の裏の書き込み"><p>最後のページの裏に、ハルの字で「仲直りしたら、続き弾こう。」</p>` };
     },
     async talk() {
       if (R.st === 'vanished') return say(['ピアノの椅子の上には、楽譜だけが残っている。']);
@@ -2967,8 +2982,8 @@
     },
     shelfItem(saved) {
       return saved
-        ? { title: '返しに行った本', body: `<img class="cg" src="img/l_card.webp" alt="貸出カードに手書きされた今日の日付"><p>空いていた返却日の欄に、ミオの字で今日の日付。ミオは、予約していたツムギにこの本を届けるため、保健室へ向かった。</p>` }
-        : { title: '返却期限の過ぎた一冊', body: `<img class="cg" src="img/l_letter.webp" alt="しおりの手紙"><p>しおりの手紙。「いてもいなくても同じなんかじゃない」</p>` };
+        ? { thumb: 'l_card', title: '返しに行った本', body: `<img class="cg" src="img/l_card.webp" alt="貸出カードに手書きされた今日の日付"><p>空いていた返却日の欄に、ミオの字で今日の日付。ミオは、予約していたツムギにこの本を届けるため、保健室へ向かった。</p>` }
+        : { thumb: 'l_book', title: '返却期限の過ぎた一冊', body: `<img class="cg" src="img/l_letter.webp" alt="しおりの手紙"><p>しおりの手紙。「いてもいなくても同じなんかじゃない」</p>` };
     },
     async talk() {
       if (R.st === 'vanished') return say(['閲覧机の上には、本が一冊だけ残っている。']);
@@ -3250,7 +3265,7 @@
       <p>わすれもの棚と、途中の放課後、この周回で終えた章の記録が消えます。美術室から順番に始まります。</p>
       <p class="note">救えた実績・見たエンディング・周回数は残ります。</p>`, '', ['はじめから始める', 'やめる']);
     if (v !== 0) return showTitle();
-    P.shelf = {}; P.shelfRun = {}; P.cur = { results: {} }; P.runNo = (P.runNo || 1) + 1; saveP(); clearRun();
+    P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.cur = { results: {} }; P.runNo = (P.runNo || 1) + 1; saveP(); clearRun();
     startRun('art');
   }
   // プレイデータをリセット：実績も含めたすべてのプレイデータを消す
@@ -3258,7 +3273,7 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
@@ -3320,12 +3335,26 @@
   }
   function showShelf() {
     const slots = [['ヒナ', 'hina', ART], ['ソウタ', 'sota', MUSIC], ['ミオ', 'mio', LIBRARY], ['ケイ'], ['ツムギ'], ['？？？']];
+    P.shelfSeen = P.shelfSeen || {};
+    const got = slots.filter(([, key]) => key && P.shelf[key]).length;
+    const savedN = slots.filter(([, key]) => key && P.shelf[key] && P.saved[key]).length;
+    const total = slots.length;
     openOverlay(`<p class="eyebrow">わすれもの棚</p><h2>残されたもの</h2>
-      <div class="shelf">${slots.map(([who, key, ch]) => key && P.shelf[key]
-        ? `<button type="button" class="slot got" data-k="${key}"><span class="who">${who}</span>${ch.shelfItem(!!P.saved[key]).title}</button>`
-        : `<div class="slot"><span class="who">${who}</span>？？？</div>`).join('')}</div>
+      <div class="shelf-count"><span>集めたわすれもの <b>${got}</b> / ${total}</span><span>姿を変えたもの <b>${savedN}</b> / ${total}</span></div>
+      <div class="shelf-bar" aria-hidden="true"><i style="width:${got / total * 100}%"></i><i class="sv" style="width:${savedN / total * 100}%"></i></div>
+      <div class="shelf">${slots.map(([who, key, ch]) => {
+        if (!(key && P.shelf[key])) return `<div class="slot locked"><span class="thumb-empty" aria-hidden="true">？</span><span class="who">${who}</span><span class="ttl">？？？</span></div>`;
+        const it = ch.shelfItem(!!P.saved[key]), state = (P.saved[key] ? 's' : 'v');
+        const isNew = P.shelfSeen[key] !== state;
+        return `<button type="button" class="slot got${P.saved[key] ? ' saved' : ''}${isNew ? ' new' : ''}" data-k="${key}">
+          <img class="thumb" src="img/${it.thumb}.webp" alt="">${isNew ? '<span class="tag">NEW</span>' : ''}
+          <span class="who">${who}</span><span class="ttl">${it.title}</span></button>`;
+      }).join('')}</div>
       <p class="note">誰かが消えたとき、その子のわすれものがここに並びます。その子を救えたら、わすれものも姿を変えます。</p>
       <div class="row"><button type="button" class="btn primary" id="sBack">戻る</button></div>`);
+    // 一度見たら NEW を外す（救って姿が変わったら、もう一度 NEW になる）
+    slots.forEach(([, key]) => { if (key && P.shelf[key]) P.shelfSeen[key] = P.saved[key] ? 's' : 'v'; });
+    saveP();
     $('#sBack').onclick = showTitle;
     [['hina', ART], ['sota', MUSIC], ['mio', LIBRARY]].forEach(([k, ch]) => {
       const b = card.querySelector(`[data-k="${k}"]`);
