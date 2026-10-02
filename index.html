@@ -1144,7 +1144,7 @@
   // key：どのストーリーかを表す名前（会話の途中セーブから再開するときに、同じストーリーを呼び直すのに使う）
   async function act(fn, key) {
     if (busy || !R || R.over) return;
-    busy = true; beginScript(key); syncSave(); $('#btnWait').disabled = true;
+    busy = true; beginScript(key); syncSave(); $('#btnWait').disabled = true; $('#btnHint').disabled = true;
     try {
       // この調べもので、その子について知るべきことがそろったら、そのまま対話に入る（途中でチャイムが鳴ったとき・対話がもう始まったときは除く）
       const was = C && C.ready ? C.ready() : true, loop0 = R.loop, asked0 = askCount;
@@ -1594,7 +1594,9 @@
              '扉は、どちらからも開けようとしなかった。夕焼けは、ずっと同じ色のままだった。'],
     samePose: '窓際には、さっきとまったく同じ姿勢で、ヒナが座っていた。',
     loopReply: [['ヒナ', '……は？ チャイムなんて鳴ってないけど', 'angry'], ['ヒナ', 'ていうか、誰？', 'angry']],
-    lastWords: [['ヒナ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ヒナ', '……お母さんの声が、聞こえないところ', 'despair']],
+    lastWords: [['ヒナ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ヒナ', '……お母さんの声が、聞こえないところ', 'despair'],
+                ['ヒナ', 'どこにいても、お母さんに見張られてる気がして。何をしても、叱られる声がして', 'despair'],
+                ['ヒナ', '……お姉ちゃん、ごめんね。私……', 'despair']],
     closeLines: ['ヒナは膝を抱えたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。'],
     hotspots: [
       ['sink', '流し', 'left:83.3%;top:37.5%;width:16.7%;height:45.8%'],
@@ -2778,7 +2780,14 @@
           showCut('lci_trash');
           await say(['ゴミ箱に、くしゃくしゃの紙が一枚。', '広げると、図書だよりの下書きだった。']);
           R.taken.trash = true; await gotItem('draft'); await tick();
-        } else await say(['もう何も入っていない。']);
+        } else if (!R.know.has('overdue')) {
+          R.know.add('overdue');
+          await say(['ゴミ箱の底に、もう一枚、小さく丸めた紙が残っていた。', '図書委員が印刷する「返却のお願い」の紙だ。',
+                     '「2年3組　水野ミオ さん　『ひとりぶんの椅子』（913.6 ヒ）　返却期限：6月24日を過ぎています」',
+                     'いちばん下に、手書きで一行。「※この本には予約が入っています」',
+                     '……当番が刷った紙を、当番が丸めて捨てたのかもしれない。', 'それなのに、紙のしわは、一度ていねいに伸ばしかけた跡があった。']);
+          await tick();
+        } else await say(['もう何も入っていない。底に、しわを伸ばしかけた「返却のお願い」が残っているだけだ。']);
       },
       async door() {
         showCut('lci_door');
