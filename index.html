@@ -448,7 +448,8 @@
         lastSkipped = true; advance = null;
         return Promise.resolve();
       }
-      replay = null; syncSave();
+      const rb = replay.bgm; replay = null; syncSave();
+      bgm(rb !== undefined ? rb : moodNow());
       noSkip = true;  // セーブしたときの文章は、既読でも止めて見せる
     }
     if (pendingCore && --pendingCore === 0) bgm('core', 2.2);
@@ -1065,7 +1066,7 @@
   let pendingCore = 0;  // 核心に入る選択のあと、何文目で核心の曲を始めるか
   function bgm(name, fadeIn = 0.8) {
     pendingCore = 0;
-    if (replay) return;
+    if (replay) { replay.bgm = name; return; }
     if (!P.sound) name = null;
     if (name === bgmName) return;
     bgmName = name;
@@ -1115,8 +1116,8 @@
     $('#clock').textContent = hm(chStart() + min);
     $('#remain').textContent = free || R.over ? '' : `チャイムまで あと${SPAN - min}分`;
     $('#bells').innerHTML = [0, 1, 2].map(i => `<i class="${i < R.loop ? 'on' : ''}"></i>`).join('');
-    $('#btnWait').disabled = R.over || R.st === 'unraveled';
-    $('#btnHint').disabled = R.over;
+    $('#btnWait').disabled = R.over || R.st === 'unraveled' || !!busy;
+    $('#btnHint').disabled = R.over || !!busy;
     syncSave();
     $('#btnLog').disabled = !R.log || !R.log.length;
 
@@ -1138,7 +1139,7 @@
   }
 
   /* ---------- flow ---------- */
-  let busy = false;
+  var busy = false;  // render() からも見るので var（宣言より前に呼ばれても undefined で済む）
   // セーブは放課後の途中ならいつでも（会話の途中でも）。ロード直後の早送り中だけは押せない
   function syncSave() { const b = $('#btnSave'); if (b) b.disabled = !R || R.over || !C || !!replay; }
   // key：どのストーリーかを表す名前（会話の途中セーブから再開するときに、同じストーリーを呼び直すのに使う）
@@ -2899,7 +2900,7 @@
                  ['ミオ', '六月の、あの朝。グループの子に、チョークを渡されたの。『ミオも、書けるよね？』って。クラスのみんなが、こっちを見てた', 'sad'],
                  ['ミオ', '逆らったら、次は私。……それに、ツムギならきっと大丈夫だって、少しだけ思っちゃったの', 'down'],
                  ['ミオ', '考えるより先に、手が動いてた。……黒板に、書いた。『いてもいなくても同じ』って', 'grief'],
-                 ['ミオ', '書いてるあいだ、顔に何も出さないようにしてた。泣いたら、次は私だから', 'grief'],
+                 ['ミオ', '書いてるあいだ、ぐちゃぐちゃな気持ちからずっと目を背けてた。少しでも顔に出したら、次は私だから', 'grief'],
                  ['ミオ', 'ツムギ、それを見て、何も言わないで帰った。……次の日から、教室に来なくなった', 'grief'],
                  ['ミオ', '次の日の朝、当番で返却ポストを開けたら、この本が入ってたの。ツムギが借りてた本', 'sad'],
                  ['ミオ', 'あの日、帰りに返していったんだと思う。……もう、いらないって言われた気がした', 'grief'],
@@ -2955,8 +2956,8 @@
         return lastWrong();
       }
       if (a === 'oitsu') return doom([['ミオ', '……何もしないのが、いちばん迷惑かけないでしょ', 'shadow'],
-                                ['ミオ', '私がいなくなれば、グループも、ツムギも……', 'despair'],
                                 ['ミオ', '……こんな私に、椅子を運んでもらう資格なんてない', 'despair'],
+                                ['ミオ', '私がいなくなれば、グループも、ツムギも……', 'despair'],
                                 ['ミオ', '……ツムギさんも、こんな気持ちだったのかな', 'despair']]);
       await say([['ミオ', '……え', 'surprise'], ['ミオ', 'なんで。……そんなこと、誰にも', 'surprise'],
                  '答えられなかった。ただ、あのしおりの手紙を覚えていた。',
