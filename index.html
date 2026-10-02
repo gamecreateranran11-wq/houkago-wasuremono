@@ -3280,7 +3280,7 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
