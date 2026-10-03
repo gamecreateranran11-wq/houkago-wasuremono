@@ -217,6 +217,19 @@
   .save-slot .btn:disabled { opacity: .35; cursor: default; }
   .slot { background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 12px 8px; min-height: 76px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; font-size: 13px; text-align: left; }
   .slot .who { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
+  /* サウンドトラック */
+  .ost { display: flex; flex-direction: column; gap: 6px; max-height: 56vh; overflow-y: auto; }
+  .ost-row { display: grid; grid-template-columns: 2em 1fr auto; align-items: center; gap: 10px; text-align: left; background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; cursor: pointer; }
+  .ost-row:hover { border-color: var(--akane); }
+  .ost-row .no { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ost-row .ttl { font-family: var(--serif); font-size: 15px; }
+  .ost-row .ttl small { font-family: var(--hand); font-size: 11px; color: var(--gold); margin-left: 6px; border: 1px solid var(--gold); border-radius: 3px; padding: 0 4px; vertical-align: 2px; }
+  .ost-row .desc { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .ost-row .st { font-size: 12px; color: var(--muted); min-width: 4.5em; text-align: right; }
+  .ost-row.on { border-color: var(--akane); background: #1d1620; }
+  .ost-row.on .st { color: var(--akane); }
+  .ost-row.locked { cursor: default; opacity: .55; }
+  .ost-row.locked:hover { border-color: var(--line); }
   /* わすれもの棚：画像つきのカード */
   .shelf .slot { position: relative; padding: 6px; min-height: 0; gap: 4px; justify-content: flex-start; }
   .slot .thumb { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 3px; display: block; }
@@ -390,6 +403,19 @@
   // 新しい仕様：runNo＝今の周回の番号。cur.results＝この周回で終えた章の結果（saved / shut / vanished）
   // shelfRun＝そのわすれものを手に入れた周回。わすれものが効くのは、前の周回以前に手に入れたものだけ
   P.runNo = P.runNo || 1; P.shelfRun = P.shelfRun || {};
+  // heard：一度でも流れた曲（サウンドトラックで「？？？」を外すのに使う）。記録を始める前に遊んだ分は、見た結末などから推し量る
+  P.heard = P.heard || {};
+  if (!P.heardV1) {
+    P.heardV1 = true;
+    const E = P.endings || {}, h = P.heard;
+    if (P.played || P.runs) { h.title = h.explore = true; }
+    if (Object.keys(P.saved || {}).length) { h.core = h.musicbox = h.unravel = true; }
+    if ((P.saved || {}).sota) h.sota = true;
+    if (Object.keys(P.shelf || {}).length || E.BAD5 || E.BAD6) h.vanish = true;
+    if (E.shut || E.BAD1 || E.BAD4) h.shut = true;
+    if (E.BAD2) h.coreHeavy = true;
+    if (E.BAD3) h.codep = true;
+  }
   if (!P.cur) P.cur = { results: {} };
   const saveP = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} };
 
@@ -1175,6 +1201,7 @@
     if (!P.sound) name = null;
     if (name === bgmName) return;
     bgmName = name;
+    if (name && !P.heard[name]) { P.heard[name] = true; saveP(); }
     let a; try { a = audio(); } catch (e) { return; }
     if (bgmGain) { const g = bgmGain; g.gain.setTargetAtTime(0, a.currentTime, 0.4); setTimeout(() => { try { g.disconnect(); } catch (e) {} }, 2500); }
     clearInterval(bgmTimer); bgmGain = null;
@@ -1380,6 +1407,7 @@
     P.endings[end[0]] = true;
     // 朝を迎えるエンディングは、ほどけたあとの曲が流れていれば続けて聴かせる。BADは、その結末の曲が流れていなければ切り替える
     if (end[0] === 'NORMAL' || end[0] === 'GOOD') keepBgm(end[3], WARM); else bgm(end[3]);
+    const firstClear = !P.runs;
     finishRun(true);
     if (end[0] === 'BAD4') await closedSchool();
     if (end[0] === 'BAD5') await emptySeats(ORDER.map(id => CHAPTERS[id]).filter(ch => res[ch.key] === 'vanished'));
@@ -1387,7 +1415,8 @@
     overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
         <p class="eyebrow">${end[0] === 'NORMAL' || end[0] === 'GOOD' ? end[0] : 'BAD END'}「${end[1]}」</p></div>
       ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。${end[0] === 'GOOD' ? '（屋上への道は、製品版で開きます）' : ''}</p>` : ''}
-      <p class="note">この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。</p>`,
+      <p class="note">この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。</p>
+      ${firstClear ? '<p class="note">タイトルに「サウンドトラック」が増えました。</p>' : ''}`,
       end[0] === 'NORMAL' || end[0] === 'GOOD' ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
   // エンディングの場面に切り替える。人物や調べる場所を消し、背景をフェードアウト→フェードインで差し替える
@@ -3781,6 +3810,7 @@
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${played() ? `<button type="button" class="btn" id="tReset">${CHAPTERS[ORDER[0]].room}からやり直す<span class="sub">わすれもの棚と、この周回の記録が消えます</span></button>` : ''}
         <button type="button" class="btn" id="tShelf">わすれもの棚</button>
+        ${ostOpen() ? '<button type="button" class="btn" id="tOst">サウンドトラック<span class="sub">おまけ</span></button>' : ''}
         <div class="title-vol" aria-label="音量">
           <label class="vol">BGM<input id="tVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
           <label class="vol">効果音<input id="tVolSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label>
@@ -3796,6 +3826,7 @@
     $('#tWipe').onclick = () => wipeAll();
     if (save) $('#tCont').onclick = () => continueRun(save);
     $('#tShelf').onclick = showShelf;
+    if ($('#tOst')) $('#tOst').onclick = showSoundtrack;
     wireVol($('#tVolBgm'), $('#tVolSe'));
     if ($('#tLoad')) $('#tLoad').onclick = () => showSlots('load');
     if (splash) {
@@ -3849,7 +3880,7 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
@@ -3908,6 +3939,44 @@
       return;
     }
     idle();
+  }
+  /* ---------- サウンドトラック（放課後を一度終えると、タイトルに出る） ---------- */
+  // [曲, 題, 版の印, 説明]。ゲームの中で流れる順に並べる。『放課後』はソウタとハルの連弾曲。ソロなどの版は、題のあとの印でわかるようにする
+  const OST = [
+    ['title', '夕映えの校舎', '', 'アコースティックギターと、遠くで練習する吹奏楽のホルン'],
+    ['explore', '誰もいない放課後', '', 'やわらかな弦の和音とアルペジオ。後半に、鉄琴のような高い旋律'],
+    ['core', '胸の奥の声', '', 'チェロ・ビオラ・コントラバスとフルート'],
+    ['musicbox', 'ほどける糸', '', 'ゆっくりしたオルゴール。音の余韻が、次の音に重なっていく'],
+    ['unravel', 'また明日', '', '弦とアルペジオ、フルートのあたたかい旋律'],
+    ['sota', '放課後', 'ソロ', 'ソウタのピアノ・ソロ。ハルのパートと同じ主題から始まる'],
+    ['vanish', 'わすれもの', '', 'アルトリコーダーの素朴な旋律と、クラリネットの低く暗い声'],
+    ['shut', '閉ざされた扉', '', '重い低音と、ゆっくり沈むチェロ。扉を叩くような音'],
+    ['coreHeavy', '身代わりの影', '', '低く沈んだ弦の和音'],
+    ['codep', 'ふたりきりの子守唄', '', 'オルゴールとピアノの3拍子。穏やかなのに、どこか落ち着かない'],
+    ['sotaDuet', '放課後', '連弾', 'ソウタとハルの連弾。ソウタのピアノに、ハルのパートが重なる'],
+  ];
+  const ostOpen = () => !!P.runs;
+  const ostHeard = k => k === 'sotaDuet' || !!P.heard[k];
+  function showSoundtrack() {
+    let playing = bgmName && OST.some(([k]) => k === bgmName) ? bgmName : null;
+    const got = OST.filter(([k]) => ostHeard(k)).length;
+    openOverlay(`<p class="eyebrow">おまけ</p><h2>サウンドトラック</h2>
+      <p class="note">聴いた曲　${got} / ${OST.length}　　押すと流れ、もう一度押すと止まります。</p>
+      <div class="ost">${OST.map(([k, ttl, ver, desc], i) => ostHeard(k)
+        ? `<button type="button" class="ost-row" data-k="${k}"><span class="no">${String(i + 1).padStart(2, '0')}</span>
+            <span><span class="ttl">『${ttl}』${ver ? `<small>${ver}</small>` : ''}</span><span class="desc">${desc}</span></span><span class="st"></span></button>`
+        : `<div class="ost-row locked"><span class="no">${String(i + 1).padStart(2, '0')}</span><span><span class="ttl">？？？</span><span class="desc">まだ聴いていない曲</span></span><span class="st"></span></div>`).join('')}</div>
+      <div class="row"><button type="button" class="btn primary" id="oBack">戻る</button></div>`);
+    const draw = () => card.querySelectorAll('.ost-row[data-k]').forEach(b => {
+      const on = b.dataset.k === playing; b.classList.toggle('on', on); b.querySelector('.st').textContent = on ? '♪ 再生中' : '';
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    card.querySelectorAll('.ost-row[data-k]').forEach(b => b.onclick = () => {
+      const k = b.dataset.k;
+      playing = playing === k ? null : k; bgm(playing, 0.3); draw();
+    });
+    draw();
+    $('#oBack').onclick = () => showTitle();
   }
   function showShelf() {
     const slots = [['ヒナ', 'hina', ART], ['ソウタ', 'sota', MUSIC], ['ミオ', 'mio', LIBRARY], ['ケイ', 'kei', GYM], ['ツムギ'], ['？？？']];
