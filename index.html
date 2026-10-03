@@ -45,6 +45,9 @@
   .bar-actions .menu-panel button:hover { border-color: var(--akane); }
   .menu-panel .vol { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; font-size: 13px; }
   .menu-panel .vol input { width: 110px; accent-color: var(--akane); }
+  .title-vol { display: flex; flex-direction: column; gap: 2px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: rgba(31, 26, 40, .6); }
+  .title-vol .vol { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; padding: 4px 0; }
+  .title-vol .vol input { flex: 1; max-width: 220px; accent-color: var(--akane); }
 
   .scene-wrap { flex: 0 0 auto; min-height: 160px; display: flex; align-items: flex-start; justify-content: center; }
   .scene { position: relative; width: 100%; max-width: calc(58vh * 1.5); aspect-ratio: 3 / 2; margin: 0 auto; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background: #1c1620; }
@@ -3768,6 +3771,10 @@
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${played() ? '<button type="button" class="btn" id="tReset">はじめから</button>' : ''}
         <button type="button" class="btn" id="tShelf">わすれもの棚</button>
+        <div class="title-vol" aria-label="音量">
+          <label class="vol">BGM<input id="tVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
+          <label class="vol">効果音<input id="tVolSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label>
+        </div>
         <button type="button" class="btn-reset" id="tWipe">プレイデータをリセット</button>
         <p class="note">このゲームはオートセーブです。新しく調べたり話し終えたりするたびに、自動で記録されます。</p>
         <p class="note">この作品には、自傷・死・いじめ・家庭での心理的虐待を示唆する表現が含まれます。</p>
@@ -3779,6 +3786,7 @@
     $('#tWipe').onclick = () => wipeAll();
     if (save) $('#tCont').onclick = () => continueRun(save);
     $('#tShelf').onclick = showShelf;
+    wireVol($('#tVolBgm'), $('#tVolSe'));
     if ($('#tLoad')) $('#tLoad').onclick = () => showSlots('load');
     if (splash) {
       const reveal = e => {
@@ -3954,14 +3962,17 @@
   // ヒント：進み具合に合わせて1つだけ出す（時間は進まない）
   $('#btnHint').onclick = () => act(hintScript, 'hint');
   $('#btnWait').onclick = () => act(waitScript, 'wait');
-  // 音量バー：BGMはすぐに反映、効果音は試しに1音鳴らす
-  $('#volBgm').value = Math.round(P.bgmVol * 100); $('#volSe').value = Math.round(P.seVol * 100);
-  $('#volBgm').addEventListener('input', e => {
-    P.bgmVol = e.target.value / 100; saveP();
-    if (bgmGain) { try { bgmGain.gain.setTargetAtTime(bgmLevel(), audio().currentTime, 0.1); } catch (er) {} }
-  });
-  $('#volSe').addEventListener('input', e => { P.seVol = e.target.value / 100; saveP(); });
-  $('#volSe').addEventListener('change', () => pianoNote(523.25, 0.2));
+  // 音量バー：BGMはすぐに反映、効果音は試しに1音鳴らす。メニューとタイトル画面のバーは同じ設定を共有する
+  function wireVol(bEl, sEl) {
+    bEl.value = Math.round(P.bgmVol * 100); sEl.value = Math.round(P.seVol * 100);
+    bEl.addEventListener('input', e => {
+      P.bgmVol = e.target.value / 100; saveP(); $('#volBgm').value = e.target.value;
+      if (bgmGain) { try { bgmGain.gain.setTargetAtTime(bgmLevel(), audio().currentTime, 0.1); } catch (er) {} }
+    });
+    sEl.addEventListener('input', e => { P.seVol = e.target.value / 100; saveP(); $('#volSe').value = e.target.value; });
+    sEl.addEventListener('change', () => pianoNote(523.25, 0.2));
+  }
+  wireVol($('#volBgm'), $('#volSe'));
   $('#btnSkip').onclick = e => { e.stopPropagation(); P.skip = !P.skip; saveP(); render(); };
   // メニュー：ログ・既読スキップ・音・タイトルへ をまとめたパネル
   const menuPanel = $('#menuPanel');
