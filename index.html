@@ -149,6 +149,26 @@
   .poem.p-overlay .gr span:not(.m) i { opacity: .35; }
   .poem.p-overlay .gr span.m i { font-weight: 700; color: #8f2f2a; }
   .poem.p-draft { background: #e9e4da; transform: rotate(-.6deg); }
+  /* 重ね合わせ：下に紹介文、上に字のない下書き（半透明の紙と赤い丸）。合うと丸の中の字が濃く見える */
+  .row[hidden] { display: none; }
+  .ov-inv { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ov-inv .label { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+  .ov-inv .chip { display: inline-flex; align-items: center; gap: 6px; }
+  .ov-inv .chip img { height: 20px; width: auto; }
+  .ov-inv .chip.on { border-color: var(--akane); }
+  .align-wrap { position: relative; overflow: hidden; border-radius: 3px; touch-action: manipulation; }
+  .align-wrap .align-base { padding: 10px 14px; }
+  .align-top { position: absolute; left: 0; top: 0; pointer-events: none; transition: transform .12s ease-out; }
+  .align-top .gr { font-size: min(15px, 3.9vw); line-height: 1; display: flex; flex-direction: row-reverse; border-top: 1px solid rgba(160, 120, 100, .7); border-right: 1px solid rgba(160, 120, 100, .7); width: max-content; background: rgba(240, 236, 228, .5); box-shadow: 0 3px 10px rgba(0, 0, 0, .25); }
+  .align-top .gr .pc { display: flex; flex-direction: column; }
+  .align-top .gr span { position: relative; width: 1.6em; height: 1.42em; border-left: 1px solid rgba(160, 120, 100, .7); border-bottom: 1px solid rgba(160, 120, 100, .7); }
+  .align-top .gr span.m::after { content: ''; position: absolute; inset: 1px; border: 1.6px solid #b8423c; border-radius: 50%; }
+  .align-wrap.ok .align-top .gr { background: rgba(240, 236, 228, .18); }
+  .align-wrap.ok .align-base span.mk i { font-weight: 700; color: #8f2f2a; }
+  .align-wrap.ok .align-base span:not(.mk) i { opacity: .45; }
+  .align-pad { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .align-pad div { display: flex; gap: 56px; }
+  .align-pad button { width: 46px; height: 38px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   .poem s { color: #8a7d74; }
   .wheel { display: flex; flex-direction: column; align-items: center; gap: 6px; }
   .wheel button { touch-action: manipulation; user-select: none; -webkit-user-select: none; width: 48px; height: 36px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
@@ -2689,6 +2709,12 @@
   const POEM_MARKS = [[0, 10], [1, 4], [2, 3], [3, 9], [4, 4], [5, 1], [6, 3], [6, 13]];
   const POEM_COLS = 17;
   // mode: 'post'＝貼り出された紹介文、'draft'＝下書き（字は消され、丸だけ残る）、'overlay'＝丸の位置に紹介文を重ねたもの
+  // mode：'base'＝重ね合わせの下（紹介文。丸のマスに目印だけ）、'top'＝重ね合わせの上（字のない下書き。赤い丸だけ）
+  function poemGrid(mode) {
+    const isMark = (r, c) => POEM_MARKS.some(([a, b]) => a === r && b === c);
+    return `<div class="gr">${POEM.map((t, r) => `<div class="pc">${Array.from({ length: POEM_COLS }, (_, c) =>
+      `<span class="${isMark(r, c) ? (mode === 'top' ? 'm' : 'mk') : ''}"><i>${mode === 'top' ? '' : (t[c] || '')}</i></span>`).join('')}</div>`).join('')}</div>`;
+  }
   function poemHTML(mode) {
     const marked = (r, c) => mode !== 'post' && POEM_MARKS.some(([a, b]) => a === r && b === c);
     // 縦書き：右の列から1行目
@@ -2699,21 +2725,66 @@
       ${mode === 'draft' ? '<p class="t"><s>気づかれませんように</s>　<s>気づいてほしい</s></p>' : ''}</div>`;
   }
   async function viewDraft() {
-    if (!R.know.has('dayori')) {
-      await overlayWait(`<p class="eyebrow">持ち物</p><h2>図書だよりの下書き</h2>${poemHTML('draft')}
-        <p>清書したあとに消しゴムをかけたのか、鉛筆の字はほとんど読めない。マス目のところどころに、赤ペンの丸だけが残っている。</p>
-        <p class="note">……このマス目と同じ形の紙が、どこかに貼り出されているのかもしれない。</p>`, '', ['閉じる']);
-      closeOverlay(); return;
-    }
     await overlayWait(`<p class="eyebrow">持ち物</p><h2>図書だよりの下書き</h2>${poemHTML('draft')}
-      <p>字の消されたマス目に、赤ペンの丸だけが残っている。マス目の数は、掲示板の図書だよりとまったく同じだ。</p>`, '', ['掲示板の図書だよりと重ねる']);
+      <p>清書したあとに消しゴムをかけたのか、鉛筆の字はほとんど読めない。マス目のところどころに、赤ペンの丸だけが残っている。</p>
+      <p class="note">${R.know.has('dayori') ? '……掲示板の図書だよりと、マス目の数がまったく同じだ。' : '……このマス目と同じ形の紙が、どこかに貼り出されているのかもしれない。'}</p>`, '', ['閉じる']);
     closeOverlay();
-    await overlayWait(`<p class="eyebrow">見比べる</p><h2>丸の位置に、図書だよりの字を重ねる</h2>${poemHTML('overlay')}`, '', ['丸のついた字を読む']);
-    closeOverlay();
-    if (!R.know.has('acrostic')) {
-      await say(['丸のついたマス目の字を、上から順に拾っていく。', '……つ、む、ぎ、へ。……ご、め、ん、ね。', '……「ツムギへ　ごめんね」。']);
-      R.know.add('acrostic'); R.seen.add('acrostic');
-    } else await say(['「ツムギへ　ごめんね」。貼り出された紹介文の中に、ずっと隠れていた言葉。']);
+  }
+  // 掲示板の図書だよりを見る画面。下書きを持っていれば、画面の下に持ち物を出す。押すと「重ね合わせる」かを選ぶ
+  // 返り値：'use'＝重ね合わせる、'close'＝閉じる
+  function noticeView(canUse) {
+    const r = replayed(); if (r) return Promise.resolve(r.v);
+    return new Promise(res0 => {
+      const res = v => res0(rec(v));
+      openOverlay(`<p class="eyebrow">掲示板</p><h2>図書だより7月号</h2>${poemHTML('post')}
+        ${canUse ? `<div class="ov-inv"><span class="label">持ち物</span><button type="button" class="chip" id="useDraft"><img src="img/l_item_draft.webp" alt=""><span>図書だよりの下書き</span></button></div>
+        <div class="row" id="useAsk" hidden><button type="button" class="btn primary" id="useYes">図書だよりに重ね合わせる</button><button type="button" class="btn" id="useNo">やめる</button></div>` : ''}
+        <div class="row"><button type="button" class="btn primary" id="nClose">閉じる</button></div>`);
+      $('#nClose').onclick = () => { closeOverlay(); res('close'); };
+      if (canUse) {
+        $('#useDraft').onclick = () => { $('#useAsk').hidden = false; $('#useDraft').classList.add('on'); };
+        $('#useNo').onclick = () => { $('#useAsk').hidden = true; $('#useDraft').classList.remove('on'); };
+        $('#useYes').onclick = () => { closeOverlay(); res('use'); };
+      }
+    });
+  }
+  // 重ね合わせ：掲示板の図書だよりの上に下書きを置き、プレイヤーが自分で動かしてマス目をぴったり合わせる
+  // 合うと、赤い丸の下に紹介文の字が透けて見える。読むのも、プレイヤー自身
+  function alignDraft() {
+    const r = replayed(); if (r) return Promise.resolve(r.v);
+    return new Promise(res0 => {
+      const res = v => res0(rec(v));
+      let dx = 3, dy = 2;
+      openOverlay(`<p class="eyebrow">持ち物を使う</p><h2>図書だよりに、下書きを重ねる</h2>
+        <p class="note">下書きを動かして、マス目をぴったり合わせよう。</p>
+        <div class="align-wrap" id="alWrap"><div class="poem p-post align-base">${poemGrid('base')}</div><div class="align-top" id="alTop">${poemGrid('top')}</div></div>
+        <div class="align-pad">
+          <button type="button" data-d="0,-1" aria-label="上へ">▲</button>
+          <div><button type="button" data-d="-1,0" aria-label="左へ">◀</button><button type="button" data-d="1,0" aria-label="右へ">▶</button></div>
+          <button type="button" data-d="0,1" aria-label="下へ">▼</button>
+        </div>
+        <p class="note" id="alMsg" aria-live="polite">　</p>
+        <div class="row"><button type="button" class="btn primary" id="alOk" disabled>重ねたまま、じっと見る</button><button type="button" class="btn" id="alNo">やめる</button></div>`);
+      const top = $('#alTop'), wrap = $('#alWrap');
+      const place = () => {
+        const cell = wrap.querySelector('.align-base .gr span'), base = wrap.querySelector('.align-base .gr');
+        const w = cell.offsetWidth, h = cell.offsetHeight;
+        const wr = wrap.getBoundingClientRect(), br = base.getBoundingClientRect();
+        top.style.left = (br.left - wr.left) + 'px'; top.style.top = (br.top - wr.top) + 'px';
+        top.style.transform = `translate(${dx * w}px, ${dy * h}px)`;
+        const ok = dx === 0 && dy === 0;
+        wrap.classList.toggle('ok', ok); $('#alOk').disabled = !ok;
+        $('#alMsg').textContent = ok ? 'ぴったり重なった。赤い丸の中に、字が透けて見える。' : '　';
+      };
+      card.querySelectorAll('.align-pad button').forEach(b => {
+        const go = () => { const [x, y] = b.dataset.d.split(',').map(Number); dx = Math.max(-5, Math.min(5, dx + x)); dy = Math.max(-5, Math.min(5, dy + y)); place(); };
+        b.addEventListener('pointerdown', e => { if (e.button > 0) return; e.preventDefault(); go(); });
+        b.onclick = e => { if (e.detail === 0) go(); };
+      });
+      requestAnimationFrame(place);
+      $('#alOk').onclick = () => { closeOverlay(); res(true); };
+      $('#alNo').onclick = () => { closeOverlay(); res(false); };
+    });
   }
   // ツムギは昨日、保健室から（養護の先生を通して）この本を予約していた。ミオが借りたままでは、ツムギに届かない
   // ミオは自分の貸出を返却し、当番として予約の本を保健室へ届けに行く
@@ -2889,14 +2960,25 @@
       async notice() {
         showCut('lci_notice');
         await say(['掲示板に、図書だより7月号が貼られている。']);
-        await overlayWait(`<p class="eyebrow">掲示板</p><h2>図書だより7月号</h2>${poemHTML('post')}`, '', ['閉じる']);
-        closeOverlay();
-        if (!R.know.has('dayori')) {
+        const canUse = R.items.has('draft');
+        const v = await noticeView(canUse);
+        const first = !R.know.has('dayori');
+        if (first) {
           R.know.add('dayori');
-          await say([R.items.has('draft') ? '……ゴミ箱の下書きと、マス目の形がまったく同じだ。' : 'マス目の原稿用紙に、丁寧な字で書かれた紹介文。',
+          await say([canUse ? '……ゴミ箱の下書きと、マス目の形がまったく同じだ。' : 'マス目の原稿用紙に、丁寧な字で書かれた紹介文。',
                      '掲示板の隅に、委員会の決まりが貼ってある。「今月のおすすめは、当番の委員が名前を入れて書くこと」']);
           await tick();
-        } else await say(['隣の当番表では、「水野」の名前だけが、黒いペンで塗りつぶされていた。']);
+        }
+        if (canUse && v === 'use') {
+          const ok = await alignDraft();
+          if (!ok) return;
+          if (!R.know.has('acrostic')) {
+            await say(['赤い丸の中に透けた字を、右の列から順に、上から拾っていく。', '……つ、む、ぎ、へ。……ご、め、ん、ね。', '……「ツムギへ　ごめんね」。']);
+            R.know.add('acrostic'); R.seen.add('acrostic'); await tick();
+          } else await say(['「ツムギへ　ごめんね」。貼り出された紹介文の中に、ずっと隠れていた言葉。']);
+          return;
+        }
+        if (!first) await say(['隣の当番表では、「水野」の名前だけが、黒いペンで塗りつぶされていた。']);
       },
       async trash() {
         if (!R.taken.trash) {
@@ -2974,7 +3056,7 @@
       if (!R.know.has('ledger')) return '部屋の中で、気になる場所を調べてみましょう。本の貸し借りの記録が、どこかにありそうです。';
       if (!R.items.has('draft') && !R.know.has('acrostic')) return '捨てられた物の中に、何か残っていないでしょうか。';
       if (!R.know.has('dayori')) return '掲示板も調べてみましょう。';
-      if (!R.know.has('acrostic')) return '持ち物の「図書だよりの下書き」を開いて、掲示板の図書だよりと重ねてみましょう。赤い丸のついたマス目の字を、順に読むと……。';
+      if (!R.know.has('acrostic')) return '掲示板の図書だよりを調べて、その画面の下に出る持ち物「図書だよりの下書き」を押してみましょう。重ね合わせたら、マス目がぴったり合う位置まで下書きを動かします。赤い丸の中に透けた字を、右の列から順に読むと……。';
       if (!R.know.has('diary')) return '奥の扉の番号は4桁です。貸出記録にあった、本の請求記号を思い出してみましょう。';
       return 'ミオに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
     },
