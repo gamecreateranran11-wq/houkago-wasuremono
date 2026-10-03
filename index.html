@@ -167,6 +167,19 @@
   .align-wrap.ok .align-base span.mk i { font-weight: 700; color: #8f2f2a; }
   .align-wrap.ok .align-base span:not(.mk) i { opacity: .45; }
   .align-pad { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  /* 作戦ボード：コートの図にマグネットを置く。押したマグネットと、次に押した場所が入れ替わる */
+  .lu-court { position: relative; aspect-ratio: 10 / 7; background: #f3f0e8; border-radius: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.4); margin: 4px 0 8px; touch-action: manipulation; }
+  .lu-court svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .lu-head { font-size: 13px; color: #e0846f; margin: 0; }
+  .lu-court .lu-note { position: absolute; right: 3%; bottom: 3%; font-size: 11px; color: #3c4a63; transform: rotate(-3deg); }
+  .lu-slot { position: absolute; transform: translate(-50%, -50%); background: none; border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; touch-action: manipulation; }
+  .lu-slot b { display: flex; align-items: center; justify-content: center; min-width: 56px; height: 30px; padding: 0 6px; border-radius: 15px; background: #c9473c; color: #fff; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,.35); }
+  .lu-slot small { font-size: 11px; color: #3c4a63; background: rgba(243,240,232,.85); padding: 0 4px; border-radius: 3px; }
+  .lu-slot.sel b { outline: 3px solid var(--gold); outline-offset: 2px; }
+  .lu-bench { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 6px; }
+  .lu-bench .label { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+  .lu-slot.bench { position: static; transform: none; }
+  .lu-slot.bench b { background: #5d6f8c; }
   .align-pad div { display: flex; gap: 56px; }
   .align-pad button { width: 46px; height: 38px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
   .poem s { color: #8a7d74; }
@@ -628,6 +641,8 @@
     frag4: { name: '五線譜の切れ端', img: 'm_frag4' },
     photo: { name: '発表会の写真', img: 'm_photo' },
     draft: { name: '図書だよりの下書き', img: 'l_item_draft' },
+    logbook: { name: '部誌', img: 'g_item_log' },
+    letter: { name: 'ハヤトの手紙', img: 'g_item_letter' },
   };
   const itemSrc = it => it.src || `img/${it.img}.webp`;
   Object.values(ITEM_INFO).forEach(it => { const i = new Image(); i.src = itemSrc(it); });
@@ -3209,6 +3224,458 @@
     },
   };
 
+  /* ================================================================
+     第四章　体育館（ケイ）
+     ================================================================ */
+  // 作戦ボード：5つのポジションとベンチに、6人のマグネットを置く。はじめは顧問の並び（けがのハヤトがゴール下、ケイが司令塔で全時間出場）
+  const LINEUP_POS = [['pg', '司令塔', 50, 82], ['sg', 'シューター', 85, 58], ['sf', '外のフォワード', 15, 58], ['pf', '中のフォワード', 30, 34], ['c', 'ゴール下', 58, 15]];
+  const LINEUP_COACH = { pg: 'ケイ', sg: 'ミナト', sf: 'シュン', pf: 'ダイチ', c: 'ハヤト', bench: 'ユウマ' };
+  // ケイが本当に組みたかった並び：いちばん走る外のフォワードに自分が入り、けがのハヤトをベンチで休ませる
+  const LINEUP_ANSWER = { pg: 'ユウマ', sg: 'ミナト', sf: 'ケイ', pf: 'シュン', c: 'ダイチ', bench: 'ハヤト' };
+  function lineupBoard() {
+    const r = replayed(); if (r) return Promise.resolve(r.v);
+    return new Promise(res0 => {
+      const res = v => res0(rec(v));
+      const cur = { ...(R.taken.board || LINEUP_COACH) }; let sel = null;
+      const court = `<svg viewBox="0 0 100 70" preserveAspectRatio="none" aria-hidden="true"><g fill="none" stroke="#4a6fa0" stroke-width=".5">
+        <line x1="2" y1="3" x2="98" y2="3"/><rect x="38" y="3" width="24" height="25"/><circle cx="50" cy="28" r="8"/>
+        <path d="M8 3 L8 15 A42 42 0 0 0 92 15 L92 3"/><circle cx="50" cy="8" r="1.8"/><line x1="46" y1="5.5" x2="54" y2="5.5"/></g></svg>`;
+      openOverlay(`<p class="eyebrow">作戦ボード</p><h2>明日のスタメン</h2>
+        <p class="note">マグネットを押してから、置きたい場所を押すと入れ替わる。</p>
+        <p class="lu-head">ボードの上に、顧問の赤い字：「明日のスタメン　負けたら部長交代」</p>
+        <div class="lu-court">${court}
+          ${R.know.has('self') ? '<span class="lu-note">いちばん走る場所は、自分</span>' : ''}
+          ${LINEUP_POS.map(([k, l, x, y]) => `<button type="button" class="lu-slot" data-k="${k}" style="left:${x}%;top:${y}%"><b></b><small>${l}</small></button>`).join('')}</div>
+        <div class="lu-bench"><span class="label">ベンチ</span><button type="button" class="lu-slot bench" data-k="bench"><b></b></button></div>
+        <div class="row"><button type="button" class="btn primary" id="luOk">この並びにする</button><button type="button" class="btn" id="luNo">やめる</button></div>`);
+      const draw = () => card.querySelectorAll('.lu-slot').forEach(b => {
+        b.querySelector('b').textContent = cur[b.dataset.k]; b.classList.toggle('sel', sel === b.dataset.k);
+        b.setAttribute('aria-label', `${b.dataset.k === 'bench' ? 'ベンチ' : LINEUP_POS.find(p => p[0] === b.dataset.k)[1]}：${cur[b.dataset.k]}`);
+      });
+      card.querySelectorAll('.lu-slot').forEach(b => {
+        b.onclick = () => {
+          const k = b.dataset.k;
+          if (sel === null) sel = k; else if (sel === k) sel = null; else { [cur[sel], cur[k]] = [cur[k], cur[sel]]; sel = null; }
+          draw();
+        };
+      });
+      draw();
+      $('#luOk').onclick = () => { closeOverlay(); res({ b: cur, go: true }); };
+      $('#luNo').onclick = () => { closeOverlay(); res({ b: cur, go: false }); };
+    });
+  }
+  async function viewLogbook() {
+    await overlayWait(`<p class="eyebrow">持ち物</p><h2>部誌</h2>
+      <p>最後のほうのページは、顧問の赤ペンで埋まっている。「たるんでる」「部長の責任」「やる気がないなら辞めろ」。</p>
+      <p>そのすき間に、ケイの小さな字。</p>
+      <p class="quote">「ハヤト、左足首。走り回る位置（司令塔・外）には置けない」</p>
+      <p class="quote">「シュンは足が速い。でも、まだボールを運べない（司令塔は無理）」</p>
+      ${R.know.has('hospital') ? '<p class="note">机に残っていた受診メモ：ハヤトは、今週の試合に出られない。</p>' : ''}`, '', ['閉じる']);
+    closeOverlay();
+  }
+  async function viewLetter() {
+    await overlayWait(`<p class="eyebrow">持ち物</p><h2>ハヤトの手紙</h2><img class="cg" src="img/g_letter.webp" alt="ノートを破った紙に、鉛筆で書かれた手紙">
+      <div class="quote"><p>ケイ先輩へ</p>
+      <p>今日、いきなり「辞めます」なんて言って、すみませんでした。</p>
+      <p>本当は、明日の朝、担任の先生と教頭先生のところへ行って、顧問のことを全部話すつもりです。部員のままだと、また先輩が俺たちの代わりに怒鳴られると思って、先に辞めるって言いました。でも、ユウマも、ミナトも、ダイチも、シュンも、一緒に行くって言ってくれました。</p>
+      <p>先輩が、俺たちのミスを全部かぶってくれてたこと、みんな知ってます。</p>
+      <p>部長が倒れる前に、俺たちが言います。だから明日は、休んでください。</p>
+      <p>1年　ハヤト</p></div>`, '', ['閉じる']);
+    closeOverlay();
+  }
+  // ほどけたあと：床のボールを渡すと、ケイは一度だけシュートを打つ
+  async function keiShoot() {
+    hideCut();
+    await say(['床のボールを拾って、ケイに渡した。',
+               'ケイはボールを二、三度床について、確かめるように指先で回した。',
+               ['ケイ', '……一本だけ、いい？', 'smile'],
+               'ケイは立ち上がると、ゴールに向かって、一度だけシュートを打った。',
+               'ボールは高い弧を描いて、リングに触れないまま、ネットだけを揺らした。',
+               ['ケイ', '……入った', 'smile'],
+               ['ケイ', '明日これ打てないのは、ちょっと悔しいけどな', 'smile'],
+               'ケイはボールをかごに戻すと、首のタオルを外して、きちんと畳んだ。']);
+    lockClick();
+    await say(['体育館の扉の向こうで、カチリと鍵の外れる音がした。']);
+    await line('……あれほど開かなかった扉が、開いている。', false);
+    await choose(['ケイを見送る']);
+    ending({ lines: ['ケイと一緒に体育館を出て、校門まで歩いた。', '校門の外で、小柄な一年生が手を振っていた。ハヤトだ。ケイは一度だけこちらを振り返って、笑った。……今度は、本当の顔で。'],
+             img: 'g_gate', alt: '夕日の校門で、ケイが肩ごしに振り返って笑い、門の外では小柄な後輩が手を振っている' });
+  }
+  const GYM = {
+    window2: ['高窓の外に、校門のあたりが少しだけ見える。', '門の脇に、誰かがしゃがみこんでいた。小柄な、ジャージ姿の男子。……ずっと、体育館のほうを見ている。'],
+    clock2: ['時計の下に、体育館の使用予定表が貼ってある。', '「7/15　男子バスケットボール部　〜18:00　鍵の返却：部長」', '……毎日、最後に鍵を閉めて帰るのは、ケイらしい。'],
+    id: 'gym', key: 'kei', name: 'ケイ', who: 'この人', startMin: 90, room: '体育館', hall: 'hall_gym', label: '第四章「体育館」', bg: 'gym',
+    sit: { src: 'kei_sit', style: 'left:79.5%;top:45%;height:22%' },
+    // 消えたあと床に残るバッシュ（わすれものの絵と同じ靴を、ケイが座っていた床に置いた重ね絵）
+    leftover: '', leftoverImg: 'g_left',
+    faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', breath: 'kei_breath', blank: 'kei_blank' },
+    lost: '片方だけのバッシュ',
+    clock: { img: 'ci_clock_gym', cx: 771, cy: 438, s: 0.94 },
+    idleFree: '（ケイが待っている。チャイムが鳴る前に）',
+    // 部誌・ケイの荷物を調べ、作戦ボードを解いて（ハヤトの手紙）いたら、対話に入れる
+    ready: () => R.know.has('logbook') && R.know.has('bag') && R.know.has('letter'),
+    giveUp: ['ケイは「だよな」と笑って、タオルで顔を拭いた。', '伸ばしかけた手を、そのまま下ろした。'],
+    badSubTalk: ['気づけば、顧問の机のスタメン表を、手に取っていた。', '「……明日、顧問のところへは、代わりに行くよ」',
+                 ['ケイ', '……は？', 'surprise'], ['ケイ', '何言ってんの。部外者だろ', 'angry'],
+                 '「いいから」',
+                 '自分でも驚くくらい、有無を言わせない声が出た。',
+                 'まっすぐ見つめ返すと、ケイは言いかけた言葉を飲み込んだ。何を言っても、こちらが引かないとわかったのかもしれない。',
+                 ['ケイ', '……ほんとに、いいのかよ', 'sad'],
+                 '「いいから。……ケイは、もう帰っていいよ」',
+                 'ケイは長いあいだこちらを見つめてから、ゆっくり立ち上がった。扉が、ケイの前でだけ開いた。', ['ケイ', '……ごめん', 'sad']],
+    badSub: ['ケイの足音が、渡り廊下の向こうへ遠ざかっていった。',
+             '誰もいない体育館で、ひとり作戦ボードの前に立つ。', '扉の外から、怒鳴り声が近づいてくる。「部長はどこだ！」',
+             '「……ここです」', '口が勝手に、そう答えていた。'],
+    badDepTalk: [['ケイ', '……ほんとに？ ずっと？', 'surprise'], ['ケイ', 'じゃあさ、ここにいてよ。……シュート練習、付き合って', 'smile'],
+                 '転がっていたボールを、受け取ってしまった。'],
+    badDep: ['チャイムが鳴っても、ケイは扉のほうを見なかった。',
+             '「……今の、明日の集合時間の連絡だったかもな」', '「見なくていいよ」と、口が勝手に答えていた。',
+             'ケイは、心の底からほっとしたように笑った。',
+             '「……休んでいいって言ってくれたの、あんただけだよ」',
+             '二人で、何本もシュートを打った。外れても、もう誰も怒鳴らなかった。',
+             'ポケットの中のハヤトの手紙は、一度も開かれないまま、くしゃくしゃになっていった。',
+             '「ここなら、もう誰にも怒鳴られないな」', '「うん。……誰にも、見つからない」',
+             'ネットが揺れる音だけが、いつまでも続いていた。',
+             '扉は、どちらからも開けようとしなかった。夕焼けは、ずっと同じ色のままだった。'],
+    samePose: 'ボールかごにもたれて、さっきとまったく同じ姿勢で、ケイが座っていた。',
+    loopReply: [['ケイ', 'チャイム？ ……鳴ったっけ？', 'surprise'], ['ケイ', 'てか、あんた誰？ 見学？', 'normal']],
+    lastWords: [['ケイ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ケイ', '……もう、誰も怒鳴られないところ', 'despair'],
+                ['ケイ', '俺がいなくなれば、顧問が怒鳴る相手も、ひとり減るだろ', 'despair'],
+                'ケイは、片方のバッシュの紐を、ゆっくりほどいた。',
+                ['ケイ', '……次の部長には、悪いことしたな', 'despair']],
+    closeLines: ['ケイは笑顔のまま、もう何も言わなかった。', '作戦ボードを見つめているうちに、時計の針だけが18:00へ近づいていった。'],
+    hotspots: [
+      ['window', '窓', 'left:0;top:0;width:20%;height:22%'],
+      ['clock', '時計', 'left:93%;top:4%;width:6%;height:9%'],
+      ['board', '作戦ボード', 'left:37%;top:35%;width:7%;height:11%'],
+      ['desk', '顧問の机', 'left:60%;top:39%;width:20%;height:8%'],
+      ['bag', 'パイプ椅子のそば', 'left:81%;top:41%;width:5.5%;height:8%'],
+      ['score', '得点板', 'left:89%;top:29%;width:9%;height:14%'],
+      ['basket', 'ボールかご', 'left:90%;top:45%;width:10%;height:13%'],
+      ['ball', '床のボール', 'left:74%;top:57%;width:5.5%;height:8.5%'],
+      ['store', '体育倉庫', 'left:26%;top:35%;width:5.5%;height:12%'],
+      ['char', 'ケイ', 'left:80%;top:47%;width:9.5%;height:20%'],
+    ],
+    async intro(rem) {
+      if (!rem) {
+        await say(['……気がつくと、体育館にいた。', '西の高窓から、低い夕日が床を赤く染めている。時計は17:30を指している。', ...locked('体育館'),
+                   'ボールかごにもたれて、男子生徒がひとり、床に座りこんでいた。',
+                   '首に白いタオル。指には、何重にもテーピングが巻かれている。……声をかけてみる。',
+                   '「あの……大丈夫？」',
+                   'ぱっと顔を上げた彼は、すぐに笑った。',
+                   ['ケイ', 'お、大丈夫大丈夫！ ちょっと休憩してただけ', 'normal'],
+                   ['ケイ', '俺、三浦ケイ。バスケ部の部長。……あんたは？ 見学？', 'normal'],
+                   '答えに迷っていると、ケイは立ち上がりかけて、ふらりとかごにつかまり、そのまま座り直した。',
+                   ['ケイ', '……っと。平気平気。明日、大会だからさ', 'normal'],
+                   ['ケイ', '悪いけど、ボード直さなきゃいけないんだ。今はそっとしといてくれると助かる', 'normal'],
+                   'それきりケイは、笑顔のまま、体育館の奥の作戦ボードを見つめていた。',
+                   '【操作】気になる場所をタップすると調べられます。この部屋の時間は30分。調べるたびに時計が3分進み、18:00になるとチャイムが鳴ります。話しかけても時間は進みません。']);
+      } else {
+        await say(['……また、この体育館だ。', '扉は、今度も開かない。', '17:30。ボールかごにもたれて、ケイが座っている。',
+                   ['ケイ', 'お、大丈夫大丈夫！ ちょっと休憩してただけ', 'normal'],
+                   ...(hasKey('kei') ? ['（あのバッシュの中敷きの下にあったメモを、覚えている）'] : ['（この部屋で見たものは、覚えている）'])]);
+      }
+    },
+    // 探索の途中、ケイの体が悲鳴をあげる（ループが進むほど、重くなる）
+    async onTick() {
+      if (R.st !== 'here' || R.seen.has('buzz') || R.ticks < (R.loop ? 2 : 4)) return;
+      R.seen.add('buzz'); hideCut();
+      await say([['体育館の扉の外を、誰かの足音が通り過ぎていった。', 'ケイの肩が、びくりと跳ねた。足音が遠ざかるまで、ケイは息を止めていた。'],
+                 ['パイプ椅子のそばのバッグの中で、スマホが震えた。', 'ケイは画面を見ないまま、笑顔だけを作り直した。', ['ケイ', '……顧問から。明日の確認だと思う。大丈夫', 'normal']],
+                 ['ケイが急に胸を押さえて、浅い息を繰り返した。', ['ケイ', '……っ、だい、じょうぶ……いつもの、やつだから', 'breath'], 'しばらくして、ケイの息は少しずつ戻っていった。']][Math.min(R.loop, 2)]);
+    },
+    // 探索の途中、ケイの記憶にまつわる声が聞こえる（ほどけた後は出ない）
+    // 1回目：後輩たちとの練習／2回目：顧問の怒鳴り声／3回目以降：引退した先輩から部長を託された日
+    async onTick2() {
+      if (R.st !== 'here' || R.seen.has('memory') || !R.seen.has('buzz') || R.ticks < (R.loop ? 5 : 7)) return;
+      R.seen.add('memory'); hideCut();
+      if (R.loop === 0) {
+        await say(['……どこかで、ボールをつく音がした。', 'にぎやかな声が、コートに響いている。',
+                   '『部長、パス！』『ナイッシュー！』『ユウマ、今の見えてたの？ すげえ』',
+                   'ケイが、誰もいないコートを見て、少しだけ笑った。']);
+      } else if (R.loop === 1) {
+        await say(['……笛の音が、耳の奥で鳴った。', '『誰だ今のミス！ 部長、お前か！』『……はい、俺です』',
+                   '『部長がそんなだから負けるんだよ！ 全員、外周もう一周！』『一年の分は、俺が走ります』',
+                   'ケイのテーピングの指が、膝の上で小さく震えていた。']);
+      } else {
+        await say(['……引退していく先輩の声が、聞こえた気がした。', '『ケイ、お前が部長な。二年、お前しか残らなかったし』',
+                   '『一年のこと、頼むわ。……あいつら、まだ顧問の怖さ知らねえから』', '『はい。……大丈夫です』',
+                   'ケイは、首のタオルを強く握りしめていた。']);
+      }
+    },
+    inv(add) {
+      if (R.items.has('logbook')) add('部誌', '', viewLogbook, 'img/g_item_log.webp');
+      if (R.items.has('letter')) add('ハヤトの手紙', '', viewLetter, 'img/g_item_letter.webp');
+    },
+    H: {
+      async board() {
+        showCut('gci_board');
+        if (R.know.has('lineup')) {
+          await say(['作戦ボード。ケイが組みたかった並びのまま、マグネットが置かれている。', '外のフォワードに「ケイ」。ベンチに「ハヤト」。']);
+          return;
+        }
+        const lp = R.loop;
+        if (!R.know.has('board')) {
+          await say(['体育館の奥の作戦ボード。コートの図に、名前の入ったマグネットが6枚並んでいる。',
+                     '上に、顧問の赤い字。「明日のスタメン　負けたら部長交代」',
+                     'マグネットのまわりに、何度も動かしては戻したような跡がある。']);
+          R.know.add('board'); await tick();
+        } else if (!R.know.has('self')) {
+          // 2回目：ボードの隅の、消しかけたケイの字
+          R.know.add('self');
+          await say(['ボードの右下の隅に、消しかけた小さな字が残っていた。', '「いちばん走る場所は、自分」', '……ケイの字だ。']);
+          await tick();
+        } else await say(['作戦ボード。コートの図に、6枚のマグネット。上に、顧問の赤い字。「負けたら部長交代」']);
+        // 調べたことでチャイムが鳴ったら、ボードには触れない
+        if (R.over || R.loop !== lp) return;
+        const c = await choose(['マグネットを動かす', 'やめる']);
+        if (c !== 0) return;
+        const v = await lineupBoard();
+        R.taken.board = v.b;
+        if (!v.go) return;
+        const ok = Object.keys(LINEUP_ANSWER).every(k => v.b[k] === LINEUP_ANSWER[k]);
+        if (!ok) {
+          R.taken.miss = (R.taken.miss || 0) + 1;
+          await say(['マグネットを並べ終えて、ボードを眺めた。', '……何かが違う気がする。']);
+          await tick(); return;
+        }
+        await say(['最後に、「ケイ」のマグネットを、外のフォワードの位置に置いた。',
+                   'カチ、と小さな音。ボードの縁とマグネットのすき間から、小さく折りたたんだ紙が、ひらりと落ちた。']);
+        R.know.add('lineup'); R.seen.add('lineup'); R.know.add('letter');
+        await gotItem('letter');
+        await viewLetter();
+        await say(['……ケイは、この並びを組もうとしていたんだ。', 'いちばんきつい場所に自分が入って、けがをしたハヤトを、ベンチで休ませる並び。',
+                   'そのすき間に、ハヤトは手紙を挟んでいた。……ケイがいつか、この並びを置く日のために。']);
+        await tick();
+      },
+      async desk() {
+        showCut('gci_desk');
+        if (!R.know.has('logbook')) {
+          await say(['ステージ前の長机。顧問の机らしい。', 'クリップボードに、顧問の字のスタメン表が挟まっている。',
+                     '「明日のスタメン　司令塔：ケイ　シューター：ミナト　外のフォワード：シュン　中のフォワード：ダイチ　ゴール下：ハヤト　ベンチ：ユウマ　※ケイは全時間出場」',
+                     'その横に、部誌が開いたまま置いてあった。']);
+          R.know.add('logbook'); await gotItem('logbook'); await tick();
+        } else if (!R.know.has('hospital')) {
+          // 2回目：部誌の下にあった受診メモ
+          R.know.add('hospital');
+          await say(['部誌のあった場所に、折りたたんだ紙が一枚残っていた。', '整形外科の受診メモのコピー。「1年　ハヤト　左足関節ねんざ　今週の試合・練習は控えること」',
+                     '余白に、ケイの字。「顧問にはまだ言えてない。明日はベンチ。そのぶん俺が走る」']);
+          await tick();
+        } else await say(['顧問の机。スタメン表の「※ケイは全時間出場」の一行だけ、ボールペンで何度もなぞってある。']);
+      },
+      async bag() {
+        showCut('gci_bag');
+        if (!R.know.has('bag')) {
+          await say(['パイプ椅子のそばに、ケイのものらしいスポーツバッグ。', 'まわりに、使い切ったテーピングの芯がいくつも転がっている。',
+                     'バッグに挟まったメモに、ケイの字。「ユウマは背が低い。ゴール下には置かない。でも、誰より周りが見える」']);
+          R.know.add('bag'); await tick();
+        } else if (!R.know.has('bento')) {
+          R.know.add('bento');
+          await say(['バッグの口から、弁当の包みがのぞいていた。', '持ち上げると、ずっしり重い。……ひと口も、手がつけられていない。',
+                     '包みに挟まったメモ。「母：今日はケイの好きな唐揚げ。ちゃんと食べてね」', 'そのそばに、胃薬の空き箱が転がっていた。']);
+          await tick();
+        } else await say(['テーピングの芯の山と、手つかずの弁当。胃薬の空き箱。']);
+      },
+      async score() {
+        showCut('gci_score');
+        if (!R.know.has('shooters')) {
+          await say(['得点板の裏に、練習試合の記録が貼ってある。', '「6/29 練習試合　外からのシュート：ミナト 3本、ハヤト 2本。ほかは0本」',
+                     '……外から決められるのは、この二人だけらしい。']);
+          R.know.add('shooters'); await tick();
+        } else if (!R.know.has('minutes')) {
+          R.know.add('minutes');
+          await say(['記録の下に、もう一枚。出場時間の表だ。', '「ケイ　40分」「ケイ　40分」「ケイ　40分」……', 'どの試合も、ケイだけが一度も交代していない。']);
+          await tick();
+        } else await say(['得点板は「00」のまま。裏の出場時間の表では、ケイの欄だけが、ずっと40分だ。']);
+      },
+      async basket() {
+        showCut('gci_basket');
+        if (!R.know.has('basket')) {
+          await say(['ボールかごの持ち手に、メモがテープで留めてある。', '「シュン、当たり負けしてまた転んだ。ゴール下はまだ早い」', '「ダイチはゴール下でしか力を出せない」']);
+          R.know.add('basket'); await tick();
+        } else if (!R.know.has('yosegaki')) {
+          R.know.add('yosegaki');
+          await say(['かごの底の、いちばん古いボールに、マジックの寄せ書きがあった。', '「部長、いつもありがとうございます　1年一同」',
+                     '字がかすれている。……ずいぶん前に書かれたものらしい。']);
+          await tick();
+        } else await say(['ボールかご。底のボールの寄せ書きは、かすれたまま残っている。']);
+      },
+      async ball() {
+        if (R.st === 'unraveled') return keiShoot();
+        showCut('gci_ball');
+        if (!R.know.has('ball')) {
+          await say(['床に、ボールがひとつ転がっている。', '表面はすり減って、ところどころ黒ずんでいる。', '……さっきまで、誰かがひとりでシュートを打っていたのかもしれない。']);
+          R.know.add('ball'); await tick();
+        } else if (!R.know.has('tape')) {
+          R.know.add('tape');
+          await say(['ボールのそばの床に、テーピングの切れ端が落ちていた。', '血がにじんで、茶色く固まっている。']);
+          await tick();
+        } else await say(['すり減ったボール。そばに、血のにじんだテーピングの切れ端。']);
+      },
+      async store() {
+        showCut('gci_store');
+        if (!R.know.has('store')) {
+          await say(['体育倉庫の扉が、少しだけ開いている。', '壁に、練習メニューの表。顧問の字で「外周10km　できなければ全員もう1周（連帯責任）」',
+                     'その下に、ケイの字で小さく。「一年の分は、部長が走ります」']);
+          R.know.add('store'); await tick();
+        } else if (!R.know.has('keyList')) {
+          R.know.add('keyList');
+          await say(['倉庫の奥に、鍵当番の表が貼ってあった。', '「月　ケイ」「火　ケイ」「水　ケイ」……', 'どの曜日も、ケイの名前だけが並んでいる。']);
+          await tick();
+        } else await say(['体育倉庫。練習メニューの「一年の分は、部長が走ります」の字が、壁に残っている。']);
+      },
+    },
+    hint() {
+      if (R.st === 'unraveled') return 'ケイに、床のボールを渡しましょう。';
+      if (!R.know.has('board')) return '部屋の中で、気になる場所を調べてみましょう。体育館の奥の作戦ボードが、気になります。';
+      if (!R.know.has('letter')) {
+        const miss = [[!R.know.has('logbook'), '顧問の机'], [!R.know.has('shooters'), '得点板'], [!R.know.has('bag'), 'パイプ椅子のそばの荷物'],
+                      [!R.know.has('basket'), 'ボールかご'], [!R.know.has('self'), '作戦ボード（もう一度）']].filter(([m]) => m).map(([, n]) => n);
+        if (miss.length) return `マグネットの並べ方の手がかりは、部屋のあちこちにあります。まだ見ていない場所：${miss.join('、')}。`;
+        if ((R.taken.miss || 0) < 2) return 'けがをしているのは誰か、外からシュートを決められるのは誰かを考えて、決まる位置から順に埋めていきましょう。部誌は持ち物から読み返せます。';
+        return 'ハヤトはけがでベンチ。シューターはミナト。周りが見えるユウマは司令塔、ダイチはゴール下。残る二人のうち、「いちばん走る場所」に入るのは……。';
+      }
+      if (!R.know.has('logbook') || !R.know.has('bag')) return 'まだ調べていない場所がありそうです。';
+      return 'ケイに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
+    },
+    async vanishScene() {
+      await say(['ボールかごのそばに、ケイの姿はなかった。', '床に、バッシュが片方だけ残っている。']);
+      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>片方だけのバッシュ</h2><img class="cg" src="img/g_shoe.webp" alt="夕日の床に、すり切れたバッシュが片方だけ転がっている">
+        <p>すり切れたバッシュ。紐はほどけたままで、中敷きの端が少しめくれている。</p>`, '', ['中敷きをめくる']);
+      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>中敷きの下のメモ</h2>
+        <p class="quote">「次の部長へ。ごめん、もう守ってあげられない」</p>
+        <p class="note">何度も書き直したのか、紙の表面が毛羽立っていた。最後の一文字だけ、ペンが紙を破りかけていた。</p>`, '', ['閉じる']);
+    },
+    shelfItem(saved) {
+      return saved
+        ? { thumb: 'g_letter', title: 'ハヤトの手紙', body: `<img class="cg" src="img/g_letter.webp" alt="ハヤトの手紙"><p>「部長が倒れる前に、俺たちが言います。だから明日は、休んでください」。ケイは手紙をポケットにしまって、校門で待っていたハヤトと帰っていった。</p>` }
+        : { thumb: 'g_shoe', title: '片方だけのバッシュ', body: `<img class="cg" src="img/g_shoe.webp" alt="片方だけのバッシュ"><p>中敷きの下のメモ。「次の部長へ。ごめん、もう守ってあげられない」</p>` };
+    },
+    async talk() {
+      if (R.st === 'vanished') return say(['床には、バッシュが片方だけ残っている。']);
+      if (R.st === 'unraveled') return keiShoot();
+      if (!remembered('kei')) {
+        const n = [R.know.has('logbook'), R.know.has('bag'), R.know.has('letter')].filter(Boolean).length;
+        if (n === 0) return say([['ケイ', 'ごめん、今ちょっと忙しいんだ。大丈夫だから', 'normal'], '（この人のことを、まだ何も知らない。部屋を調べてみよう）']);
+        if (n < 3) return say([['ケイ', '……さっきから、何探してんの？', 'angry'], '（ケイについて、まだ知らないことがある気がする）']);
+      } else {
+        await say(['（部誌も、手つかずの弁当も、作戦ボードの本当の並びも、もう知っている）']);
+      }
+
+      // 1段目：「大丈夫」の仮面。作戦ボードの話から近づく
+      await say(['ボールかごの横に、そっと腰を下ろした。', 'ケイが、少しだけ驚いた顔でこちらを見る。',
+                 ['ケイ', '……そっとしといてって、言ったのに', 'normal'],
+                 '「ごめん。……あのボード、気になって」',
+                 '「顧問の机のスタメン表と、ちがう並びにしたかったんだよね」',
+                 'ケイの笑顔が、一瞬だけ止まった。']);
+      if (R.seen.has('lineup')) {
+        await say(['「ハヤトをベンチにして、いちばん走る場所に、自分を入れてた」', ['ケイ', '……なんで、わかったの', 'surprise'],
+                   ['ケイ', 'あいつ、足首やってんの。顧問は知らないけど', 'down']]);
+      } else {
+        await say(['「部誌、読んだんだ。ハヤトって子、足首をけがしてるんでしょ」', ['ケイ', '……あー。見られちゃったか', 'normal']]);
+      }
+      await say(['「……毎日、ここにひとりで残ってるの？」', ['ケイ', 'うん。片付けと、ボード。部長だから', 'normal']]);
+      await line(['ケイ', '……ほら、大丈夫だよ。いつものことだから', 'normal'], false);
+      let a = await ask([['……あいつらのこと、大事なんだね', 'yori'], ['大会の前なら、早く帰って休むべきだよ', 'seiron'], ['ハヤトって子に、辞めるって言われたんでしょ', 'oitsu']], 1);
+      if (a === 'seiron') { await say([['ケイ', '……はは。正論だな', 'normal'], ['ケイ', 'でも、俺が帰ったら、誰がボード直すの', 'angry'], 'ケイはそれきり、作戦ボードのほうを向いたまま、口を閉ざした。']); return closeHeart(); }
+      if (a === 'oitsu') return shutOut([['ケイ', '……は？', 'surprise'],
+                                  ['', 'ケイの顔に、笑顔の形だけが残った。目の奥から、光がすっと消えていく。', 'blank'],
+                                  ['ケイ', '……なんで知ってんの', 'blank'],
+                                  ['ケイ', '悪いけど、もう閉めるわ。部長の仕事だから', 'blank'],
+                                  ['ケイ', '……出てってくれる？', 'blank']],
+                                 ['扉を叩いた。返事はない。', '……体育館の中で、ボールが一度だけ、床に跳ねる音がした。']);
+      await say([['ケイ', '……うん', 'down'],
+                 ['ケイ', '三年が引退して、二年は俺ひとりしか残らなかったんだ', 'down'],
+                 ['ケイ', 'あとは一年が五人。ユウマ、ハヤト、ミナト、ダイチ、シュン', 'smile'],
+                 ['ケイ', '下手くそだけど、いいやつらなんだよ。……あいつらと試合するの、好きなんだ', 'smile'],
+                 'ケイは、指のテーピングを、ぼんやり撫でた。']);
+
+      // 2段目
+      await say(['テーピングを撫でていたケイの指が、ふと止まった。', ['ケイ', '……でも、顧問がさ', 'sad'], '「顧問？」',
+                 ['ケイ', '声がでかいんだよ。ミスしたら、みんなの前で怒鳴る。ボールを投げつけることもある', 'sad'],
+                 ['ケイ', '一年が怒鳴られそうになったら、俺が先にミスしたことにするんだ。そしたら、怒鳴られるのは俺だけで済むから', 'down'],
+                 ['ケイ', '走り込みも、連帯責任ってやつ。……部長が倍走れば、一年は減らしてもらえる', 'down'],
+                 ['ケイ', '最近、朝ごはん、のどを通らなくてさ。無理に食べても、体育館の前で戻しちゃう', 'grief'],
+                 ['ケイ', '夜も、目をつぶると笛の音がして、眠れない', 'grief'],
+                 'ケイの呼吸が、急に浅く、速くなった。',
+                 ['ケイ', '……っ、は……だい、じょうぶ……いつもの、やつ', 'breath'],
+                 '背中をさすると、しばらくして、ケイの息はゆっくり戻っていった。',
+                 ['ケイ', '……ごめん。驚かせた', 'sad'],
+                 ['ケイ', '顧問に言われてるんだ。「明日負けたら部長の責任だ。お前が辞めろ」って', 'sad'],
+                 ['ケイ', 'それで今日、ハヤトが来て。……「もう辞めます」って', 'grief'],
+                 ['ケイ', '守ってたつもりだったんだけどな。……あいつにまで、見捨てられたのかなって', 'grief']]);
+      await line(['ケイ', 'でも、俺がいなくなったら、あいつらが標的になる。……だから、辞めることも、休むこともできないんだよ', 'grief'], false);
+      a = await ask([['それは先生に言うべきだよ。ひとりで抱えることじゃない', 'seiron'], ['……ずっと、ひとりで盾になってたんだね', 'yori'],
+                     ['ケイくんは十分がんばったよ。もう大丈夫だよ', 'nagu'], ['後輩も、結局ケイくんを置いて辞めていくんだね', 'oitsu']], 2);
+      if (a === 'seiron') { await say([['ケイ', '……言ったよ。一回だけ', 'angry'], ['ケイ', '次の日、一年が倍走らされた。「部長に告げ口させるな」って', 'angry'], 'ケイはタオルで顔を覆ったまま、動かなくなった。', '正しい言葉ほど、今のケイには重すぎるのかもしれない。']); return closeHeart(); }
+      if (a === 'oitsu') return doom([['ケイ', '……だよな', 'despair'], ['ケイ', '守ってるつもりだったの、俺だけだったんだ', 'shadow'], ['ケイ', '俺がいなくても、あいつらは……', 'despair'], ['ケイ', '……もう、守らなくていいなら。楽になってもいいよな', 'despair']]);
+      if (a === 'nagu') {
+        R.cons++;
+        await say([['ケイ', '……大丈夫、か', 'surprise'],
+                   ['ケイ', 'それ、俺がずっと言ってたやつだ', 'crySmile'],
+                   'ケイは弱々しく笑って、すがるようにこちらを見た。',
+                   ['ケイ', '……なあ。あんたは、ここにいてくれる？', 'sad'],
+                   '（……その言葉に、うなずいていいのか、わからなかった）']);
+      } else {
+        await say([['ケイ', '……盾、か。かっこよすぎるな', 'crySmile'], ['ケイ', 'ほんとは、毎朝、体育館の扉の前で、足が止まるんだ。……それでも入るしかなかった', 'grief']]);
+      }
+
+      // 3段目
+      await say(['ケイは、首のタオルをぎゅっと握りしめた。', ['ケイ', '……少しだけ、休みたいんだ', 'sad']]);
+      if (hasKey('kei')) {
+        await say([['ケイ', 'でも、俺が休んだら、あいつらが……', 'grief']]);
+        await line('……あのバッシュの中敷きの下にあった、メモが頭に浮かんだ。', false);
+      } else {
+        await line(['ケイ', 'でも、俺が休んだら、あいつらが……', 'grief'], false);
+      }
+      const opts = [['休むのも、部長の仕事だよ', 'seiron'], ['後輩たちなら、きっと大丈夫だよ', 'nagu'], ['じゃあ、このまま倒れるまで続けるの？', 'oitsu']];
+      if (hasKey('kei')) opts.splice(1, 0, ['「もう守ってあげられない」なんて、誰かに謝らなくていい。……これ、読んでほしい', 'key']);
+      a = await ask(opts, 3);
+      const missing = hasKey('kei') ? [] : ['（何か、あと一つ足りない気がする。この人が、受け取れずにいる何かが）'];
+      if (a === 'nagu' && R.cons >= 1) {
+        await say([['ケイ', '……そっか。大丈夫か', 'smile'],
+                   ['ケイ', 'あんたがそう言うなら、そうなのかもな', 'sad'],
+                   'ケイは、床のボールを拾って、こちらに差し出した。',
+                   ['ケイ', '……じゃあさ。もうちょっとだけ、ここでシュート練習しない？ ひとりだと、さびしいから', 'sad'],
+                   'そのボールを、受け取ってしまった。']);
+        return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
+      }
+      if (a === 'nagu') {
+        R.cons++;
+        await say([['ケイ', '……あいつらのこと、何も知らないくせに', 'angry'], ['ケイ', '大丈夫じゃないから、俺が前に立ってるんだよ', 'angry'], ...missing]);
+        return lastWrong();
+      }
+      if (a === 'seiron') {
+        await say([['ケイ', '……仕事、か', 'down'],
+                   ['ケイ', '部長の仕事なら、あいつらの前に立ってることだよ。休んだら、それができない', 'angry'], ...missing]);
+        return lastWrong();
+      }
+      if (a === 'oitsu') return doom([['ケイ', '……うん。そのつもりだった', 'shadow'],
+                                ['ケイ', '明日、俺が倒れれば、顧問も少しは懲りるだろ', 'despair'],
+                                ['ケイ', 'そしたら、あいつらは怒鳴られずに済む', 'despair'],
+                                ['ケイ', '……次の部長には、悪いことしたな', 'despair']]);
+      await say([['ケイ', '……え', 'surprise'], ['ケイ', 'なんで、それ。……次の部長に書こうと思ってた言葉、誰にも言ってないのに', 'surprise'],
+                 '答えられなかった。ただ、あのメモを覚えていた。']);
+      if (R.items.has('letter')) await say(['作戦ボードのすき間から落ちてきた、小さく折りたたんだ紙を差し出した。']);
+      else await say(['ケイを作戦ボードの前に連れていき、マグネットのすき間を指さした。', '小さく折りたたんだ紙が、ひらりと落ちた。']);
+      await say(['ケイは、震える指で紙を開いた。', '「ケイ先輩へ。……部長が倒れる前に、俺たちが言います。だから明日は、休んでください」',
+                 ['ケイ', '……あいつら、知ってたのかよ', 'grief'],
+                 ['ケイ', '俺が怒鳴られてたの……全部', 'grief'],
+                 ['ケイ', 'ハヤトの「辞めます」って、これ……', 'grief'],
+                 ['ケイ', '守ってたつもりで、俺……守られてたんだな', 'crySmile'],
+                 '「……今度は、あいつらが前に立つって言ってる。少しだけ、休んでもいいんじゃないかな」',
+                 'ケイは、長いあいだ手紙を見つめていた。']);
+      bgm(null);
+      await say(['タオルで顔を覆って、ケイは初めて、声を出して泣いた。']);
+      bgm('musicbox');
+      await say([['ケイ', '……明日、休むよ', 'crySmile'],
+                 ['ケイ', 'それで、あいつらと一緒に、先生のところに行く', 'smile'],
+                 ['ケイ', '部長として。……最後の仕事じゃなくて、最初の仕事として', 'smile']]);
+      R.st = 'unraveled'; render();
+      await say([`……張りつめていた体育館の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ケイ', '……なあ。そこのボール、取ってくれる？', 'smile']]);
+    },
+  };
+
   /* ---------- 書体の先読み ---------- */
   const FONTS_READY = (() => {
     if (!document.fonts || !document.fonts.load) return Promise.resolve();
@@ -3220,8 +3687,9 @@
   })();
 
   /* ---------- 章の切り替え ---------- */
-  const CHAPTERS = { art: ART, music: MUSIC, library: LIBRARY };
-  const ORDER = ['art', 'music', 'library'];
+  const CHAPTERS = { art: ART, music: MUSIC, library: LIBRARY, gym: GYM };
+  // 第四章は確認用：URL に ?ch4 をつけたときだけ遊べる
+  const ORDER = ['art', 'music', 'library', ...(/[?&]ch4\b/.test(location.search) ? ['gym'] : [])];
   // 章は順番に開放：前の章を終えると（ほどけた・追い出された）次の章が選べる
   // 章は1章から順に進む。この周回で終えた章には戻れず、次の章だけが選べる
   const done = id => !!P.cur.results[CHAPTERS[id].key];
@@ -3292,7 +3760,7 @@
     openOverlay(`<h1 class="vtitle">放課後の<span>わすれもの</span></h1>
       <p class="tap-hint" id="tapHint"${splash ? '' : ' hidden'}>画面をタップしてください</p>
       <div class="title-side${splash ? ' later' : ''}" id="titleMenu"${splash ? ' hidden' : ''}>
-        <p class="eyebrow">試作版　第一章〜第三章</p>
+        <p class="eyebrow">試作版　第一章〜第${'一二三四五'[ORDER.length - 1]}章</p>
         ${runs ? `<p class="note">これまでの周回　${runs}</p>` : ''}
         ${Object.keys(P.cur.results).length ? `<p class="note">第${P.runNo}周　${Object.keys(P.cur.results).length}章まで終えた</p>` : ''}
         ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save)}</span></button>` : ''}
@@ -3423,7 +3891,7 @@
     idle();
   }
   function showShelf() {
-    const slots = [['ヒナ', 'hina', ART], ['ソウタ', 'sota', MUSIC], ['ミオ', 'mio', LIBRARY], ['ケイ'], ['ツムギ'], ['？？？']];
+    const slots = [['ヒナ', 'hina', ART], ['ソウタ', 'sota', MUSIC], ['ミオ', 'mio', LIBRARY], ['ケイ', 'kei', GYM], ['ツムギ'], ['？？？']];
     P.shelfSeen = P.shelfSeen || {};
     const got = slots.filter(([, key]) => key && P.shelf[key]).length;
     const savedN = slots.filter(([, key]) => key && P.shelf[key] && P.saved[key]).length;
@@ -3445,7 +3913,7 @@
     slots.forEach(([, key]) => { if (key && P.shelf[key]) P.shelfSeen[key] = P.saved[key] ? 's' : 'v'; });
     saveP();
     $('#sBack').onclick = showTitle;
-    [['hina', ART], ['sota', MUSIC], ['mio', LIBRARY]].forEach(([k, ch]) => {
+    [['hina', ART], ['sota', MUSIC], ['mio', LIBRARY], ['kei', GYM]].forEach(([k, ch]) => {
       const b = card.querySelector(`[data-k="${k}"]`);
       if (b) b.onclick = async () => {
         const it = ch.shelfItem(!!P.saved[k]);
