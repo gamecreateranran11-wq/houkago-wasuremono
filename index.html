@@ -1711,11 +1711,13 @@
   /* ---------- 共通の調べもの ---------- */
   const COMMON = {
     async window() {
-      showCut('ci_window');
-      if (!R.know.has('window')) {
-        await say(['窓の外は、ずっと同じ夕焼け。校庭には誰もいない。', windowLine()]);
+      // 窓の絵と1回目の文は、章ごとに差し替えられる（windowImg・windowImg2・window1）。ない章は美術室の窓の絵
+      const first = !R.know.has('window'), second = !first && C.window2 && !R.know.has('window2');
+      showCut((!first && C.windowImg2) || C.windowImg || 'ci_window');
+      if (first) {
+        await say([...(C.window1 || ['窓の外は、ずっと同じ夕焼け。校庭には誰もいない。']), windowLine()]);
         R.know.add('window'); await tick();
-      } else if (C.window2 && !R.know.has('window2')) {
+      } else if (second) {
         // 2回目：その章だけの、窓まわりの新しい情報
         R.know.add('window2'); await say(C.window2); await tick();
       } else await say(['夕焼けは、少しも動かない。']);
@@ -2993,7 +2995,7 @@
     leftover: '', leftoverImg: 'l_left',
     faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile' },
     lost: '返却期限の過ぎた一冊',
-    // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:771, cy:438, s:0.94）、保健室は ci_clock_infirmary（cx:777, cy:420, s:0.89）を使う
+    // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:777, cy:420, s:0.89）を使う
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
     idleFree: '（ミオが待っている。チャイムが鳴る前に）',
     // 貸出記録・縦読み・学級日誌を知ったら、対話に入れる
@@ -3462,7 +3464,9 @@
   // 第四章：3回目以降に調べたとき、奇数回は謎解きの手がかり、偶数回は2回目の情報を交互に出す（時計は進めない）
   const again = id => { R.looks = R.looks || {}; R.looks[id] = (R.looks[id] || 0) + 1; return R.looks[id] % 2 === 1; };
   const GYM = {
-    window2: ['高窓の外に、校門のあたりが少しだけ見える。', '門の脇に、誰かがしゃがみこんでいた。小柄な、ジャージ姿の男子。……ずっと、体育館のほうを見ている。'],
+    // 体育館は本校舎の北（中庭をはさんで向かい）の別棟。西の高窓からは、すぐ下に部室棟と、その前の道が見える（校門は本校舎の向こうで見えない）
+    window1: ['高窓の外は、ずっと同じ夕焼け。すぐ下の部室棟の前の道にも、誰もいない。'],
+    window2: ['高窓の外。部室棟の前の道の端に、さっきはいなかった誰かがしゃがみこんでいた。', '小柄な、ジャージ姿の男子。……ずっと、体育館のほうを見ている。'],
     clock2: ['時計の下に、体育館の使用予定表が貼ってある。', '「7/15　男子バスケットボール部　〜18:00　鍵の返却：部長」', '……毎日、最後に鍵を閉めて帰るのは、ケイらしい。'],
     id: 'gym', key: 'kei', name: 'ケイ', who: 'この人', startMin: 90, room: '体育館', hall: 'hall_gym', label: '第四章「体育館」', bg: 'gym',
     sit: { src: 'kei_sit', style: 'left:79.5%;top:45%;height:22%' },
@@ -3470,7 +3474,7 @@
     leftover: '', leftoverImg: 'g_left',
     faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', breath: 'kei_breath', blank: 'kei_blank' },
     lost: '片方だけのバッシュ',
-    clock: { img: 'ci_clock_gym', cx: 771, cy: 438, s: 0.94 },
+    clock: { img: 'ci_clock_gym', cx: 868, cy: 448, s: 0.86 },
     idleFree: '（ケイが待っている。チャイムが鳴る前に）',
     // 部誌・ケイの荷物を調べ、作戦ボードを解いて（ハヤトの手紙）いたら、対話に入れる
     ready: () => R.know.has('logbook') && R.know.has('bag') && R.know.has('letter'),
