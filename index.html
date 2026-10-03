@@ -45,6 +45,11 @@
   .bar-actions .menu-panel button:hover { border-color: var(--akane); }
   .menu-panel .vol { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; font-size: 13px; }
   .menu-panel .vol input { width: 110px; accent-color: var(--akane); }
+  .title-redo { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 10px; border: 1px solid var(--line); border-radius: 6px; background: rgba(31, 26, 40, .6); }
+  .title-redo .label { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+  .btn-sub { background: none; border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; text-align: left; font-size: 13px; color: var(--ink); cursor: pointer; }
+  .btn-sub:hover { border-color: var(--akane); }
+  .btn-sub .sub { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
   .title-vol { display: flex; flex-direction: column; gap: 2px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: rgba(31, 26, 40, .6); }
   .title-vol .vol { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; padding: 4px 0; }
   .title-vol .vol input { flex: 1; max-width: 220px; accent-color: var(--akane); }
@@ -3882,11 +3887,11 @@
         ${runs ? `<p class="note">これまでの周回　${runs}</p>` : ''}
         ${Object.keys(P.cur.results).length ? `<p class="note">第${P.runNo}周の記録　${runRecord()}</p>` : ''}
         ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save)}</span></button>` : ''}
-        <button type="button" class="btn ${save ? '' : 'primary'}" id="tGo">${save ? `${nextCh().room}の放課後をやり直す` : `${nextCh().room}へ向かう`}<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から${save ? '。今の続きは消えます' : ''}</span></button>
+        ${save ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
-        ${played() ? `<button type="button" class="btn" id="tReset">${CHAPTERS[ORDER[0]].room}からやり直す<span class="sub">わすれもの棚と、この周回の記録が消えます</span></button>` : ''}
         <button type="button" class="btn" id="tShelf">わすれもの棚</button>
         ${ostOpen() ? '<button type="button" class="btn" id="tOst">サウンドトラック<span class="sub">おまけ</span></button>' : ''}
+        ${redoHTML(save)}
         <div class="title-vol" aria-label="音量">
           <label class="vol">BGM<input id="tVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
           <label class="vol">効果音<input id="tVolSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label>
@@ -3897,7 +3902,7 @@
       </div>`, 'title-screen', 'ov-card title-card');
     ov.style.setProperty('--dusk', Object.keys(P.cur.results).length);
     bgm('title');
-    $('#tGo').onclick = () => goRoom();
+    if ($('#tGo')) $('#tGo').onclick = () => goRoom();
     if ($('#tReset')) $('#tReset').onclick = () => resetAll();
     $('#tWipe').onclick = () => wipeAll();
     if (save) $('#tCont').onclick = () => continueRun(save);
@@ -3916,6 +3921,20 @@
       };
       ov.addEventListener('click', reveal); document.addEventListener('keydown', reveal);
     }
+  }
+  // タイトルの「やり直す」枠：ふだん押す大きなボタン（つづきから／〇〇へ向かう）と分けて、小さく控えめに出す
+  // 押しても「つづきから」と同じ結果になるもの（消えるものがないもの）は出さない
+  function redoHTML(save) {
+    const ch = nextCh(), first = CHAPTERS[ORDER[0]];
+    const fresh = !save || (save.loop === 0 && save.ticks === 0 && !(save.know || []).length && !(save.items || []).length);
+    const shelfN = Object.keys(P.shelf).length, doneN = Object.keys(P.cur.results).length;
+    const rows = [];
+    if (save && !fresh) rows.push(`<button type="button" class="btn-sub" id="tGo">${ch.room}を${hm(ch.startMin || 0)}からやり直す<span class="sub">今の放課後の続きは消えます（わすれもの棚は残ります）</span></button>`);
+    if (shelfN || doneN || (save && !fresh && ch.id !== first.id)) {
+      const lost = [shelfN ? 'わすれもの棚' : '', doneN ? 'この周回の記録' : '', save && !fresh ? '今の続き' : ''].filter(Boolean).join('・');
+      rows.push(`<button type="button" class="btn-sub" id="tReset">${shelfN ? 'わすれもの棚を空にして、' : ''}${first.room}からやり直す<span class="sub">${lost}が消えます</span></button>`);
+    }
+    return rows.length ? `<div class="title-redo"><span class="label">やり直す</span>${rows.join('')}</div>` : '';
   }
   // 一度でも遊んだことがあるか（初めてのときは「美術室からやり直す」を出さない）
   const played = () => !!(P.played || P.runs || loadRun() || SLOTS.some(n => readSlot(n))
