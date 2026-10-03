@@ -381,7 +381,7 @@
     return { shelf: {}, runs: 0, endings: {}, sound: true };
   })();
   P.shelf = P.shelf || {}; P.endings = P.endings || {}; P.saved = P.saved || {};
-  // cleared：今回のプレイで朝を迎えた子（章の開放に使う。はじめからで消える）／saved：実績（はじめからでも残る）
+  // cleared：今回のプレイで朝を迎えた子（章の開放に使う。「美術室からやり直す」で消える）／saved：実績（それでも残る）
   P.cleared = P.cleared || { ...P.saved };
   // shut：今回のプレイで部屋から閉め出された子。最後の放課後のエンディングを迎えるまで、その章には戻れない
   P.shut = P.shut || {};
@@ -3765,11 +3765,11 @@
       <div class="title-side${splash ? ' later' : ''}" id="titleMenu"${splash ? ' hidden' : ''}>
         <p class="eyebrow">試作版　第一章〜第${'一二三四五'[ORDER.length - 1]}章</p>
         ${runs ? `<p class="note">これまでの周回　${runs}</p>` : ''}
-        ${Object.keys(P.cur.results).length ? `<p class="note">第${P.runNo}周　${Object.keys(P.cur.results).length}章まで終えた</p>` : ''}
+        ${Object.keys(P.cur.results).length ? `<p class="note">第${P.runNo}周の記録　${runRecord()}</p>` : ''}
         ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save)}</span></button>` : ''}
-        <button type="button" class="btn ${save ? '' : 'primary'}" id="tSelect">放課後を選ぶ</button>
+        <button type="button" class="btn ${save ? '' : 'primary'}" id="tGo">${save ? `${nextCh().room}の放課後をやり直す` : `${nextCh().room}へ向かう`}<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から${save ? '。今の続きは消えます' : ''}</span></button>
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
-        ${played() ? '<button type="button" class="btn" id="tReset">はじめから</button>' : ''}
+        ${played() ? `<button type="button" class="btn" id="tReset">${CHAPTERS[ORDER[0]].room}からやり直す<span class="sub">わすれもの棚と、この周回の記録が消えます</span></button>` : ''}
         <button type="button" class="btn" id="tShelf">わすれもの棚</button>
         <div class="title-vol" aria-label="音量">
           <label class="vol">BGM<input id="tVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
@@ -3781,7 +3781,7 @@
       </div>`, 'title-screen', 'ov-card title-card');
     ov.style.setProperty('--dusk', Object.keys(P.cur.results).length);
     bgm('title');
-    $('#tSelect').onclick = () => selectRoom();
+    $('#tGo').onclick = () => goRoom();
     if ($('#tReset')) $('#tReset').onclick = () => resetAll();
     $('#tWipe').onclick = () => wipeAll();
     if (save) $('#tCont').onclick = () => continueRun(save);
@@ -3800,7 +3800,7 @@
       ov.addEventListener('click', reveal); document.addEventListener('keydown', reveal);
     }
   }
-  // 一度でも遊んだことがあるか（初めてのときは「はじめから」を出さない）
+  // 一度でも遊んだことがあるか（初めてのときは「美術室からやり直す」を出さない）
   const played = () => !!(P.played || P.runs || loadRun() || SLOTS.some(n => readSlot(n))
     || Object.keys(P.shelf).length || Object.keys(P.cur.results).length);
   function saveLabel(d) {
@@ -3808,27 +3808,28 @@
     const time = d.st === 'unraveled' ? `${hm(sm + SPAN)}過ぎ` : hm(sm + d.ticks * MIN_PER_TICK);
     return `${(CHAPTERS[d.ch] || ART).room}・${time}・チャイム${d.loop}回`;
   }
-  // 放課後を選ぶ：わすれもの棚や記録は引き継いだまま、部屋を選んで始める
-  async function selectRoom() {
+  // この周回で次に入る教室（章は順番に進む。終えた章には戻れない）
+  const nextCh = () => CHAPTERS[ORDER.find(id => selectable(id)) || ORDER[0]];
+  // タイトルに出す、この周回の記録（終えた教室と結果）
+  function runRecord() {
+    const RES = { saved: 'ほどけた', shut: '閉ざされた扉', vanished: '消えた' };
+    return ORDER.map(id => CHAPTERS[id]).filter(ch => P.cur.results[ch.key]).map(ch => `${ch.room}：${RES[P.cur.results[ch.key]]}`).join('　');
+  }
+  // 「〇〇へ向かう」／「〇〇の放課後をやり直す」：わすれもの棚や記録は引き継いだまま、次の教室を17:00（その章のはじめ）から始める
+  async function goRoom() {
+    const ch = nextCh();
     if (loadRun()) {
-      const v = await overlayWait(`<p class="eyebrow">放課後を選ぶ</p><h2>今の放課後の続きは消えます</h2>
-        <p>新しく始めますか？ わすれもの棚や、この周回で終えた章の記録はそのまま残ります。</p>`, '', ['新しく始める', 'やめる']);
+      const v = await overlayWait(`<p class="eyebrow">${ch.label}</p><h2>${ch.room}の放課後を、${hm(ch.startMin || 0)}からやり直しますか？</h2>
+        <p>今の放課後の続きは消えます。わすれもの棚と、この周回で終えた教室の記録はそのまま残ります。</p>`, '', ['やり直す', 'やめる']);
       if (v !== 0) return showTitle();
     }
-    const open = ORDER.filter(id => selectable(id)).map(id => CHAPTERS[id]);
-    const RES = { saved: 'ほどけた', shut: '閉ざされた扉', vanished: '消えた' };
-    const status = ch => { const r = P.cur.results[ch.key]; return r ? `${RES[r]}（この周回では戻れない）` : hasKey(ch.key) ? 'わすれものを持っている' : 'まだ終えていない'; };
-    const c = await overlayWait(`<p class="eyebrow">放課後を選ぶ　第${P.runNo}周</p><h2>どの放課後から始めますか？</h2>
-      <p class="note">${ORDER.map(id => CHAPTERS[id]).map(ch => unlocked(ch.id) ? `${ch.label}：${status(ch)}` : '？？？（前の章を終えると開放）').join('<br>')}</p>`,
-      '', [...open.map(ch => ch.room), 'やめる']);
-    if (c >= open.length) return showTitle();
-    startRun(open[c].id);
+    startRun(ch.id);
   }
-  // はじめから：わすれもの棚と途中の放課後を消して、最初の放課後から始める（朝を迎えた記録などの実績は残す）
+  // 美術室からやり直す：わすれもの棚と途中の放課後を消して、最初の教室から始める（朝を迎えた記録などの実績は残す）
   async function resetAll() {
-    const v = await overlayWait(`<p class="eyebrow">はじめから</p><h2>最初の放課後から始めますか？</h2>
-      <p>わすれもの棚と、途中の放課後、この周回で終えた章の記録が消えます。美術室から順番に始まります。</p>
-      <p class="note">救えた実績・見たエンディング・周回数は残ります。</p>`, '', ['はじめから始める', 'やめる']);
+    const v = await overlayWait(`<p class="eyebrow">${CHAPTERS[ORDER[0]].room}からやり直す</p><h2>${CHAPTERS[ORDER[0]].room}から、もう一度始めますか？</h2>
+      <p>わすれもの棚と、途中の放課後、この周回で終えた教室の記録が消えます。${CHAPTERS[ORDER[0]].room}から順番に始まります。</p>
+      <p class="note">救えた実績・見たエンディング・周回数は残ります。</p>`, '', ['やり直す', 'やめる']);
     if (v !== 0) return showTitle();
     P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.cur = { results: {} }; P.runNo = (P.runNo || 1) + 1; saveP(); clearRun();
     startRun('art');
