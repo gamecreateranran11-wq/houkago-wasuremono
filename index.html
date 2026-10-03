@@ -45,14 +45,22 @@
   .bar-actions .menu-panel button:hover { border-color: var(--akane); }
   .menu-panel .vol { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; font-size: 13px; }
   .menu-panel .vol input { width: 110px; accent-color: var(--akane); }
+  /* 文字の速さ：4つのボタンから1つを選ぶ */
+  .speed { display: flex; flex-direction: column; gap: 5px; padding: 6px 10px; font-size: 13px; }
+  .seg { display: flex; gap: 4px; }
+  .seg button, .bar-actions .menu-panel .seg button { flex: 1; text-align: center; padding: 5px 6px; font-size: 12px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; color: var(--ink); cursor: pointer; }
+  .seg button[aria-pressed="true"], .bar-actions .menu-panel .seg button[aria-pressed="true"] { border-color: var(--akane); background: #3a2a2e; }
+  .settings { display: flex; flex-direction: column; }
+  .settings .set-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .settings .set-row:first-child { padding-top: 4px; }
+  .settings .set-label { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+  .settings .vol { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+  .settings .vol input { flex: 1; max-width: 240px; accent-color: var(--akane); }
   .title-redo { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px 10px; border: 1px solid var(--line); border-radius: 6px; background: rgba(31, 26, 40, .6); }
   .title-redo .label { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
   .btn-sub { background: none; border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; text-align: left; font-size: 13px; color: var(--ink); cursor: pointer; }
   .btn-sub:hover { border-color: var(--akane); }
   .btn-sub .sub { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
-  .title-vol { display: flex; flex-direction: column; gap: 2px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: rgba(31, 26, 40, .6); }
-  .title-vol .vol { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; padding: 4px 0; }
-  .title-vol .vol input { flex: 1; max-width: 220px; accent-color: var(--akane); }
 
   .scene-wrap { flex: 0 0 auto; min-height: 160px; display: flex; align-items: flex-start; justify-content: center; }
   .scene { position: relative; width: 100%; max-width: calc(58vh * 1.5); aspect-ratio: 3 / 2; margin: 0 auto; overflow: hidden; border: 1px solid var(--line); border-radius: 4px; background: #1c1620; }
@@ -347,6 +355,7 @@
         <button id="btnOpenMenu" type="button" aria-expanded="false" aria-controls="menuPanel">メニュー</button>
         <div id="menuPanel" class="menu-panel" hidden>
           <button id="btnSkip" type="button" aria-pressed="true">既読スキップ</button>
+          <div class="speed"><span>文字の速さ</span><div class="seg" id="spdMenu"></div></div>
           <label class="vol">BGM<input id="volBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
           <label class="vol">効果音<input id="volSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label>
           <button id="btnMenu" type="button">タイトルへ</button>
@@ -481,6 +490,17 @@
     readTimer = setTimeout(() => { try { localStorage.setItem(READ_KEY, JSON.stringify([...READ])); } catch (e) {} }, 400);
   }
   if (P.skip === undefined) P.skip = true;
+  // 文字の速さ：[値, 名前, 1文字あたりのミリ秒]。一括は、文章をすぐに全部出す
+  const SPEEDS = [['instant', '一括', 0], ['fast', '早い', 16], ['normal', '普通', 32], ['slow', '遅い', 55]];
+  if (!SPEEDS.some(([k]) => k === P.textSpeed)) P.textSpeed = 'normal';
+  const charMs = () => (SPEEDS.find(([k]) => k === P.textSpeed) || SPEEDS[2])[2];
+  const speedButtons = () => SPEEDS.map(([k, label]) => `<button type="button" data-sp="${k}" aria-pressed="${P.textSpeed === k}">${label}</button>`).join('');
+  // 画面にあるすべての「文字の速さ」ボタンを、今の設定に合わせる
+  function syncSpeed() { document.querySelectorAll('.seg [data-sp]').forEach(b => b.setAttribute('aria-pressed', b.dataset.sp === P.textSpeed ? 'true' : 'false')); }
+  function wireSpeed(root) {
+    root.innerHTML = speedButtons();
+    root.querySelectorAll('[data-sp]').forEach(b => b.onclick = e => { e.stopPropagation(); P.textSpeed = b.dataset.sp; saveP(); syncSpeed(); });
+  }
 
   /* 組み合わせアイテム：素材を集めて「組み合わせる」まで、それに依存するストーリーは一切進まない。
      判定は「組み合わせた完成品を今の放課後で持っているか」。チャイムで持ち物が消えたら、組み直すまで再び止まる。 */
@@ -573,8 +593,8 @@
         if (!done) { finish(); return; }
         advance = null; more.hidden = true; res();
       };
-      if (reduce) finish();
-      else { txt.textContent = ''; timer = setInterval(() => { if (g !== gen) { clearInterval(timer); return; } i++; txt.textContent = full.slice(0, i); if (i >= full.length) finish(); }, 32); }
+      if (reduce || !charMs()) finish();
+      else { txt.textContent = ''; timer = setInterval(() => { if (g !== gen) { clearInterval(timer); return; } i++; txt.textContent = full.slice(0, i); if (i >= full.length) finish(); }, charMs()); }
     });
   }
   // 立ち絵の表情差分：normal（警戒）/ angry / surprise / sad / down / smile
@@ -3904,10 +3924,7 @@
         <button type="button" class="btn" id="tShelf">わすれもの棚</button>
         ${ostOpen() ? '<button type="button" class="btn" id="tOst">サウンドトラック<span class="sub">おまけ</span></button>' : ''}
         ${redoHTML(save)}
-        <div class="title-vol" aria-label="音量">
-          <label class="vol">BGM<input id="tVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
-          <label class="vol">効果音<input id="tVolSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label>
-        </div>
+        <button type="button" class="btn" id="tSet">設定<span class="sub">既読スキップ・文字の速さ・音量</span></button>
         <button type="button" class="btn-reset" id="tWipe">プレイデータをリセット</button>
         <p class="note">このゲームはオートセーブです。新しく調べたり話し終えたりするたびに、自動で記録されます。</p>
         <p class="note">この作品には、自傷・死・いじめ・家庭での心理的虐待を示唆する表現が含まれます。</p>
@@ -3920,7 +3937,7 @@
     if (save) $('#tCont').onclick = () => continueRun(save);
     $('#tShelf').onclick = showShelf;
     if ($('#tOst')) $('#tOst').onclick = showSoundtrack;
-    wireVol($('#tVolBgm'), $('#tVolSe'));
+    $('#tSet').onclick = showSettings;
     if ($('#tLoad')) $('#tLoad').onclick = () => showSlots('load');
     if (splash) {
       const reveal = e => {
@@ -4047,6 +4064,26 @@
     }
     idle();
   }
+  /* ---------- 設定（タイトルから開く）：既読スキップ・文字の速さ・音量 ---------- */
+  function showSettings() {
+    openOverlay(`<p class="eyebrow">タイトル</p><h2>設定</h2>
+      <div class="settings">
+        <div class="set-row"><span class="set-label">既読スキップ</span><div class="seg" id="setSkip">
+          <button type="button" data-skip="1" aria-pressed="${!!P.skip}">ON</button><button type="button" data-skip="0" aria-pressed="${!P.skip}">OFF</button></div></div>
+        <div class="set-row"><span class="set-label">文字の速さ</span><div class="seg" id="setSpeed"></div></div>
+        <div class="set-row"><span class="set-label">音量</span>
+          <label class="vol">BGM<input id="sVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
+          <label class="vol">効果音<input id="sVolSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label></div>
+      </div>
+      <div class="row"><button type="button" class="btn primary" id="setBack">戻る</button></div>`);
+    card.querySelectorAll('#setSkip [data-skip]').forEach(b => b.onclick = () => {
+      P.skip = b.dataset.skip === '1'; saveP(); if (R) render();
+      card.querySelectorAll('#setSkip [data-skip]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.skip === '1') === P.skip ? 'true' : 'false'));
+    });
+    wireSpeed($('#setSpeed'));
+    wireVol($('#sVolBgm'), $('#sVolSe'));
+    $('#setBack').onclick = () => showTitle();
+  }
   /* ---------- サウンドトラック（放課後を一度終えると、タイトルに出る） ---------- */
   // [曲, 題, 版の印, 説明]。ゲームの中で流れる順に並べる。『放課後』はソウタとハルの連弾曲。ソロなどの版は、題のあとの印でわかるようにする
   const OST = [
@@ -4161,6 +4198,7 @@
   }
   wireVol($('#volBgm'), $('#volSe'));
   $('#btnSkip').onclick = e => { e.stopPropagation(); P.skip = !P.skip; saveP(); render(); };
+  wireSpeed($('#spdMenu'));
   // メニュー：ログ・既読スキップ・音・タイトルへ をまとめたパネル
   const menuPanel = $('#menuPanel');
   const setMenu = open => { menuPanel.hidden = !open; $('#btnOpenMenu').setAttribute('aria-expanded', open ? 'true' : 'false'); };
