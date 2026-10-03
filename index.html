@@ -191,6 +191,7 @@
   .lu-slot { position: absolute; transform: translate(-50%, -50%); background: none; border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; touch-action: manipulation; }
   .lu-slot b { display: flex; align-items: center; justify-content: center; min-width: 56px; height: 30px; padding: 0 6px; border-radius: 15px; background: #c9473c; color: #fff; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,.35); }
   .lu-slot small { font-size: 11px; color: #3c4a63; background: rgba(243,240,232,.85); padding: 0 4px; border-radius: 3px; }
+  .lu-slot small .lu-role { display: block; font-size: 10px; color: #b8423c; text-align: center; }
   .lu-slot.sel b { outline: 3px solid var(--gold); outline-offset: 2px; }
   .lu-bench { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 6px; }
   .lu-bench .label { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
@@ -3382,7 +3383,10 @@
      第四章　体育館（ケイ）
      ================================================================ */
   // 作戦ボード：5つのポジションとベンチに、6人のマグネットを置く。はじめは顧問の並び（けがのハヤトがゴール下、ケイが司令塔で全時間出場）
-  const LINEUP_POS = [['pg', '司令塔', 50, 82], ['sg', 'シューター', 85, 58], ['sf', '外のフォワード', 15, 58], ['pf', '中のフォワード', 30, 34], ['c', 'ゴール下', 58, 15]];
+  // [位置, 名前, 横, 縦, 役目]。役目はボードに顧問の字で書き添えてある（バスケを知らなくても、手がかりと結びつけられるように）
+  const LINEUP_POS = [['pg', '司令塔', 50, 82, 'ボールを運ぶ'], ['sg', 'シューター', 85, 58, '外から打つ'], ['sf', '外のフォワード', 15, 58, 'いちばん走る'],
+                      ['pf', '中のフォワード', 30, 34, 'ゴール近くへ走りこむ'], ['c', 'ゴール下', 58, 15, '体をぶつけて守る']];
+  const ROLE_LINE = LINEUP_POS.map(([, l, , , r]) => `「${l}：${r}」`).join('');
   const LINEUP_COACH = { pg: 'ケイ', sg: 'ミナト', sf: 'シュン', pf: 'ダイチ', c: 'ハヤト', bench: 'ユウマ' };
   // ケイが本当に組みたかった並び：いちばん走る外のフォワードに自分が入り、けがのハヤトをベンチで休ませる
   const LINEUP_ANSWER = { pg: 'ユウマ', sg: 'ミナト', sf: 'ケイ', pf: 'シュン', c: 'ダイチ', bench: 'ハヤト' };
@@ -3399,7 +3403,7 @@
         <p class="lu-head">ボードの上に、顧問の赤い字：「明日のスタメン　負けたら部長交代」</p>
         <div class="lu-court">${court}
           ${R.know.has('self') ? '<span class="lu-note">いちばん走る場所は、自分</span>' : ''}
-          ${LINEUP_POS.map(([k, l, x, y]) => `<button type="button" class="lu-slot" data-k="${k}" style="left:${x}%;top:${y}%"><b></b><small>${l}</small></button>`).join('')}</div>
+          ${LINEUP_POS.map(([k, l, x, y, r]) => `<button type="button" class="lu-slot" data-k="${k}" style="left:${x}%;top:${y}%"><b></b><small>${l}<span class="lu-role">${r}</span></small></button>`).join('')}</div>
         <div class="lu-bench"><span class="label">ベンチ</span><button type="button" class="lu-slot bench" data-k="bench"><b></b></button></div>
         <div class="row"><button type="button" class="btn primary" id="luOk">この並びにする</button><button type="button" class="btn" id="luNo">やめる</button></div>`);
       const draw = () => card.querySelectorAll('.lu-slot').forEach(b => {
@@ -3574,6 +3578,7 @@
         if (!R.know.has('board')) {
           await say(['体育館の奥の作戦ボード。コートの図に、名前の入ったマグネットが6枚並んでいる。',
                      '上に、顧問の赤い字。「明日のスタメン　負けたら部長交代」',
+                     `5つの位置の横には、それぞれの役目も顧問の字で書き添えてある。${ROLE_LINE}`,
                      'マグネットのまわりに、何度も動かしては戻したような跡がある。']);
           R.know.add('board'); await tick();
         } else if (!R.know.has('self')) {
@@ -3582,7 +3587,7 @@
           await say(['ボードの右下の隅に、消しかけた小さな字が残っていた。', '「いちばん走る場所は、自分」', '……ケイの字だ。']);
           await tick();
         } else if (again('board')) await say(['ボードの右下の隅に、消しかけたケイの小さな字。「いちばん走る場所は、自分」']);
-        else await say(['作戦ボード。コートの図に、6枚のマグネット。上に、顧問の赤い字。「明日のスタメン　負けたら部長交代」', 'マグネットのまわりには、何度も動かしては戻したような跡がある。']);
+        else await say(['作戦ボード。上に、顧問の赤い字。「明日のスタメン　負けたら部長交代」', `位置の横の役目。${ROLE_LINE}`]);
         // 調べたことでチャイムが鳴ったら、ボードには触れない
         if (R.over || R.loop !== lp) return;
         const c = await choose(['マグネットを動かす', 'やめる']);
@@ -3700,8 +3705,8 @@
         const miss = [[!R.know.has('logbook'), '顧問の机'], [!R.know.has('shooters'), '得点板'], [!R.know.has('bag'), 'パイプ椅子のそばの荷物'],
                       [!R.know.has('basket'), 'ボールかご'], [!R.know.has('self'), '作戦ボード（もう一度）']].filter(([m]) => m).map(([, n]) => n);
         if (miss.length) return `マグネットの並べ方の手がかりは、部屋のあちこちにあります。まだ見ていない場所：${miss.join('、')}。`;
-        if ((R.taken.miss || 0) < 2) return 'けがをしているのは誰か、外からシュートを決められるのは誰かを考えて、決まる位置から順に埋めていきましょう。部誌は持ち物から読み返せます。';
-        return 'ハヤトはけがでベンチ。シューターはミナト。周りが見えるユウマは司令塔、ダイチはゴール下。残る二人のうち、「いちばん走る場所」に入るのは……。';
+        if ((R.taken.miss || 0) < 2) return 'けがをしているのは誰か、外からシュートを決められるのは誰かを考えて、決まる位置から順に埋めていきましょう。ボードに書かれた位置の役目と、部屋のメモを見比べてみて。部誌は持ち物から読み返せます。';
+        return 'ハヤトはけがでベンチ。シューターはミナト。ダイチはゴール下。ボードの隅の「いちばん走る場所は、自分」と、位置の役目を見比べると……。ボールを運べない人は、司令塔には入れません。';
       }
       if (!R.know.has('logbook') || !R.know.has('bag')) return 'まだ調べていない場所がありそうです。';
       return 'ケイに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
