@@ -700,7 +700,8 @@
   }
   const moodNow = () => !R || R.over ? null : (R.st === 'unraveled' ? (C.unravelMood || 'unravel') : 'explore');
   function idle() {
-    bgm(moodNow());
+    // 放課後が終わったあと（エンディング・消失・閉め出しなど）は、流れている曲を止めずにそのまま続ける
+    if (!R || !R.over) bgm(moodNow());
     $('#scene').classList.remove('story');
     hideCut();
     setTalk(false); setCG(false);
@@ -1187,6 +1188,13 @@
     const pump = () => { try { while (bgmGain === gain && bgmNext < a.currentTime + 1.5) { bgmNext += fn(bgmNext, bgmStep++); } } catch (e) {} };
     pump(); bgmTimer = setInterval(pump, 400);
   }
+  // ほどけたあとの温かい曲。校門やエンディングでは、これが流れていれば最初からかけ直さずに続けて聴かせる
+  const WARM = ['unravel', 'musicbox'];
+  // ok に入っている曲が流れていれば、そのまま続ける。合わない曲が流れているとき・何も流れていないときだけ name に切り替える
+  function keepBgm(name, ok) {
+    if (!replay && P.sound && bgmName && ok.includes(bgmName)) return;
+    bgm(name);
+  }
   // 鍵の外れる音：合成音では自然に聞こえなかったため、鳴らさない（呼び出し側はそのまま）
   function lockClick() {}
   // 足音（記憶の演出）。kind='run'：子ども二人が駆けていく／'heel'：固いヒールの音がゆっくり通り過ぎる
@@ -1371,7 +1379,8 @@
     else if (sh >= 1) end = ['NORMAL', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。', '振り返ると、閉ざされた扉の教室には、まだ明かりがついていた。', '門の手前で、足が止まる。まだ、ここは通れない。'], 'unravel', 'chime_sky'];
     else end = ['GOOD', '送り出した屋上', ['全員の背中を、校門の向こうへ見送った。', '夕焼けの屋上に、一人で立つ。', '足もとに、生徒手帳が一冊、落ちていた。'], 'unravel', 'chime_sky'];
     P.endings[end[0]] = true;
-    bgm(end[3]);
+    // 朝を迎えるエンディングは、ほどけたあとの曲が流れていれば続けて聴かせる。BADは、その結末の曲が流れていなければ切り替える
+    if (end[0] === 'NORMAL' || end[0] === 'GOOD') keepBgm(end[3], WARM); else bgm(end[3]);
     finishRun(true);
     if (end[0] === 'BAD4') await closedSchool();
     if (end[0] === 'BAD5') await emptySeats(ORDER.map(id => CHAPTERS[id]).filter(ch => res[ch.key] === 'vanished'));
@@ -1544,7 +1553,7 @@
   // stop：主人公が足を止める場所（主人公は、まだ放課後の外へは出られない）
   function ending({ lines, img, alt, stop = '門の手前で、足が止まる。まだ、ここは通れない。' }) {
     const now = chStart() + R.ticks * MIN_PER_TICK;
-    R.over = true; clearRun(); P.saved[C.key] = true; saveP(); render(); idle(); bgm('unravel');
+    R.over = true; clearRun(); P.saved[C.key] = true; saveP(); render(); idle(); keepBgm('unravel', WARM);
     const next = recordResult('saved');
     overlayWait(`<img class="cg" src="img/${img}.webp" alt="${alt}">
       <div class="fade" style="display:flex;flex-direction:column;gap:12px">
@@ -2842,6 +2851,7 @@
     leftover: '', leftoverImg: 'l_left',
     faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile' },
     lost: '返却期限の過ぎた一冊',
+    unravelMood: 'musicbox',
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:771, cy:438, s:0.94）、保健室は ci_clock_infirmary（cx:777, cy:420, s:0.89）を使う
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
     idleFree: '（ミオが待っている。チャイムが鳴る前に）',
@@ -3313,6 +3323,7 @@
     leftover: '', leftoverImg: 'g_left',
     faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', breath: 'kei_breath', blank: 'kei_blank' },
     lost: '片方だけのバッシュ',
+    unravelMood: 'musicbox',
     clock: { img: 'ci_clock_gym', cx: 771, cy: 438, s: 0.94 },
     idleFree: '（ケイが待っている。チャイムが鳴る前に）',
     // 部誌・ケイの荷物を調べ、作戦ボードを解いて（ハヤトの手紙）いたら、対話に入れる
