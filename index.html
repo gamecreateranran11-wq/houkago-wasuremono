@@ -1188,8 +1188,9 @@
     const pump = () => { try { while (bgmGain === gain && bgmNext < a.currentTime + 1.5) { bgmNext += fn(bgmNext, bgmStep++); } } catch (e) {} };
     pump(); bgmTimer = setInterval(pump, 400);
   }
-  // ほどけたあとの温かい曲。校門やエンディングでは、これが流れていれば最初からかけ直さずに続けて聴かせる
-  const WARM = ['unravel', 'musicbox'];
+  // ほどけたときの曲。校門・渡り廊下の見送りやエンディングでは、これが流れていれば最初からかけ直さずに続けて聴かせる
+  // （オルゴールは「ほどける直前」の別の曲なので、流れていたら切り替える）
+  const WARM = ['unravel'];
   // ok に入っている曲が流れていれば、そのまま続ける。合わない曲が流れているとき・何も流れていないときだけ name に切り替える
   function keepBgm(name, ok) {
     if (!replay && P.sound && bgmName && ok.includes(bgmName)) return;
@@ -2851,7 +2852,6 @@
     leftover: '', leftoverImg: 'l_left',
     faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile' },
     lost: '返却期限の過ぎた一冊',
-    unravelMood: 'musicbox',
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:771, cy:438, s:0.94）、保健室は ci_clock_infirmary（cx:777, cy:420, s:0.89）を使う
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
     idleFree: '（ミオが待っている。チャイムが鳴る前に）',
@@ -3233,6 +3233,7 @@
                  ['ミオ', 'ツムギのところに。……それから、あの黒板の字は、私が書いたって、言う', 'grief'],
                  ['ミオ', '許してもらえなくても。……言わなきゃいけないこと、だから', 'crySmile']]);
       R.st = 'unraveled'; render();
+      bgm('unravel');
       await say([`……張りつめていた部屋の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ミオ', '……ねえ。カウンターのペン、取ってくれる？', 'smile']]);
     },
   };
@@ -3323,7 +3324,6 @@
     leftover: '', leftoverImg: 'g_left',
     faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', breath: 'kei_breath', blank: 'kei_blank' },
     lost: '片方だけのバッシュ',
-    unravelMood: 'musicbox',
     clock: { img: 'ci_clock_gym', cx: 771, cy: 438, s: 0.94 },
     idleFree: '（ケイが待っている。チャイムが鳴る前に）',
     // 部誌・ケイの荷物を調べ、作戦ボードを解いて（ハヤトの手紙）いたら、対話に入れる
@@ -3686,6 +3686,7 @@
                  ['ケイ', 'それで、あいつらと一緒に、先生のところに行く', 'smile'],
                  ['ケイ', '部長として。……最後の仕事じゃなくて、最初の仕事として', 'smile']]);
       R.st = 'unraveled'; render();
+      bgm('unravel');
       await say([`……張りつめていた体育館の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ケイ', '……なあ。そこのボール、取ってくれる？', 'smile']]);
     },
   };
