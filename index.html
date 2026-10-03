@@ -1521,7 +1521,6 @@
     P.endings[end[0]] = true;
     // 朝を迎えるエンディングは、ほどけたあとの曲が流れていれば続けて聴かせる。BADは、その結末の曲が流れていなければ切り替える
     if (end[0] === 'NORMAL' || end[0] === 'GOOD') keepBgm(end[3], WARM); else bgm(end[3]);
-    const firstClear = !P.runs;
     finishRun(true);
     if (end[0] === 'BAD4') await closedSchool();
     if (end[0] === 'BAD5') await emptySeats(ORDER.map(id => CHAPTERS[id]).filter(ch => res[ch.key] === 'vanished'));
@@ -1530,7 +1529,7 @@
         <p class="eyebrow">${end[0] === 'NORMAL' || end[0] === 'GOOD' ? end[0] : 'BAD END'}「${end[1]}」</p></div>
       ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。${end[0] === 'GOOD' ? '（屋上への道は、製品版で開きます）' : ''}</p>` : ''}
       <p class="note">この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。</p>
-      ${firstClear ? '<p class="note">タイトルに「サウンドトラック」が増えました。</p>' : ''}`,
+      `,
       end[0] === 'NORMAL' || end[0] === 'GOOD' ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
   // エンディングの場面に切り替える。人物や調べる場所を消し、背景をフェードアウト→フェードインで差し替える
