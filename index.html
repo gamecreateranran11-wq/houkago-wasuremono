@@ -746,7 +746,11 @@
   P.sound = true;
   if (P.bgmVol === undefined) P.bgmVol = 0.7;
   if (P.seVol === undefined) P.seVol = 0.8;
-  const seMul = () => P.seVol / 0.8;
+  // 効果音（チャイム・ピアノ・足音など）はBGMより大きく聞こえるので、全体を0.6倍に抑える（バーの位置はそのまま）
+  const SE_TRIM = 0.6;
+  const seMul = () => P.seVol / 0.8 * SE_TRIM;
+  // 音を作る前から、スマホの消音スイッチ（マナーモード）に従う設定にしておく
+  try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) {}
   const audio = () => {
     actx = actx || new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
     if (actx.state !== 'running') { try { actx.resume(); } catch (e) {} }
@@ -766,16 +770,10 @@
   }
   // スマホは「タップを離した瞬間」などでないと音を出せないので、最初の操作で音の準備をしておく
   let audioReady = false;
-  // 無音の短いwav（iPhoneで、消音スイッチがオンでもゲーム音が鳴るようにする）
-  const SILENT_WAV = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
-  let silentTag = null;
   function unlockAudio() {
     if (!P.sound) return;
-    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
-    try {
-      if (!silentTag) { silentTag = new Audio(SILENT_WAV); silentTag.loop = false; silentTag.setAttribute('playsinline', ''); }
-      if (silentTag.paused) { const pr = silentTag.play(); if (pr && pr.catch) pr.catch(() => {}); }
-    } catch (e) {}
+    // スマホの消音スイッチ（マナーモード）に従う。'ambient' はマナーモード中は鳴らず、ほかのアプリの音楽も止めない
+    try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) {}
     try {
       const a = audio();
       if (!audioReady) {
