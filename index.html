@@ -1110,6 +1110,17 @@
     });
     return beat * 2;
   }
+  // 連弾のフレーズのあと、ソウタがひとりで弾く続き（2章の場面の sotaSolo と同じ音・同じ速さ）。k=0〜3 が4小節、k=4 が終わりの和音
+  function duetSoloCont(t, k) {
+    const beat = 0.14 * 4;
+    if (k < 4) {
+      for (let j = 0; j < 8; j++) piano(nm(SOLO_RH[k * 8 + j]), t + j * 0.14, 0.034, 0.5);
+      [0, 1].forEach(b => SOLO_LH[k * 2 + b].forEach((n, j) => piano(nm(n), t + b * beat + j * 0.28, 0.03, 0.9)));
+      return beat * 2;
+    }
+    ['C2', 'C3', 'G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'].forEach((n, j) => piano(nm(n), t + j * 0.045, j < 2 ? 0.045 : 0.032, 2.6));
+    return beat * 4;
+  }
   const BGM = {
     // タイトル：誰もいない放課後。アコースティックギターと、遠くで練習する吹奏楽のホルン
     title(t, i) {
@@ -1185,7 +1196,8 @@
     sota(t, i) { return sotaBar(t, i, false); },
     // おまけ用：『放課後』連弾版。はじめの4小節は、音楽室で主人公とソウタが合わせたフレーズ（ハルの旋律＋ソウタの伴奏、元の速さ）
     // そこからテンポを上げて、4本の手で弾く本編（duetBar 32小節）へ。最後まで行ったら、はじめの4小節に戻る
-    sotaDuet(t, i) { const k = i % 36; return k < 4 ? duetIntro(t, k) : duetBar(t, k - 4); },
+    // 2章の連弾の場面と同じ流れ：合わせた4小節 → ソウタがひとりで弾く続き4小節 → 終わりの和音 → テンポを上げて本編（duetBar 32小節）
+    sotaDuet(t, i) { const k = i % 41; return k < 4 ? duetIntro(t, k) : k < 9 ? duetSoloCont(t, k - 4) : duetBar(t, k - 9); },
     // ほどけたとき：あたたかい長調。弦の和音とアルペジオに、フルートの旋律
     unravel(t, i) {
       const bar = i % 8, cyc = (i >> 3) % 2, q = 0.8, d = q * 4;
