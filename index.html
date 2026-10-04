@@ -1035,7 +1035,9 @@
     voice(nf(n), t, dur, vol, { attack: 0.003 }); voice(nf(n) * 1.0025, t, dur * 0.9, vol * 0.35, { attack: 0.003 });
     voice(nf(n) * 2.76, t, dur * 0.3, vol * 0.16, { attack: 0.003 }); voice(nf(n) * 4.07, t, dur * 0.16, vol * 0.07, { attack: 0.002 });
   };
-  const piano = (n, t, vol, dur = 1.6) => { voice(nf(n), t, dur, vol, { type: 'triangle', attack: 0.006 }); voice(nf(n) * 2, t, dur * 0.55, vol * 0.4, { attack: 0.006 }); voice(nf(n) * 3, t, dur * 0.3, vol * 0.12, { attack: 0.005 }); voice(nf(n) * 1.001, t, dur, vol * 0.3, { attack: 0.006 }); };
+  // 『放課後』（ソロ・連弾）を鳴らしている間だけ、中低音（C2〜B3）の音量を pianoMidLow 倍にする
+  let pianoMidLow = 1;
+  const piano = (n, t, vol, dur = 1.6) => { if (pianoMidLow !== 1 && n >= 36 && n < 60) vol *= pianoMidLow; voice(nf(n), t, dur, vol, { type: 'triangle', attack: 0.006 }); voice(nf(n) * 2, t, dur * 0.55, vol * 0.4, { attack: 0.006 }); voice(nf(n) * 3, t, dur * 0.3, vol * 0.12, { attack: 0.005 }); voice(nf(n) * 1.001, t, dur, vol * 0.3, { attack: 0.006 }); };
   const guitar = (n, t, vol, dur = 2) => { voice(nf(n), t, dur, vol, { type: 'triangle', attack: 0.004, lp: 2400 }); voice(nf(n) * 2, t, dur * 0.5, vol * 0.3, { attack: 0.004 }); voice(nf(n) * 3, t, dur * 0.25, vol * 0.1, { attack: 0.003 }); voice(nf(n) * 1.002, t, dur * 0.8, vol * 0.3, { type: 'sine', attack: 0.004 }); };
   // グロッケン（鉄琴）：澄んだ高い音。整数倍でない倍音が早く消え、基音だけが長く残る
   const glock = (n, t, vol) => { voice(nf(n), t, 2.6, vol, { attack: 0.002 }); voice(nf(n) * 2.71, t, 0.5, vol * 0.25, { attack: 0.002 }); voice(nf(n) * 5.15, t, 0.15, vol * 0.08, { attack: 0.001 }); };
@@ -1296,11 +1298,11 @@
       return e * 8;
     },
     // ソウタの演奏：連弾で弾いたハルのパートと同じ『放課後』の主題（ミソラソ・ファミレド、ハ長調）から始まる。くわしくは SOTA_PIECE
-    sota(t, i) { return sotaBar(t, i, false); },
+    sota(t, i) { pianoMidLow = 2; try { return sotaBar(t, i, false); } finally { pianoMidLow = 1; } },
     // おまけ用：『放課後』連弾版。はじめの4小節は、音楽室で主人公とソウタが合わせたフレーズ（ハルの旋律＋ソウタの伴奏、元の速さ）
     // そこからテンポを上げて、4本の手で弾く本編（duetBar 32小節）へ。最後まで行ったら、はじめの4小節に戻る
     // 2章の連弾の場面と同じ流れ：合わせた4小節 → ソウタがひとりで弾く続き4小節 → 終わりの和音 → テンポを上げて本編（duetBar 32小節）
-    sotaDuet(t, i) { const k = i % 41; return k < 4 ? duetIntro(t, k) : k < 9 ? duetSoloCont(t, k - 4) : duetBar(t, k - 9); },
+    sotaDuet(t, i) { const k = i % 41; pianoMidLow = 2; try { return k < 4 ? duetIntro(t, k) : k < 9 ? duetSoloCont(t, k - 4) : duetBar(t, k - 9); } finally { pianoMidLow = 1; } },
     // ほどけたとき：あたたかい長調。弦の和音とアルペジオに、フルートの旋律
     unravel(t, i) {
       const bar = i % 8, cyc = (i >> 3) % 2, q = 0.8, d = q * 4;
@@ -2401,7 +2403,7 @@
   function sotaBeat(i) {
     const [rh, lh] = PRIMO[i];
     rh.forEach((n, k) => pianoNote(noteF(n), k ? 0.07 : 0.09, 0.02 + k * S16));
-    lh.forEach((n, k) => pianoNote(noteF(n), 0.08, 0.02 + k * S16 * 2));
+    lh.forEach((n, k) => pianoNote(noteF(n), 0.16, 0.02 + k * S16 * 2));   // 中低音は2倍
   }
   // フレーズのあと、ソウタがひとりで弾く続き（2/4拍子で4小節＋終止）。2オクターブにわたる分散和音と駆け下りるパッセージ
   const SOLO_RH = ['E5', 'G5', 'C6', 'E6', 'D6', 'C6', 'B5', 'A5',
@@ -2412,9 +2414,9 @@
   function sotaSolo() {
     const t0 = 0.3;
     SOLO_RH.forEach((n, k) => pianoNote(noteF(n), 0.075, t0 + k * S16));
-    SOLO_LH.forEach((pair, beat) => pair.forEach((n, k) => pianoNote(noteF(n), 0.07, t0 + beat * S16 * 4 + k * S16 * 2)));
+    SOLO_LH.forEach((pair, beat) => pair.forEach((n, k) => pianoNote(noteF(n), 0.14, t0 + beat * S16 * 4 + k * S16 * 2)));
     const end = t0 + SOLO_RH.length * S16;
-    ['C2', 'C3', 'G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'].forEach((n, k) => pianoNote(noteF(n), k < 2 ? 0.1 : 0.07, end + k * 0.045));
+    ['C2', 'C3', 'G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'].forEach((n, k) => pianoNote(noteF(n), k < 2 ? 0.2 : k === 2 ? 0.14 : 0.07, end + k * 0.045));
     return (end + 2.2) * 1000;
   }
   // 鍵盤：ハルのパートを弾く。duet のときはソウタのパートも重ねて鳴らす
