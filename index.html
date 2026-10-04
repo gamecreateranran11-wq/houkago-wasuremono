@@ -1515,7 +1515,7 @@
     // いま映っている背景がどの部屋かで決める（BAD5 で別の部屋の背景を順に映すときも、針を出す）
     const bg = $('#bgImg'), sv = $('#bgClock'), src = bg.getAttribute('src');
     let chs = []; try { chs = Object.values(CHAPTERS); } catch (e) {}
-    const room = chs.find(ch => ch.bgClock && src === `img/${ch.bg}.webp`), ck = room && room.bgClock;
+    const room = chs.find(ch => ch.bgClock && (src === `img/${ch.bg}.webp` || src === `img/${ch.bg}_unlit.webp`)), ck = room && room.bgClock;
     sv.style.display = ck ? '' : 'none';
     if (!ck) return;
     sv.style.opacity = bg.style.opacity;
@@ -1732,7 +1732,7 @@
       bg.style.opacity = '1'; await wait(750);
     };
     for (const ch of chs) {
-      await show(ch.bg, ch);
+      await show(`${ch.bg}_unlit`, ch);   // 消えた子の部屋は、明かりが消えたまま
       await line(`${ch.room}。${ch.name}の座っていた場所に、${ch.lost}だけが残っている。`);
     }
     await line('机の上に、わすれものだけが並んでいた。');
