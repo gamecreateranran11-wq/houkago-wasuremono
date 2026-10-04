@@ -3555,8 +3555,9 @@
     hideCut();
     await say(['ケイのすぐそばに、ボールがひとつ転がっている。', 'ケイはしばらくそれを見つめていたが、やがて自分で手を伸ばして、拾い上げた。',
                'ボールを二、三度床について、確かめるように指先で回す。',
-               ['ケイ', '……一本だけ、いい？', 'smile'],
-               'ケイは立ち上がると、ゴールに向かって、一度だけシュートを打った。',
+               ['ケイ', '……一本だけ、いい？', 'softSmile']]);
+    R.standing = true;   // 立ち上がってシュート。ここからは立ち絵
+    await say(['ケイは立ち上がると、ゴールに向かって、一度だけシュートを打った。',
                'ボールは高い弧を描いて、リングに触れないまま、ネットだけを揺らした。',
                ['ケイ', '……入った', 'smile'],
                ['ケイ', '……土曜、これが打てたらいいな', 'smile'],
@@ -3581,7 +3582,7 @@
     sit: { src: 'kei_sit', style: 'left:79.5%;top:45%;height:22%' },
     // 消えたあと床に残るバッシュ（わすれものの絵と同じ靴を、ケイが座っていた床に置いた重ね絵）
     leftover: '', leftoverImg: 'g_left',
-    faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', breath: 'kei_breath', blank: 'kei_blank', teary: 'kei_teary' },
+    faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', softSmile: 'kei_smile', breath: 'kei_breath', blank: 'kei_blank', teary: 'kei_teary' },
     lost: '片方だけのバッシュ',
     clock: { img: 'ci_clock_gym', cx: 868, cy: 448, s: 0.86 },
     idleFree: '（ケイが待っている。チャイムが鳴る前に）',
@@ -3968,7 +3969,7 @@
                  ['ケイ', '部長として。……最後の仕事じゃなくて、最初の仕事として', 'crySmile']]);
       R.st = 'unraveled'; render();
       bgm('unravel');
-      await say([`……張りつめていた体育館の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ケイ', '……なあ。そこのボール、取ってくれる？', 'smile']]);
+      await say([`……張りつめていた体育館の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ケイ', '……なんか、久しぶりにボール触りたくなった', 'softSmile']]);
     },
   };
 
