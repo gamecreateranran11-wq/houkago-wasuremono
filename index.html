@@ -929,12 +929,14 @@
     return revIn;
   }
   // 1音：立ち上がり attack、持続、release で消える。lp＝こもらせる周波数、vib＝ビブラート（vibDelay 秒かけて深くなる）、det＝重ねる音のずれ（セント）
-  function voice(freq, t, dur, vol, { type = 'sine', attack = 0.02, release = null, lp = 0, q = 0.5, vib = 0, vibRate = 5, vibDelay = 0, det = null } = {}) {
+  function voice(freq, t, dur, vol, { type = 'sine', attack = 0.02, release = null, lp = 0, q = 0.5, vib = 0, vibRate = 5, vibDelay = 0, det = null, glide = 0 } = {}) {
     if (vol <= 0 || !bgmGain) return;
     const a = audio(), g = a.createGain();
     let dest = g;
     if (lp) { const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; f.Q.value = q; f.connect(g); dest = f; }
     const oscs = (det || [0]).map(d => { const o = a.createOscillator(); o.type = type; o.frequency.value = freq; o.detune.value = d; o.connect(dest); return o; });
+    // glide：半音 glide 個ぶん下からずり上がって目的の音に入る（弦楽器の、すすり泣くようなポルタメント）
+    if (glide) oscs.forEach(o => { o.frequency.setValueAtTime(freq * Math.pow(2, -glide / 12), t); o.frequency.exponentialRampToValueAtTime(freq, t + 0.16); });
     if (vib) {
       const l = a.createOscillator(), lg = a.createGain(); l.frequency.value = vibRate;
       lg.gain.setValueAtTime(vibDelay ? 0 : freq * vib, t); if (vibDelay) lg.gain.linearRampToValueAtTime(freq * vib, t + vibDelay);
@@ -968,6 +970,30 @@
   const viola = (n, t, dur, vol) => bowed(n, t, dur, vol, 1600, 5.4);
   const cello = (n, t, dur, vol) => bowed(n, t, dur, vol, 1000, 5);
   const contrabass = (n, t, dur, vol) => bowed(n, t, dur, vol, 480, 4.4);
+  // 歌うチェロ（『胸の奥の声』の主旋律）：高い音ほど明るく鳴らし、深いビブラートと、弓をふくらませる長い立ち上がり。
+  // cry＝下からすべりこむポルタメント（泣く・叫ぶ）。C2 から C6 まで、チェロの全音域で使う
+  const celloSing = (n, t, dur, vol, cry = 0) => {
+    const at = Math.min(0.55, dur * 0.4), rl = Math.min(0.8, dur * 0.4), lp = Math.min(4200, nf(n) * 7 + 500);
+    const v = vol * (n >= 72 ? 0.8 : 1);
+    voice(nf(n), t, dur, v, { type: 'sawtooth', attack: at, release: rl, lp, q: 0.8, det: [-6, 0, 5], vib: n >= 69 ? 0.0075 : 0.006, vibRate: 5.3, vibDelay: 0.22, glide: cry });
+    voice(nf(n), t, dur, v * 0.4, { type: 'triangle', attack: at, release: rl, glide: cry });
+    if (cry) air(t, Math.min(dur, 0.6), v * 0.25, nf(n) * 3);
+  };
+  // 扉を叩く音：木の扉を、こぶしで「ドン」。低い胴鳴りと、木の板の響き（スマホのスピーカーでも聞こえる高さを混ぜる）
+  function knock(t, vol) {
+    if (!bgmGain) return;
+    const a = audio();
+    [[190, 0.2, 'sine'], [120, 0.28, 'triangle'], [310, 0.09, 'triangle']].forEach(([f, d, type]) => {
+      const o = a.createOscillator(), g = a.createGain(); o.type = type;
+      o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 0.7, t + d);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0005, t + d);
+      o.connect(g).connect(bgmGain); o.start(t); o.stop(t + d + 0.02);
+    });
+    const s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain();
+    s.buffer = getNoise(); fl.type = 'bandpass'; fl.frequency.value = 750; fl.Q.value = 1.4;
+    g.gain.setValueAtTime(vol * 3, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.1);
+    s.connect(fl).connect(g).connect(bgmGain); s.start(t); s.stop(t + 0.14);
+  }
   const flute = (n, t, dur, vol) => {
     voice(nf(n), t, dur, vol, { attack: 0.08, release: Math.min(0.35, dur * 0.4), vib: 0.006, vibRate: 5.2, vibDelay: 0.3 });
     voice(nf(n) * 2, t, dur, vol * 0.1, { type: 'triangle', attack: 0.08, release: Math.min(0.3, dur * 0.4), lp: 3200 });
@@ -1070,7 +1096,7 @@
       const pat = len >= 8 ? [0, 1, 2, 3, 4, 3, 2, 1] : len >= 4 ? [0, 2, 3, 4] : [0, 3];
       pat.forEach((k, m) => {
         const n = v[Math.min(k, v.length - 1)];
-        piano(n, at + m * e * (len / pat.length), m === 0 ? 0.045 : 0.02 + (v.length - k) * 0.002, m === 0 ? 2.6 : 1.7);
+        piano(n, at + m * e * (len / pat.length), m === 0 ? 0.08 : (k <= 1 ? 0.034 : 0.022) + (v.length - k) * 0.002, m === 0 ? 2.6 : 1.7);
       });
       at += len * e;
     });
@@ -1100,9 +1126,9 @@
     // ハル左手：低音のオクターブ
     segs.forEach(g => {
       const r = g.v[0], x = t + g.at * e;
-      piano(r - 12 >= 21 ? r - 12 : r, x, 0.042, 2.6); piano(r, x, 0.03, 2.4);
-      if (g.len >= 8) { piano(g.v[1] - 12, x + 4 * e, 0.03, 2.0); piano(g.v[1], x + 4 * e, 0.022, 1.8); }
-      if (cyc) for (let k = 1; k < g.len; k += 2) piano(r + 12, x + k * e, 0.013, 0.32);
+      piano(r - 12 >= 21 ? r - 12 : r, x, 0.075, 2.6); piano(r, x, 0.05, 2.4);
+      if (g.len >= 8) { piano(g.v[1] - 12, x + 4 * e, 0.052, 2.0); piano(g.v[1], x + 4 * e, 0.036, 1.8); }
+      if (cyc) for (let k = 1; k < g.len; k += 2) piano(r + 12, x + k * e, 0.02, 0.32);
     });
     // ハル右手：対旋律を6度の重音で（中音域）
     seq(P_.hal[bar], t, e, (n, x, len) => {
@@ -1149,7 +1175,7 @@
       const i = k * 2 + b, x = t + b * beat, [rh, lh] = PRIMO[i];
       piano(nm(MELODY[i]), x, 0.05, beat * 1.4);                                  // ハルの旋律（主人公が弾いたところ）
       rh.forEach((n, j) => piano(nm(n), x + j * 0.14, j ? 0.026 : 0.032, 0.5));   // ソウタ右手：16分音符
-      lh.forEach((n, j) => piano(nm(n), x + j * 0.28, 0.03, 0.9));                // ソウタ左手：8分音符
+      lh.forEach((n, j) => piano(nm(n), x + j * 0.28, 0.05, 0.9));                // ソウタ左手：8分音符
     });
     return beat * 2;
   }
@@ -1158,10 +1184,10 @@
     const beat = 0.14 * 4;
     if (k < 4) {
       for (let j = 0; j < 8; j++) piano(nm(SOLO_RH[k * 8 + j]), t + j * 0.14, 0.034, 0.5);
-      [0, 1].forEach(b => SOLO_LH[k * 2 + b].forEach((n, j) => piano(nm(n), t + b * beat + j * 0.28, 0.03, 0.9)));
+      [0, 1].forEach(b => SOLO_LH[k * 2 + b].forEach((n, j) => piano(nm(n), t + b * beat + j * 0.28, 0.05, 0.9)));
       return beat * 2;
     }
-    ['C2', 'C3', 'G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'].forEach((n, j) => piano(nm(n), t + j * 0.045, j < 2 ? 0.045 : 0.032, 2.6));
+    ['C2', 'C3', 'G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'].forEach((n, j) => piano(nm(n), t + j * 0.045, j < 2 ? 0.075 : 0.032, 2.6));
     return beat * 4;
   }
   const BGM = {
@@ -1191,25 +1217,40 @@
       if (mel) seq(mel, t, sp, (n, x) => orgel(n + 12, x, 0.016, 2.6));
       return d;
     },
-    // 核心の場面①：チェロ・ビオラ・コントラバスの弦とフルート。2周目はチェロが旋律を歌い、ビオラがフルートに寄り添う
+    // 核心の場面①『胸の奥の声』（ニ短調、16小節でひと回り）
+    // フルート＝やさしく温かい記憶、チェロ＝静かな涙と悲痛な叫び。二つが別々の主旋律として入り混じり、ビオラとコントラバスが支える
+    // 前半（1〜8小節）：フルートが記憶の旋律を歌い、チェロは中低音で、ため息のように下がる音で答える（静かな涙）。4小節目は C2 から駆け上がる
+    // 後半（9〜16小節）：チェロが主役になり、オクターブの跳躍とすべりこみで高音（C6）まで叫ぶ。フルートは高いところで、記憶の断片を重ねる
+    // 最後の小節で、チェロは高音から D2 まで一気に崩れ落ちる。2周目の前半は、チェロがフルートの記憶の旋律をオクターブ下で追いかける
     core(t, i) {
-      const q = 1.2, bar = i % 8, cyc = (i >> 3) % 2;
-      const root = [33, 29, 38, 28, 29, 36, 38, 28][bar];
-      const vla = [[60, 64], [60, 65], [62, 65], [59, 64], [60, 57], [60, 64], [62, 57], [59, 56]][bar];
-      const cel = [[45, 52], [41, 48], [50, 45], [40, 47], [41, 45], [48, 43], [50, 53], [52, 47]][bar];
-      const mel = [[[76, 1], [74, 1], [72, 2]], [[69, 1], [72, 1], [77, 2]], [[77, 1], [76, 0.5], [74, 0.5], [69, 2]], [[71, 1], [68, 1], [64, 2]],
-                   [[72, 1.5], [74, 0.5], [76, 1], [77, 1]], [[79, 2], [76, 1], [72, 1]], [[74, 1], [77, 1], [81, 1.5], [79, 0.5]], [[76, 2], [74, 1], [71, 1]]][bar];
-      contrabass(root, t, q * 4 + 0.2, 0.03);
-      viola(vla[0], t, q * 2 + 0.15, 0.016); viola(vla[1], t + q * 2, q * 2 + 0.15, 0.016);
-      if (cyc && bar < 4) {
-        // 2周目の前半：チェロが旋律を低く歌い、フルートは長い音で上から支える
-        seq(mel, t, q, (n, x, len) => cello(n - 24, x, len * 1.02, 0.03));
-        flute(mel[0][0], t, q * 4, 0.012);
-      } else {
-        cello(cel[0], t, q * 2 + 0.1, 0.028); cello(cel[1], t + q * 2, q * 2 + 0.1, 0.026);
-        if (cyc || bar % 2 === 0 || bar >= 4) seq(mel, t, q, (n, x, len) => flute(n, x, len * 0.98, 0.028));
-        if (cyc && bar >= 4) seq(mel, t, q, (n, x, len) => viola(n - 12, x, len, 0.009));
-      }
+      const q = 1.15, bar = i % 16, cyc = (i >> 4) % 2, late = bar >= 8;
+      //             Dm  B♭  F   C   Gm  F   E   A   B♭  F   Gm  Dm  B♭  C   A7  Dm
+      const root = [38, 34, 41, 36, 31, 41, 40, 33, 34, 33, 31, 38, 34, 36, 33, 38][bar];
+      const vla = [[57, 62], [58, 62], [57, 60], [55, 60], [58, 62], [57, 60], [58, 64], [57, 61],
+                   [58, 65], [57, 60], [58, 62], [57, 62], [58, 62], [55, 64], [57, 61], [57, 62]][bar];
+      const flu = [[[77, 2], [76, 1], [74, 1]], [[74, 1.5], [77, 0.5], [81, 2]], [[81, 1], [79, 1], [77, 1], [76, 1]], [[76, 3], [0, 1]],
+                   [[74, 1], [77, 1], [79, 1], [82, 1]], [[81, 2], [77, 2]], [[76, 1], [79, 1], [77, 1], [76, 1]], [[74, 4]],
+                   [[0, 1], [86, 1], [84, 1], [82, 1]], [[81, 2], [0, 1], [84, 1]], [[82, 1], [81, 1], [79, 2]], [[81, 4]],
+                   [[0, 2], [86, 1], [84, 1]], [[88, 4]], [[85, 2], [88, 2]], [[86, 4]]][bar];
+      // チェロ：[音, 拍, すべりこみ（半音）]
+      const cel = [[[57, 2], [55, 1], [53, 1]], [[53, 2, 1], [50, 2]], [[48, 2], [53, 1], [52, 1]], [[36, 1], [43, 1], [52, 1], [60, 1, 2]],
+                   [[58, 2, 1], [57, 1], [55, 1]], [[57, 3], [53, 1]], [[52, 1], [55, 1], [58, 1, 1], [57, 1]], [[50, 3], [49, 1]],
+                   [[62, 1], [74, 2, 3], [72, 1]], [[72, 1], [69, 1], [77, 2, 2]], [[79, 2, 2], [77, 1], [74, 1]], [[76, 1], [74, 1], [69, 2, 1]],
+                   [[70, 1], [74, 1], [77, 1], [82, 1, 2]], [[84, 2, 3], [81, 1], [79, 1]], [[82, 2, 2], [81, 1], [73, 1, 1]], [[74, 2, 1], [62, 1], [38, 1]]][bar];
+      // コントラバス：前半は長い音、後半は2分音符で歩くように支える
+      if (late) { contrabass(root - 12, t, q * 2 + 0.2, 0.034); contrabass(root - 12 + (bar === 14 ? 4 : 7), t + q * 2, q * 2 + 0.2, 0.028); }
+      else contrabass(root - 12, t, q * 4 + 0.25, 0.032);
+      // ビオラ：和音の内声。前半は全音符、後半は小節の頭と3拍目で弓を返す
+      if (late) [0, 2].forEach(k => { viola(vla[0], t + k * q, q * 2 + 0.1, 0.013); viola(vla[1], t + k * q, q * 2 + 0.1, 0.011); });
+      else { viola(vla[0], t, q * 4 + 0.15, 0.013); viola(vla[1], t, q * 4 + 0.15, 0.011); }
+      // チェロ：前半は静かな涙（中低音・弱め）、後半は叫び（高音・強め）。2周目は全体に少し強く。いちばん低い音は少し太く
+      const cv = (late ? 0.034 : 0.024) * (cyc ? 1.12 : 1);
+      let x = t;
+      cel.forEach(([n, len, cry]) => { if (n) celloSing(n, x, len * q * (late ? 1.04 : 1.1), cv * (n < 45 ? 1.25 : 1), cry || 0); x += len * q; });
+      // フルート：前半は主旋律、後半は高いところで記憶の断片（チェロより一歩引いて）
+      seq(flu, t, q, (n, xx, len) => flute(n, xx, len * 0.98, late ? 0.017 : 0.026));
+      // 2周目の前半：チェロが同じ記憶の旋律を、半拍遅れてオクターブ2つ下で追いかける（記憶と涙が入り混じる）
+      if (cyc && !late) seq(flu, t + q * 0.5, q, (n, xx, len) => celloSing(n - 24, xx, len * 1.05, 0.012));
       return q * 4;
     },
     // 重い核心（身代わり）：低く沈んだ弦の和音
@@ -1263,7 +1304,7 @@
       contrabass(root - 12, t, q * 4 + 0.3, 0.02);
       // 1周目の後半から：空気の混ざったオルガンの和音を、後ろで長く鳴らす（音域は E4〜B4）（確かにそこにいた人がいなくなった、がらんとした響き）
       if (i >= 4) [[65, 69], [65, 70], [67, 70], [64, 69], [65, 69], [65, 70], [67, 70], [64, 69]][bar]
-        .forEach((n, k) => organ(n, t + k * 0.06, q * 4 + 0.4, k ? 0.007 : 0.009));
+        .forEach((n, k) => organ(n, t + k * 0.06, q * 4 + 0.4, k ? 0.0105 : 0.0135));
       // グロッケン：チャイム（最高音E5）より1オクターブ以上高い音域（F6〜F7）で、16分音符を中心にした細かい旋律を重ねる
       // 和音（Dm・B♭・Gm・A）に沿った旋律。ほんの少しだけ時間を揺らし、2周目はところどころ音が抜ける（こわれやすさ）
       const gl = [[[98, 2], [93, 1], [89, 1], [93, 2], [96, 2], [98, 3], [0, 1], [101, 2], [98, 2]],
@@ -1313,7 +1354,8 @@
       contrabass(33, t, d + 0.4, 0.03); tone(nf(21), t, d + 0.6, 0.05, 'sine', 0.8);
       cello([45, 44, 43, 42, 41, 42, 43, 44][bar], t, d + 0.2, 0.016);
       if (bar % 4 === 3) viola(57, t + 1, 2.8, 0.008);
-      if (i % 2 === 1) tone(nf(28), t + 2, 0.5, 0.08, 'sine', 0.005);
+      // 扉を叩く音：2小節に1回「ドン、ドン、ドン」。返事はない（4小節目ごとに、叩く手が弱くなる）
+      if (i % 2 === 1) { const w = bar % 4 === 3 ? 0.6 : 1; [0, 0.42, 0.84].forEach((o, k) => knock(t + 1.6 + o, (0.22 - k * 0.02) * w)); }
       return d;
     },
     // 緊張（ミオとツムギを引き合わせる場面用）：ゆっくり重い弦の旋律の下で、心臓の音が鳴り続ける（ハ短調）
