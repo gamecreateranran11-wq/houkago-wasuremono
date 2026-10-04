@@ -1386,12 +1386,16 @@
 
   // 背景の壁の時計：針を消した背景に、今の時刻の針を重ねる（C.bgClock は背景 1536×1024 基準の文字盤の中心と半径）
   function syncBgClock() {
-    const bg = $('#bgImg'), sv = $('#bgClock'), ck = C && C.bgClock;
-    const on = !!ck && bg.getAttribute('src') === `img/${C.bg}.webp`;
-    sv.style.display = on ? '' : 'none';
-    if (!on) return;
+    // いま映っている背景がどの部屋かで決める（BAD5 で別の部屋の背景を順に映すときも、針を出す）
+    const bg = $('#bgImg'), sv = $('#bgClock'), src = bg.getAttribute('src');
+    let chs = []; try { chs = Object.values(CHAPTERS); } catch (e) {}
+    const room = chs.find(ch => ch.bgClock && src === `img/${ch.bg}.webp`), ck = room && room.bgClock;
+    sv.style.display = ck ? '' : 'none';
+    if (!ck) return;
     sv.style.opacity = bg.style.opacity;
-    const min = chStart() + (R.st === 'unraveled' ? SPAN + 1 : R.ticks * MIN_PER_TICK);
+    // 遊んでいる章の部屋ならその章の時刻、ほかの部屋なら画面の時計と同じ時刻
+    const [hh, mm] = ($('#clock').textContent || '16:00').split(':').map(Number);
+    const min = room === C ? chStart() + (R.st === 'unraveled' ? SPAN + 1 : R.ticks * MIN_PER_TICK) : (hh - 16) * 60 + mm;
     const hAng = (16 * 30 + min * 0.5) % 360, mAng = (min * 6) % 360;
     const hand = (deg, len, tail, w) => `<polygon transform="rotate(${deg})" points="${-w / 2},${tail} ${-w / 5},${-len} ${w / 5},${-len} ${w / 2},${tail}"/>`;
     sv.innerHTML = `<g transform="translate(${ck.cx} ${ck.cy}) scale(${ck.rx / 100} ${ck.ry / 100})" fill="#1e1a18" opacity=".9">
