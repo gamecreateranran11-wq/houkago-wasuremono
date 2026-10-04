@@ -611,7 +611,7 @@
                       mio: 'angry crysmile despair down grief sad smile surprise', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
-                       blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief' };
+                       blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', lookup: 'down', surpriseup: 'surprise', angryup: 'angry' };
   function faceFile(f) {
     const key = C.key, suf = C.faces[f].slice(key.length + 1);
     if (!R || !R.standing) return suf === 'bust' ? `${key}_s` : `${key}_s_${suf}`;
@@ -2610,7 +2610,7 @@
     id: 'music', key: 'sota', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room', bgClock: { cx: 756, cy: 245, rx: 36, ry: 37 },
     sit: { src: 'sota_sit', style: 'left:54.3%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
-    faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile' },
+    faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
     lost: 'ソウタのパートだけの楽譜',
     idleFree: '（ソウタが待っている。チャイムが鳴る前に）',
     // 探索の途中、ソウタの記憶にまつわる音が聞こえる（ほどけた後は鳴らない）
@@ -2684,7 +2684,7 @@
         await say(['……気がつくと、音楽室にいた。', '窓の外は夕焼け。時計は16:30を指している。', ...locked('音楽室'), 'グランドピアノの前に、男子生徒がひとり座っていた。',
                    '鍵盤の蓋は閉じたまま。両手を膝に置いて、じっとうつむいている。……声をかけてみる。',
                    '「……ピアノ、弾くの？」',
-                   '彼が、少しだけ顔を上げた。胸の名札には「2年 井上ソウタ」とある。目の下に、濃いくまが浮いていた。', '焦点の合わない目。座っているだけなのに、上体がときどき、ふらりと揺れる。',
+                   ['', '彼が、少しだけ顔を上げた。胸の名札には「2年 井上ソウタ」とある。目の下に、濃いくまが浮いていた。', 'lookUp'], ['', '焦点の合わない目。座っているだけなのに、上体がときどき、ふらりと揺れる。', 'lookUp'],
                    ['ソウタ', '……弾かない', 'down'],
                    ['ソウタ', '一人じゃ、弾けない曲だから', 'down'],
                    '「一人じゃ？」',
@@ -2866,7 +2866,7 @@
       if (R.seen.has('played')) {
         await say([['ソウタ', '……なんで、ハルのパート弾けんの', 'surprise']]);
       } else {
-        await say(['「……『放課後』。ハルくんと二人で、弾くはずだった曲だよね」', 'ソウタが、はっと顔を上げた。', ['ソウタ', '……なんで知ってんの', 'surprise']]);
+        await say(['「……『放課後』。ハルくんと二人で、弾くはずだった曲だよね」', ['', 'ソウタが、はっと顔を上げた。', 'surpriseUp'], ['ソウタ', '……なんで知ってんの', 'surpriseUp']]);
       }
       await say([R.seen.has('lid') ? '答えられなかった。ソウタは、鍵盤に目を落とした。' : '答えられなかった。ソウタは、閉じた鍵盤の蓋に目を落とした。',
                  ['ソウタ', '……ハルとは、幼稚園のときから同じピアノ教室だった', 'down'],
@@ -2931,7 +2931,7 @@
       if (a === 'nagu') {
         R.cons++;
         await say([['ソウタ', '……みんな、そう言うんだよ', 'down'],
-                   ['', 'ソウタは、言い返すように顔を上げた。', 'angry'],
+                   ['', 'ソウタは、言い返すように顔を上げた。', 'angryUp'],
                    ['ソウタ', 'でも、言ったのは俺なんだよ', 'angrySad'],
                    ['', 'けれど、すぐに目を伏せた。', 'down'],
                    ['ソウタ', '……お前は、俺のせいじゃないって、ずっと言っててくれる？', 'down'],
