@@ -607,10 +607,10 @@
   const FACE_CACHE = {};
   // 立ち絵は「座った絵（_s）」と「立った絵（_p）」の2組。部屋では座っていて、立ち上がる場面から立った絵に切り替える（R.standing）
   // 立った絵は表情の数が少ないので、ない表情は近いものを使う
-  const STAND_SET = { hina: 'angry down grief sad smile surprise', sota: 'angry crysmile down grief sad smile surprise',
-                      mio: 'angry crysmile down grief sad smile surprise', kei: 'angry crysmile down grief sad smile surprise',
+  const STAND_SET = { hina: 'angry despair down grief sad smile surprise', sota: 'angry crysmile despair down grief sad smile surprise',
+                      mio: 'angry crysmile despair down grief sad smile surprise', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
-  const STAND_NEAR = { despair: 'down', reject: 'angry', shadow: 'down', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
+  const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
                        blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief' };
   function faceFile(f) {
     const key = C.key, suf = C.faces[f].slice(key.length + 1);
@@ -1474,6 +1474,7 @@
   async function chime() {
     // 3回目のチャイムの直前：心に触れていた子は、この先を示す言葉を残す
     if (R.loop + 1 >= 3 && R.st !== 'unraveled' && !R.doom && R.touched && C.lastWords) {
+      R.standing = true; render();  // 時間切れ：その子は立ち上がって、行ってしまう（立った絵の「絶望」を使う）
       bgm('vanish'); await say(C.lastWords); R.late = true;
     }
     // チャイムが鳴っている間は、左上の時計もチャイムの時刻（章の終わり）を指す
