@@ -549,6 +549,8 @@
   // noSkip：既読でも早送りしない（チャイムの夕焼けなど、必ず見せたい演出）
   function line(l, wait = true, noSkip = false) {
     const g = gen;
+    { const [w0, t0] = Array.isArray(l) ? l : ['', l];
+      if (R && !w0 && typeof t0 === 'string' && STAND_RE.test(t0) && !STAND_NOT.test(t0) && !R.standing) { R.standing = true; render(); } }
     if (scr) scr.lines++;
     if (replay) {
       if (replay.skip > 0) {
@@ -602,16 +604,34 @@
   }
   // 立ち絵の表情差分：normal（警戒）/ angry / surprise / sad / down / smile
   let face = 'normal';
-  const FACE_CACHE = {};  // 表情の絵を読み込んで持っておく（切り替えの瞬間に前の絵が残らないように）
+  const FACE_CACHE = {};
+  // 立ち絵は「座った絵（_s）」と「立った絵（_p）」の2組。部屋では座っていて、立ち上がる場面から立った絵に切り替える（R.standing）
+  // 立った絵は表情の数が少ないので、ない表情は近いものを使う
+  const STAND_SET = { hina: 'angry down grief sad smile surprise', sota: 'angry crysmile down grief sad smile surprise',
+                      mio: 'angry crysmile down grief sad smile surprise', kei: 'angry crysmile down grief sad smile surprise',
+                      tsumugi: 'angry crysmile despair down grief sad surprise' };
+  const STAND_NEAR = { despair: 'down', reject: 'angry', shadow: 'down', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
+                       blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief' };
+  function faceFile(f) {
+    const key = C.key, suf = C.faces[f].slice(key.length + 1);
+    if (!R || !R.standing) return suf === 'bust' ? `${key}_s` : `${key}_s_${suf}`;
+    const set = (STAND_SET[key] || '').split(' ');
+    let s = suf;
+    if (s !== 'bust' && !set.includes(s)) s = STAND_NEAR[s] && set.includes(STAND_NEAR[s]) ? STAND_NEAR[s] : 'bust';
+    return s === 'bust' ? `${key}_p` : `${key}_p_${s}`;
+  }
+  // 地の文で子どもが立ち上がったら、そこから立った絵にする（「立ち上がりかけて」「立ち上がろうと」は座ったまま）
+  const STAND_RE = /立ち上がっ|立ち上がると/, STAND_NOT = /立ち上がりかけ|立ち上がろう/;  // 表情の絵を読み込んで持っておく（切り替えの瞬間に前の絵が残らないように）
   function setTalk(on, f) {
     const faces = C ? C.faces : {};
     const pt = $('#portrait'), wasShown = pt.classList.contains('show');
     if (on) {
       // 表情の指定がなければ、話し続けている間は今の表情のまま。出し直すときは「ふつう」から
       const want = f && faces[f] ? f : (wasShown ? face : 'normal');
-      if (want !== face || !pt.getAttribute('src')) {
+      const url = `img/${faceFile(want)}.webp`;
+      if (want !== face || pt.getAttribute('src') !== url) {
         face = want;
-        const url = `img/${faces[want]}.webp`, pre = FACE_CACHE[url];
+        const pre = FACE_CACHE[url];
         if (pre && pre.complete && pre.naturalWidth) pt.src = url;
         else {
           pt.style.visibility = 'hidden'; pt.src = url;
@@ -1397,7 +1417,7 @@
     $('#btnSkip').setAttribute('aria-pressed', P.skip ? 'true' : 'false');
 
     if (!C) return;
-    $('#sitFig').classList.toggle('gone', R.st === 'vanished' || R.st === 'shut');
+    $('#sitFig').classList.toggle('gone', R.st === 'vanished' || R.st === 'shut' || !!R.standing);
     $('#leftover').style.display = R.st === 'vanished' ? '' : 'none';
 
     const inv = $('#inv'); inv.innerHTML = '';
@@ -1711,6 +1731,7 @@
   // ほどけたら開くのは、その部屋の扉。一枚絵はその子の行き先（下校する子は校門、ミオは保健室へ続く渡り廊下）
   // stop：主人公が足を止める場所（主人公は、まだ放課後の外へは出られない）
   function ending({ lines, img, alt, stop = '門の手前で、足が止まる。まだ、ここは通れない。' }) {
+    R.standing = true;  // 見送りの場面では立っている
     const now = chStart() + R.ticks * MIN_PER_TICK;
     R.over = true; clearRun(); P.saved[C.key] = true; saveP(); render(); idle(); keepBgm('unravel', WARM);
     const next = recordResult('saved');
@@ -2216,7 +2237,7 @@
     },
   };
   async function hinaPaint() {
-    R.items.delete('blue'); render();
+    R.items.delete('blue'); R.standing = true; render();  // ヒナはイーゼルの前に立って描く
     await say(['青い絵の具を渡すと、ヒナは新しい画用紙をイーゼルに立てかけた。', '筆が走る。迷いのない線だった。']);
     const pre = new Image(); pre.src = 'img/sky.webp';
     await (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {});
@@ -3392,7 +3413,7 @@
       await say([['ミオ', '……届けなきゃ。この本', 'grief'],
                  ['ミオ', 'ツムギのところに。……それから、あの黒板の字は、私が書いたって、言う', 'grief'],
                  ['ミオ', '許してもらえなくても。……言わなきゃいけないこと、だから', 'crySmile']]);
-      R.st = 'unraveled'; render();
+      R.st = 'unraveled'; R.standing = true; render();  // ミオはカウンターへ立っていく
       bgm('unravel');
       await say([`……張りつめていた部屋の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ミオ', '……ねえ。カウンターのペン、取ってくれる？', 'smile']]);
     },
@@ -3922,7 +3943,7 @@
     if (C.leftoverImg) { lo.innerHTML = `<img src="img/${C.leftoverImg}.webp" alt="" style="width:100%;height:100%;display:block">`; lo.setAttribute('style', 'inset:0;width:100%;height:100%;background:none;box-shadow:none;display:none'); }
     else { lo.innerHTML = ''; lo.setAttribute('style', C.leftover + ';display:none'); }
     face = ''; setTalk(false);
-    Object.values(C.faces).forEach(f => {
+    Object.values(C.faces).flatMap(f => { const suf = f.slice(C.key.length + 1); return suf === 'bust' ? [`${C.key}_s`, `${C.key}_p`] : [`${C.key}_s_${suf}`]; }).forEach(f => {
       const url = `img/${f}.webp`;
       if (!FACE_CACHE[url]) { const i = new Image(); i.src = url; if (i.decode) i.decode().catch(() => {}); FACE_CACHE[url] = i; }
     });
