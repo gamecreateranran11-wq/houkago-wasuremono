@@ -204,7 +204,7 @@
   .wheel button { touch-action: manipulation; user-select: none; -webkit-user-select: none; width: 48px; height: 36px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
   .wheel output { font-family: var(--serif); font-weight: 800; font-size: 34px; width: 48px; text-align: center; background: #120f17; border: 1px solid var(--line); border-radius: 4px; font-variant-numeric: tabular-nums; }
 
-  .title-screen { --dusk: 0; background: linear-gradient(rgba(60, 14, 40, calc(var(--dusk) * .09)), rgba(10, 6, 20, calc(var(--dusk) * .1))), linear-gradient(90deg, rgba(12, 9, 16, .9) 0%, rgba(12, 9, 16, .55) 45%, rgba(12, 9, 16, .1) 100%), url("img/title.webp") center / cover no-repeat, var(--ground); justify-items: start; padding-left: max(16px, 6vw); }
+  .title-screen { --title-img: url("img/title.webp"); background: linear-gradient(90deg, rgba(12, 9, 16, .9) 0%, rgba(12, 9, 16, .55) 45%, rgba(12, 9, 16, .1) 100%), var(--title-img) center / cover no-repeat, var(--ground); justify-items: start; padding-left: max(16px, 6vw); }
   .title-card { background: transparent; border: none; max-width: 560px; flex-direction: row; align-items: stretch; gap: 26px; }
   .vtitle { writing-mode: vertical-rl; font-family: var(--serif); font-weight: 800; font-size: clamp(34px, 9vw, 52px); letter-spacing: .12em; line-height: 1.2; margin: 0; }
   .vtitle span { color: var(--akane); }
@@ -2994,7 +2994,7 @@
     leftover: '', leftoverImg: 'l_left',
     faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile' },
     lost: '返却期限の過ぎた一冊',
-    // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:777, cy:420, s:0.89）を使う
+    // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
     idleFree: '（ミオが待っている。チャイムが鳴る前に）',
     // 貸出記録・縦読み・学級日誌を知ったら、対話に入れる
@@ -3955,7 +3955,9 @@
         <p class="note">このゲームはオートセーブです。新しく調べたり話し終えたりするたびに、自動で記録されます。</p>
         <p class="note">この作品には、自傷・死・いじめ・家庭での心理的虐待を示唆する表現が含まれます。</p>
       </div>`, 'title-screen', 'ov-card title-card');
-    ov.style.setProperty('--dusk', Object.keys(P.cur.results).length);
+    // 進み具合（終えた教室の数）に合わせて、タイトルの絵の時刻を変える（16:00→18:30）
+    const TITLE_IMG = ['title', 'title_1630', 'title_1700', 'title_1730', 'title_1800', 'title_1830'];
+    ov.style.setProperty('--title-img', `url("img/${TITLE_IMG[Math.min(Object.keys(P.cur.results).length, 5)]}.webp")`);
     bgm('title');
     if ($('#tGo')) $('#tGo').onclick = () => goRoom();
     if ($('#tReset')) $('#tReset').onclick = () => resetAll();
