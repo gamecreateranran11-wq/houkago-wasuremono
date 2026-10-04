@@ -80,6 +80,7 @@
   .get-name { margin: 0; font-family: var(--serif); font-weight: 800; font-size: clamp(16px, 2.6vw, 22px); color: #f4ecdd; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
   .scene .bg { inset: 0; width: 100%; height: 100%; object-fit: cover; transition: filter .5s ease, opacity .7s ease; }
   .scene.talk .bg, .scene.talk .sit { filter: brightness(.55) saturate(.8); }
+  .scene .bg-clock { position: absolute; pointer-events: none; }
   .sit { position: absolute; width: auto; transition: filter .5s ease; pointer-events: none; }
   .sit.gone { display: none; }
   .scene .chime-cg { inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .9s ease; pointer-events: none; z-index: 2; }
@@ -371,6 +372,7 @@
     <div id="scene" class="scene" role="group" aria-label="">
       <div id="stage" class="stage">
         <img id="bgImg" class="bg" src="" alt="">
+        <svg id="bgClock" class="bg bg-clock" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display:none"></svg>
         <img id="sitFig" class="sit" src="" alt="">
         <div id="leftover" class="leftover" style="display:none"></div>
       </div>
@@ -1362,12 +1364,28 @@
   }
   function flash() { if (replay) return; const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
 
+  // 背景の壁の時計：針を消した背景に、今の時刻の針を重ねる（C.bgClock は背景 1536×1024 基準の文字盤の中心と半径）
+  function syncBgClock() {
+    const bg = $('#bgImg'), sv = $('#bgClock'), ck = C && C.bgClock;
+    const on = !!ck && bg.getAttribute('src') === `img/${C.bg}.webp`;
+    sv.style.display = on ? '' : 'none';
+    if (!on) return;
+    sv.style.opacity = bg.style.opacity;
+    const min = chStart() + (R.st === 'unraveled' ? SPAN + 1 : R.ticks * MIN_PER_TICK);
+    const hAng = (16 * 30 + min * 0.5) % 360, mAng = (min * 6) % 360;
+    const hand = (deg, len, tail, w) => `<polygon transform="rotate(${deg})" points="${-w / 2},${tail} ${-w / 5},${-len} ${w / 5},${-len} ${w / 2},${tail}"/>`;
+    sv.innerHTML = `<g transform="translate(${ck.cx} ${ck.cy}) scale(${ck.rx / 100} ${ck.ry / 100})" fill="#1e1a18" opacity=".9">
+      ${hand(hAng, 42, 8, 9)}${hand(mAng, 66, 10, 5.5)}<circle r="6"/></g>`;
+  }
+  new MutationObserver(() => syncBgClock()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src', 'style'] });
+
   /* ---------- render ---------- */
   function render() {
     // 1章は30分。調べるたびに MIN_PER_TICK 分進む
     const min = R.ticks * MIN_PER_TICK;
     const free = R.st === 'unraveled';
     $('#clock').textContent = hm(chStart() + min);
+    syncBgClock();
     $('#remain').textContent = free || R.over ? '' : `チャイムまで あと${SPAN - min}分`;
     $('#bells').innerHTML = [0, 1, 2].map(i => `<i class="${i < R.loop ? 'on' : ''}"></i>`).join('');
     $('#btnWait').disabled = R.over || R.st === 'unraveled' || !!busy;
@@ -1812,7 +1830,7 @@
   const ART = {
     window2: ['窓ガラスに、自分の顔がうっすら映っている。', '……ヒナは窓の外だけを見ていた。ガラスに映る自分の顔からは、目をそらすように。'],
     clock2: ['時計の下に、美術部の今月の予定表が貼ってある。', '「7/18　県展 搬入」の欄にだけ、赤い丸が何重にも描かれて、紙が毛羽立っていた。'],
-    id: 'art', key: 'hina', name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom',
+    id: 'art', key: 'hina', name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom', bgClock: { cx: 755, cy: 163, rx: 34, ry: 35 },
     sit: { src: 'hina_sit', style: 'left:1%;top:36.7%;height:20%' },
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
     faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry' },
@@ -2437,7 +2455,7 @@
   const MUSIC = {
     window2: ['窓際の机に、ソウタの鞄が置いてある。開いた口から、紙が一枚のぞいていた。', '模試の結果だ。「第一志望　E判定」。……何度も握りつぶしたように、しわだらけになっている。'],
     clock2: ['時計の針の音が、やけに大きく聞こえる。', '……ソウタは、時計のほうを見ないようにしているみたいだった。17:00。リハーサルが始まるはずだった時間を。'],
-    id: 'music', key: 'sota', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room',
+    id: 'music', key: 'sota', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room', bgClock: { cx: 756, cy: 245, rx: 36, ry: 37 },
     sit: { src: 'sota_sit', style: 'left:54.3%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
     faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile' },
@@ -2988,13 +3006,13 @@
   const LIBRARY = {
     window2: ['窓の外、渡り廊下の向こうに、本校舎の一階が見える。', '……ほかの教室はみんな暗いのに、保健室の窓にだけ、まだ明かりがついていた。'],
     clock2: ['時計の下に、開館時間の札。「放課後　〜17:30」。', 'その下に、小さな付箋が貼ってある。「7/15　当番　水野」。……今日の当番は、ミオひとりだけらしい。'],
-    id: 'library', key: 'mio', name: 'ミオ', who: 'この子', startMin: 60, room: '図書室', hall: 'hall_library', label: '第三章「図書室」', bg: 'library',
+    id: 'library', key: 'mio', name: 'ミオ', who: 'この子', startMin: 60, room: '図書室', hall: 'hall_library', label: '第三章「図書室」', bg: 'library', bgClock: { cx: 1437, cy: 78, rx: 31, ry: 61 },
     sit: { src: 'mio_sit', style: 'left:11%;top:42%;height:47%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
     faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile' },
     lost: '返却期限の過ぎた一冊',
-    // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う
+    // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う。背景 infirmary の壁の時計は bgClock: { cx: 829, cy: 202, rx: 49, ry: 48 }
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
     idleFree: '（ミオが待っている。チャイムが鳴る前に）',
     // 貸出記録・縦読み・学級日誌を知ったら、対話に入れる
@@ -3468,7 +3486,7 @@
     window1: ['高窓の外は、ずっと同じ夕焼け。すぐ下の部室棟の前の道にも、誰もいない。'],
     window2: ['高窓の外。部室棟の前の道の端に、さっきはいなかった誰かがしゃがみこんでいた。', '小柄な、ジャージ姿の男子。……ずっと、体育館のほうを見ている。'],
     clock2: ['時計の下に、体育館の使用予定表が貼ってある。', '「7/15　男子バスケットボール部　〜18:00　鍵の返却：部長」', '……毎日、最後に鍵を閉めて帰るのは、ケイらしい。'],
-    id: 'gym', key: 'kei', name: 'ケイ', who: 'この人', startMin: 90, room: '体育館', hall: 'hall_gym', label: '第四章「体育館」', bg: 'gym',
+    id: 'gym', key: 'kei', name: 'ケイ', who: 'この人', startMin: 90, room: '体育館', hall: 'hall_gym', label: '第四章「体育館」', bg: 'gym', bgClock: { cx: 1464, cy: 90, rx: 31, ry: 32 },
     sit: { src: 'kei_sit', style: 'left:79.5%;top:45%;height:22%' },
     // 消えたあと床に残るバッシュ（わすれものの絵と同じ靴を、ケイが座っていた床に置いた重ね絵）
     leftover: '', leftoverImg: 'g_left',
