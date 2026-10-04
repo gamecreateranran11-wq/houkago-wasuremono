@@ -1040,6 +1040,20 @@
   const piano = (n, t, vol, dur = 1.6) => { if (pianoMidLow !== 1 && n >= 36 && n < 60) vol *= pianoMidLow; voice(nf(n), t, dur, vol, { type: 'triangle', attack: 0.006 }); voice(nf(n) * 2, t, dur * 0.55, vol * 0.4, { attack: 0.006 }); voice(nf(n) * 3, t, dur * 0.3, vol * 0.12, { attack: 0.005 }); voice(nf(n) * 1.001, t, dur, vol * 0.3, { attack: 0.006 }); };
   const guitar = (n, t, vol, dur = 2) => { voice(nf(n), t, dur, vol, { type: 'triangle', attack: 0.004, lp: 2400 }); voice(nf(n) * 2, t, dur * 0.5, vol * 0.3, { attack: 0.004 }); voice(nf(n) * 3, t, dur * 0.25, vol * 0.1, { attack: 0.003 }); voice(nf(n) * 1.002, t, dur * 0.8, vol * 0.3, { type: 'sine', attack: 0.004 }); };
   // グロッケン（鉄琴）：澄んだ高い音。整数倍でない倍音が早く消え、基音だけが長く残る
+  // トランペット：明るく張りのある金管。吹きはじめに息の音、のばすと少しずつ明るくなり、あとからビブラート
+  const trumpet = (n, t, dur, vol) => {
+    voice(nf(n), t, dur, vol, { type: 'sawtooth', attack: 0.05, release: Math.min(0.3, dur * 0.3), lp: Math.min(4200, nf(n) * 5), q: 0.9, det: [-4, 3], vib: 0.0045, vibRate: 5.6, vibDelay: 0.4 });
+    voice(nf(n) * 2, t, dur, vol * 0.18, { type: 'triangle', attack: 0.08, release: Math.min(0.3, dur * 0.3) });
+    breath(t, 0.18, vol * 0.35, nf(n) * 2.5);
+  };
+  // ウィンドチャイム：細い金属の管が風で触れ合う音。高い音を、ばらばらの間合いで鳴らす（倍音は鐘のようにずれる）
+  const chimeTube = (n, t, vol) => {
+    voice(nf(n), t, 3.2, vol, { attack: 0.002 }); voice(nf(n) * 2.76, t, 1.4, vol * 0.32, { attack: 0.002 });
+    voice(nf(n) * 5.4, t, 0.5, vol * 0.12, { attack: 0.001 }); voice(nf(n) * 1.003, t, 3.0, vol * 0.4, { attack: 0.002 });
+  };
+  const windChime = (t, len, vol, notes = [84, 86, 88, 91, 93, 96, 98, 100, 103]) => {
+    let x = t; while (x < t + len) { chimeTube(notes[Math.floor(Math.random() * notes.length)], x, vol * (0.6 + Math.random() * 0.5)); x += 0.07 + Math.random() * 0.22; }
+  };
   const glock = (n, t, vol) => { voice(nf(n), t, 2.6, vol, { attack: 0.002 }); voice(nf(n) * 2.71, t, 0.5, vol * 0.25, { attack: 0.002 }); voice(nf(n) * 5.15, t, 0.15, vol * 0.08, { attack: 0.001 }); };
   const brass = (n, t, dur, vol) => { voice(nf(n), t, dur, vol, { type: 'sawtooth', attack: 0.45, release: 0.8, lp: 850, det: [-5, 5], vib: 0.003, vibRate: 4.5, vibDelay: 0.6 }); };
   // 心臓の音：低い「ドクン」を2つ。スマホでも聞こえるよう、少し上の倍音を足す
@@ -1313,6 +1327,55 @@
       const mel = [[[76, 2], [79, 1], [76, 1]], [[76, 1], [72, 1], [69, 2]], [[72, 1], [76, 1], [77, 2]], [[74, 3], [71, 1]],
                    [[72, 2], [76, 1], [79, 1]], [[81, 2], [79, 1], [77, 1]], [[76, 1], [74, 1], [71, 1], [74, 1]], [[72, 4]]][bar];
       if (cyc || bar >= 4) seq(mel, t, q, (n, x, len) => flute(n, x, len * 0.98, 0.024));
+      return d;
+    },
+    // TRUEエンド：『また明日』のアレンジ（同じ和音と旋律）。トランペット・ピアノ・ウィンドチャイムを足して、晴れやかな気持ちと夜明けを
+    // 24小節でひと回り（8小節×3）
+    // 1回目（夜明け前）：弦とアルペジオの上で、ピアノが下から上へ分散和音をのぼる。小節の頭でウィンドチャイムがかすかに揺れる。後半はフルートが旋律
+    // 2回目（空が白む）：ピアノが旋律を歌い、後半からトランペットが遠くで長い音を吹く（ファンファーレの予感）。チェロは1オクターブ下を重ねる
+    // 3回目（日の出）：全音上（ニ長調）へ上がり、トランペットが旋律を吹きあげる。ピアノは和音を刻み、弦はいっぱいに。最後の小節でウィンドチャイムが降りそそぐ
+    unravelTrue(t, i) {
+      const bar = i % 8, part = Math.floor(i / 8) % 3, q = 0.8, d = q * 4, tr = part === 2 ? 2 : 0;
+      const ch = [[48, 55, 64], [45, 52, 60], [41, 48, 57], [43, 50, 59], [40, 48, 55], [41, 48, 57], [43, 50, 59], [48, 55, 64]][bar].map(n => n + tr);
+      const mel = [[[76, 2], [79, 1], [76, 1]], [[76, 1], [72, 1], [69, 2]], [[72, 1], [76, 1], [77, 2]], [[74, 3], [71, 1]],
+                   [[72, 2], [76, 1], [79, 1]], [[81, 2], [79, 1], [77, 1]], [[76, 1], [74, 1], [71, 1], [74, 1]], [[72, 4]]][bar].map(([n, l]) => [n + tr, l]);
+      // もとの曲と同じ土台：弦の和音とアルペジオ
+      viola(ch[1] + 12, t, d + 0.3, part === 2 ? 0.011 : 0.008); violin(ch[2] + 12, t, d + 0.3, part === 2 ? 0.008 : 0.005);
+      cello(ch[0], t, d + 0.2, 0.018);
+      if (part >= 1) cello(ch[0] - 12, t, d + 0.2, 0.012);
+      if (part === 2) violin(ch[2] + 24, t, d + 0.3, 0.004);
+      [0, 1, 2, 3].forEach(k => pluck(ch[k % 3] + 24 + (k === 3 ? 12 : 0), t + k * q, part === 2 ? 0.026 : 0.034, 2.6));
+      // ピアノ
+      if (part === 0) {
+        // 8分音符で、低い根音から2オクターブ上まで分散和音をのぼって、また降りる
+        const up = [ch[0], ch[0] + 7, ch[1] + 12, ch[2] + 12, ch[0] + 24, ch[2] + 12, ch[1] + 12, ch[0] + 7];
+        up.forEach((n, k) => piano(n, t + k * q / 2, k ? 0.022 : 0.034, 1.4));
+      } else if (part === 1) {
+        // 旋律を右手で（オクターブ上をそっと重ねる）、左手は根音と5度
+        seq(mel, t, q, (n, x, len) => { piano(n, x, 0.05, Math.max(1, len * 1.3)); piano(n + 12, x, 0.016, Math.max(0.8, len)); });
+        piano(ch[0] - 12, t, 0.04, 2.4); piano(ch[0] - 5, t + q * 2, 0.026, 1.8);
+      } else {
+        // 4分音符で和音を刻む（1拍目は低音のオクターブ）
+        [0, 1, 2, 3].forEach(k => { const x = t + k * q; if (!k) { piano(ch[0] - 12, x, 0.05, 2.4); piano(ch[0], x, 0.035, 2.2); }
+          [ch[1] + 12, ch[2] + 12, ch[0] + 24].forEach(n => piano(n, x, k ? 0.014 : 0.02, 0.9)); });
+      }
+      // フルート：1回目の後半は旋律、2回目は旋律の3度上で寄りそう、3回目は高いところで旋律をなぞる
+      if (part === 0 && bar >= 4) seq(mel, t, q, (n, x, len) => flute(n, x, len * 0.98, 0.024));
+      if (part === 2) seq(mel, t, q, (n, x, len) => flute(n + 12, x, len * 0.98, 0.012));
+      // トランペット
+      if (part === 1 && bar >= 4) {
+        // 遠くで長い音（和音のいちばん上の音を、ゆっくり吹きのばす）
+        trumpet(ch[2] + 12, t + q, q * 3 - 0.05, 0.016);
+      }
+      if (part === 2) {
+        seq(mel, t, q, (n, x, len) => trumpet(n - 12, x, len * 0.95, 0.03));
+        if (bar === 7) trumpet(ch[2] + 12 - 12, t, d, 0.022);
+      }
+      // ウィンドチャイム：1回目は小節の頭でかすかに、2回目は2小節に1回、3回目の最後は大きく降りそそぐ
+      const sc = [84, 86, 88, 91, 93, 96, 98, 100, 103].map(n => n + tr);
+      if (part === 0) windChime(t, 0.9, 0.004, sc);
+      else if (part === 1 && bar % 2 === 0) windChime(t + q * 2, 1.4, 0.005, sc);
+      else if (part === 2 && (bar === 3 || bar === 7)) windChime(t + (bar === 7 ? 0 : q * 2), bar === 7 ? d : 1.6, bar === 7 ? 0.008 : 0.005, sc);
       return d;
     },
     // 消えたとき：喪失感。アルトリコーダーの素朴な旋律と、クラリネットの低く暗い声（ニ短調）
