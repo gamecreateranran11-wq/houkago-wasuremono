@@ -197,7 +197,7 @@
   .lu-court { position: relative; aspect-ratio: 10 / 7; background: #f3f0e8; border-radius: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.4); margin: 4px 0 8px; touch-action: manipulation; }
   .lu-court svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   .lu-head { font-size: 13px; color: #e0846f; margin: 0; }
-  .lu-court .lu-note { position: absolute; right: 3%; bottom: 3%; font-size: 11px; color: #3c4a63; transform: rotate(-3deg); }
+  .lu-court .lu-note { position: absolute; left: 3%; top: 6%; font-size: 11px; line-height: 1.35; color: #3c4a63; transform: rotate(-3deg); }
   .lu-slot { position: absolute; transform: translate(-50%, -50%); background: none; border: 0; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; touch-action: manipulation; }
   .lu-slot b { display: flex; align-items: center; justify-content: center; min-width: 56px; height: 30px; padding: 0 6px; border-radius: 15px; background: #c9473c; color: #fff; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,.35); }
   .lu-slot small { font-size: 11px; color: #3c4a63; background: rgba(243,240,232,.85); padding: 0 4px; border-radius: 3px; }
@@ -3592,7 +3592,7 @@
         <p class="note">マグネットを押してから、置きたい場所を押すと入れ替わる。</p>
         <p class="lu-head">ボードの上に、顧問の赤い字：「土曜のスタメン　負けたら部長交代」</p>
         <div class="lu-court">${court}
-          ${R.know.has('self') ? '<span class="lu-note">自分の場所は、最後に決める</span>' : ''}
+          ${R.know.has('self') ? '<span class="lu-note">自分の場所は、<br>最後に決める</span>' : ''}
           ${LINEUP_POS.map(([k, l, x, y, r]) => `<button type="button" class="lu-slot" data-k="${k}" style="left:${x}%;top:${y}%"><b></b><small>${l}<span class="lu-role">${r}</span></small></button>`).join('')}</div>
         <div class="lu-bench"><span class="label">ベンチ</span><button type="button" class="lu-slot bench" data-k="bench"><b></b></button></div>
         <div class="row"><button type="button" class="btn primary" id="luOk">この並びにする</button><button type="button" class="btn" id="luNo">やめる</button></div>`);
@@ -3781,9 +3781,9 @@
         } else if (!R.know.has('self')) {
           // 2回目：ボードの隅の、消しかけたケイの字
           R.know.add('self');
-          await say(['ボードの右下の隅に、消しかけた小さな字が残っていた。', '「自分の場所は、最後に決める」', '……ケイの字だ。']);
+          await say(['ボードの左上の隅に、消しかけた小さな字が残っていた。', '「自分の場所は、最後に決める」', '……ケイの字だ。']);
           await tick();
-        } else if (again('board')) await say(['ボードの右下の隅に、消しかけたケイの小さな字。「自分の場所は、最後に決める」']);
+        } else if (again('board')) await say(['ボードの左上の隅に、消しかけたケイの小さな字。「自分の場所は、最後に決める」']);
         else await say(['作戦ボード。上に、顧問の赤い字。「土曜のスタメン　負けたら部長交代」', `位置の横の役目。${ROLE_LINE}`]);
         // 調べたことでチャイムが鳴ったら、ボードには触れない
         if (R.over || R.loop !== lp) return;
