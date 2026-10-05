@@ -3926,7 +3926,7 @@
       if (R.st === 'unraveled') return keiShoot();
       if (!remembered('kei')) {
         const n = [R.know.has('logbook'), R.know.has('bag'), R.know.has('lineup')].filter(Boolean).length;
-        if (n === 0) return say([['ケイ', 'ごめん、今ちょっと忙しいんだ。大丈夫だから', 'normal'], '（この人のことを、まだ何も知らない。部屋を調べてみよう）']);
+        if (n === 0) return say([['ケイ', 'ごめん、もうちょっとだけ休ませて。大丈夫だから', 'normal'], '（この人のことを、まだ何も知らない。部屋を調べてみよう）']);
         if (n < 3) return say([['ケイ', '……さっきから、何探してんの？', 'angry'], '（ケイについて、まだ知らないことがある気がする）']);
       } else {
         await say(['（部誌も、手つかずの弁当も、作戦ボードの本当の並びも、もう知っている）']);
