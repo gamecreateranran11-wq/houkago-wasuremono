@@ -3573,7 +3573,7 @@
         <p class="note">マグネットを押してから、置きたい場所を押すと入れ替わる。</p>
         <p class="lu-head">ボードの上に、顧問の赤い字：「土曜のスタメン　負けたら部長交代」</p>
         <div class="lu-court">${court}
-          ${R.know.has('self') ? '<span class="lu-note">いちばん走る場所は、自分</span>' : ''}
+          ${R.know.has('self') ? '<span class="lu-note">自分の場所は、最後に決める</span>' : ''}
           ${LINEUP_POS.map(([k, l, x, y, r]) => `<button type="button" class="lu-slot" data-k="${k}" style="left:${x}%;top:${y}%"><b></b><small>${l}<span class="lu-role">${r}</span></small></button>`).join('')}</div>
         <div class="lu-bench"><span class="label">ベンチ</span><button type="button" class="lu-slot bench" data-k="bench"><b></b></button></div>
         <div class="row"><button type="button" class="btn primary" id="luOk">この並びにする</button><button type="button" class="btn" id="luNo">やめる</button></div>`);
@@ -3763,9 +3763,9 @@
         } else if (!R.know.has('self')) {
           // 2回目：ボードの隅の、消しかけたケイの字
           R.know.add('self');
-          await say(['ボードの右下の隅に、消しかけた小さな字が残っていた。', '「いちばん走る場所は、自分」', '……ケイの字だ。']);
+          await say(['ボードの右下の隅に、消しかけた小さな字が残っていた。', '「自分の場所は、最後に決める」', '……ケイの字だ。']);
           await tick();
-        } else if (again('board')) await say(['ボードの右下の隅に、消しかけたケイの小さな字。「いちばん走る場所は、自分」']);
+        } else if (again('board')) await say(['ボードの右下の隅に、消しかけたケイの小さな字。「自分の場所は、最後に決める」']);
         else await say(['作戦ボード。上に、顧問の赤い字。「土曜のスタメン　負けたら部長交代」', `位置の横の役目。${ROLE_LINE}`]);
         // 調べたことでチャイムが鳴ったら、ボードには触れない
         if (R.over || R.loop !== lp) return;
@@ -3816,14 +3816,14 @@
         showCut('gci_bag');
         if (!R.know.has('bag')) {
           await say(['パイプ椅子のそばに、ケイのものらしいスポーツバッグ。', 'まわりに、使い切ったテーピングの芯がいくつも転がっている。',
-                     'バッグに挟まったメモに、ケイの字。「ユウマは背が低い。ゴール下には置かない。でも、誰より周りが見える」']);
+                     'バッグに挟まったメモに、ケイの字。「ユウマは背が低い。ゴール下には置かない。でも、誰より周りが見える。ボール運びは、もう任せられる」']);
           R.know.add('bag'); await tick();
         } else if (!R.know.has('bento')) {
           R.know.add('bento');
           await say(['バッグの口から、弁当の包みがのぞいていた。', '持ち上げると、ずっしり重い。……ひと口も、手がつけられていない。',
                      '包みに挟まったメモ。「母：今日はケイの好きな唐揚げ。ちゃんと食べてね」', 'そのそばに、胃薬の空き箱が転がっていた。']);
           await tick();
-        } else if (again('bag')) await say(['バッグに挟まったメモ。「ユウマは背が低い。ゴール下には置かない。でも、誰より周りが見える」']);
+        } else if (again('bag')) await say(['バッグに挟まったメモ。「ユウマは背が低い。ゴール下には置かない。でも、誰より周りが見える。ボール運びは、もう任せられる」']);
         else await say(['テーピングの芯の山と、手つかずの弁当。胃薬の空き箱。', '「母：今日はケイの好きな唐揚げ。ちゃんと食べてね」']);
       },
       async score() {
@@ -3843,14 +3843,14 @@
       async basket() {
         showCut('gci_basket');
         if (!R.know.has('basket')) {
-          await say(['ボールかごの持ち手に、メモがテープで留めてある。', '「シュン、当たり負けしてまた転んだ。ゴール下はまだ早い」', '「ダイチはゴール下でしか力を出せない」']);
+          await say(['ボールかごの持ち手に、メモがテープで留めてある。', '「シュン、当たり負けしてまた転んだ。ゴール下はまだ早い。足は速いけど、まだ後半まで走りきれない（いちばん走る外は無理）」', '「ダイチはゴール下でしか力を出せない」']);
           R.know.add('basket'); await tick();
         } else if (!R.know.has('yosegaki')) {
           R.know.add('yosegaki');
           await say(['かごの底の、いちばん古いボールに、マジックの寄せ書きがあった。', '「部長、いつもありがとうございます　1年一同」',
                      '字がかすれている。……ずいぶん前に書かれたものらしい。']);
           await tick();
-        } else if (again('basket')) await say(['持ち手のメモ。「シュン、当たり負けしてまた転んだ。ゴール下はまだ早い」「ダイチはゴール下でしか力を出せない」']);
+        } else if (again('basket')) await say(['持ち手のメモ。「シュン、当たり負けしてまた転んだ。ゴール下はまだ早い。足は速いけど、まだ後半まで走りきれない（いちばん走る外は無理）」「ダイチはゴール下でしか力を出せない」']);
         else await say(['かごの底のボールの寄せ書き。「部長、いつもありがとうございます　1年一同」', 'かすれたまま残っている。']);
       },
       async ball() {
@@ -3886,7 +3886,7 @@
                       [!R.know.has('basket'), 'ボールかご'], [!R.know.has('self'), '作戦ボード（もう一度）']].filter(([m]) => m).map(([, n]) => n);
         if (miss.length) return `マグネットの並べ方の手がかりは、部屋のあちこちにあります。まだ見ていない場所：${miss.join('、')}。`;
         if ((R.taken.miss || 0) < 2) return 'けがをしているのは誰か、外からシュートを決められるのは誰かを考えて、決まる位置から順に埋めていきましょう。ボードに書かれた位置の役目と、部屋のメモを見比べてみて。部誌は持ち物から読み返せます。';
-        return 'ハヤトはけがでベンチ。シューターはミナト。ダイチはゴール下。ボードの隅の「いちばん走る場所は、自分」と、位置の役目を見比べると……。ボールを運べない人は、司令塔には入れません。';
+        return 'ハヤトはけがでベンチ。シューターはミナト。ダイチはゴール下。ボールを運べるのは誰か、後半まで走りきれないのは誰かを、位置の役目と見比べて。ケイの字のとおり、ケイの場所は最後に残ったところです。';
       }
       if (!R.know.has('logbook') || !R.know.has('bag')) return 'まだ調べていない場所がありそうです。';
       return 'ケイに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
