@@ -1720,15 +1720,21 @@
     const bg = $('#bgImg'), lo = $('#leftover');
     const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
     const show = async (img, ch) => {
+      // 部屋の絵と、わすれものの重ね絵を両方読み終えてから、同時に切り替える（重ね絵だけ後から現れないように）
+      const dec = im => (im.decode ? im.decode() : Promise.resolve()).catch(() => {});
       const pre = new Image(); pre.src = `img/${img}.webp`;
+      const preLo = ch && ch.leftoverImg ? new Image() : null; if (preLo) preLo.src = `img/${ch.leftoverImg}.webp`;
       bg.style.opacity = '0'; lo.style.transition = 'opacity .7s ease'; lo.style.opacity = '0';
-      await Promise.all([wait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);
-      bg.src = pre.src; try { await bg.decode(); } catch (e) {}
+      await Promise.all([wait(750), dec(pre), preLo ? dec(preLo) : null]);
+      bg.src = pre.src;
       if (ch) {
-        if (ch.leftoverImg) { lo.innerHTML = `<img src="img/${ch.leftoverImg}.webp" alt="" style="width:100%;height:100%;display:block">`; lo.setAttribute('style', 'inset:0;width:100%;height:100%;background:none;box-shadow:none'); }
-        else { lo.innerHTML = ''; lo.setAttribute('style', ch.leftover); }
-        lo.style.opacity = '1';
+        if (preLo) {
+          lo.innerHTML = ''; preLo.alt = ''; preLo.setAttribute('style', 'width:100%;height:100%;display:block'); lo.appendChild(preLo);
+          lo.setAttribute('style', 'inset:0;width:100%;height:100%;background:none;box-shadow:none;opacity:0;transition:opacity .7s ease');
+        } else { lo.innerHTML = ''; lo.setAttribute('style', ch.leftover); lo.style.opacity = '0'; lo.style.transition = 'opacity .7s ease'; }
       } else lo.style.display = 'none';
+      try { await bg.decode(); } catch (e) {}
+      if (ch) lo.style.opacity = '1';
       bg.style.opacity = '1'; await wait(750);
     };
     for (const ch of chs) {
