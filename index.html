@@ -1807,7 +1807,7 @@
     const list = opts.filter(([, k]) => k !== 'nagu' || (R.loop >= 1 && stage >= 2));
     const i = await choose(list.map(([t]) => t));
     const kind = list[i][1];
-    if (stage === 1 && kind === 'yori') { R.touched = true; bgm(null); pendingCore = 2; }
+    if (stage === 1 && kind === 'yori') { R.touched = true; bgm(null); pendingCore = C.coreAt || 2; }   // coreAt：選択のあと何文目で核心の曲を始めるか（章ごと）
     if (stage >= 2 && (kind === 'yori' || kind === 'nagu' || kind === 'key')) R.touched = true;
     return kind;
   }
@@ -1988,6 +1988,8 @@
   const ART = {
     window2: ['窓ガラスに、自分の顔がうっすら映っている。', '……ヒナは窓の外だけを見ていた。ガラスに映る自分の顔からは、目をそらすように。'],
     clock2: ['時計の下に、美術部の今月の予定表が貼ってある。', '「7/18　県展 搬入」の欄にだけ、赤い丸が何重にも描かれて、紙が毛羽立っていた。'],
+    // 核心の曲は「破ったのは、お母さん」（選択のあと5文目）から始める
+    coreAt: 5,
     id: 'art', key: 'hina', name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom', bgClock: { cx: 755, cy: 163, rx: 34, ry: 35 },
     sit: { src: 'hina_sit', style: 'left:1%;top:36.7%;height:20%' },
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
@@ -3383,7 +3385,8 @@
         } else { await say(['ブッ、と低い音。錠は開かない。']); await tick(); }
       },
       async desk() {
-        showCut('lci_phone');
+        // 2回目からは、机の写真のあとにお母さんのメッセージが届いた画面（lci_phone2）
+        showCut(R.know.has('phone') ? 'lci_phone2' : 'lci_phone');
         if (!R.know.has('phone')) {
           await say(['閲覧机の上で、伏せたスマホが震えた。', '画面に通知が浮かぶ。クラスのグループから、写真が一枚。',
                      '机の天板いっぱいに、黒い油性ペンで書かれた落書き。「次はおまえ」「明日から」。',
@@ -3392,7 +3395,7 @@
         } else if (!R.know.has('homeMsg')) {
           R.know.add('homeMsg');
           await say(['伏せたスマホが、また光った。今度は、クラスのグループじゃない。', '「お母さん：今日も遅くなるね。夕飯は冷蔵庫に入ってるよ。ユキちゃんによろしく」',
-                     '既読はついているのに、返事は打たれていない。', '……明日から自分が標的になることを、ミオは家でも言えずにいるのかもしれない。']);
+                     'クラスのグループの写真のあとに届いた、お母さんからの通知。……開かれないまま、ロック画面に残っている。', '……明日から自分が標的になることを、ミオは家でも言えずにいるのかもしれない。']);
           await tick();
         } else await say(['伏せたスマホ。通知の数だけが、増え続けている。母親からの「夕飯は冷蔵庫に」にも、返事はないままだ。']);
       },
