@@ -4059,8 +4059,7 @@
 
   /* ---------- 章の切り替え ---------- */
   const CHAPTERS = { art: ART, music: MUSIC, library: LIBRARY, gym: GYM };
-  // 第四章は確認用：URL に ?ch4 をつけたときだけ遊べる
-  const ORDER = ['art', 'music', 'library', ...(/[?&]ch4\b/.test(location.search) ? ['gym'] : [])];
+  const ORDER = ['art', 'music', 'library', 'gym'];
   // 章は順番に開放：前の章を終えると（ほどけた・追い出された）次の章が選べる
   // 章は1章から順に進む。この周回で終えた章には戻れず、次の章だけが選べる
   const done = id => !!P.cur.results[CHAPTERS[id].key];
