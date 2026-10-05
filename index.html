@@ -92,8 +92,17 @@
   .hs { position: absolute; background: transparent; border: 1px dashed transparent; border-radius: 4px; padding: 0; cursor: pointer; }
   .hs::after { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -4px 0 0 -4px; border-radius: 50%; background: #fff4de; box-shadow: 0 0 8px 2px rgba(255, 220, 170, .7); opacity: .55; animation: glint 2.8s ease-in-out infinite; }
   .hs span { position: absolute; left: 4px; bottom: 4px; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: rgba(15, 12, 20, .78); color: var(--ink); opacity: 0; transition: opacity .2s; white-space: nowrap; }
-  .hs:hover, .hs:focus-visible { border-color: rgba(236, 230, 214, .7); background: rgba(255, 240, 220, .07); outline: none; }
-  .hs:hover span, .hs:focus-visible span { opacity: 1; }
+  .hs span { pointer-events: none; }  /* 名札は押せない（隣の探索ポイントに重なっても、タップを横取りしない） */
+  /* ホバーの枠と名札は、マウスのときだけ（タッチではタップ後に表示が残り、隣と重なって見えるため） */
+  @media (hover: hover) {
+    .hs:hover { border-color: rgba(236, 230, 214, .7); background: rgba(255, 240, 220, .07); }
+    .hs:hover span { opacity: 1; }
+  }
+  .hs:focus-visible { border-color: rgba(236, 230, 214, .7); background: rgba(255, 240, 220, .07); outline: none; }
+  .hs:focus-visible span { opacity: 1; }
+  .hs:focus:not(:focus-visible) { outline: none; }
+  /* タッチでは、小さな探索ポイントでも指で押しやすいよう、見た目はそのままで判定を少し広げる */
+  @media (pointer: coarse) { .hs::before { content: ""; position: absolute; inset: -5px; } }
   .scene.talk .hs { visibility: hidden; }
   @keyframes glint { 50% { opacity: .15; transform: scale(.7); } }
 
@@ -3742,8 +3751,8 @@
                    '『部長、パス！』『ナイッシュー！』『ユウマ、今の見えてたの？ すげえ』',
                    'ケイが、誰もいないコートを見て、少しだけ笑った。']);
       } else if (R.loop === 1) {
-        await say(['……笛の音が、耳の奥で鳴った。', '『誰だ今のミス！ 部長、お前か！』『……はい、俺です』',
-                   '『部長がそんなだから負けるんだよ！ 今ミスしたやつ、ダッシュ10本！』『一年の分は、俺が走ります』',
+        await say(['……笛の音が、耳の奥で鳴った。', '『今のパスミス、誰だ！』『……すみません。俺の指示が、遅れました』',
+                   '『部長がそんなだから、一年が育たないんだよ！ ミスしたやつは、最後にダッシュ10本！』『……そいつの分も、俺が走ります』',
                    'ケイのテーピングの指が、膝の上で小さく震えていた。']);
       } else {
         await say(['……引退していく先輩の声が、聞こえた気がした。', '『ケイ、お前が部長な。二年、お前しか残らなかったし』',
