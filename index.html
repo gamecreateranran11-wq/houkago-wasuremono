@@ -193,6 +193,24 @@
   .align-wrap.ok .align-base span.mk i { font-weight: 700; color: #8f2f2a; }
   .align-wrap.ok .align-base span:not(.mk) i { opacity: .45; }
   .align-pad { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  /* 保健室：方向錠・視力検査表・来室カード・当番表 */
+  .dl-show { display: flex; justify-content: center; gap: 8px; min-height: 40px; margin: 6px 0 10px; font-size: 26px; color: var(--gold); }
+  .dl-show span { width: 36px; height: 36px; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .dl-pad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 6px; justify-content: center; margin-bottom: 10px; }
+  .dl-pad button { font-size: 24px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3); background: #3a3446; color: #f3ead8; touch-action: manipulation; }
+  .dl-pad .knob { border-radius: 50%; background: #6b6478; pointer-events: none; }
+  .eye-chart { background: #fbfaf6; border-radius: 4px; padding: 10px 8px 6px; color: #222; }
+  .eye-chart svg { display: block; width: 100%; height: auto; }
+  .card-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fbf8f0; color: #2a2a2a; }
+  .card-table th, .card-table td { border: 1px solid #b9b2a2; padding: 2px 4px; text-align: center; }
+  .card-scroll { max-height: 46vh; overflow-y: auto; border-radius: 4px; }
+  .roster-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fbf8f0; color: #2a2a2a; margin-bottom: 8px; }
+  .roster-table th, .roster-table td { border: 1px solid #b9b2a2; padding: 4px 6px; }
+  .roster-table s { color: #8a8478; }
+  .wd-row { display: flex; justify-content: center; gap: 6px; margin: 6px 0 10px; }
+  .wd-row button { width: 44px; height: 44px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); background: #3a3446; color: #f3ead8; font-size: 16px; touch-action: manipulation; }
+  .wd-row button.on { background: #c9473c; border-color: #c9473c; }
+  .trace-note { font-size: 14px; line-height: 1.8; }
   /* 913の棚：本の背を押して入れ替え、請求記号の順に並べ直す */
   .sh-row { display: flex; justify-content: center; align-items: flex-end; gap: 3px; padding: 10px 6px 0; background: linear-gradient(#5a3b24, #4a301d); border-radius: 4px 4px 0 0; box-shadow: inset 0 -6px 0 #3a2414; touch-action: manipulation; }
   .sh-book { width: 34px; height: 168px; border: 0; border-radius: 3px 3px 0 0; padding: 6px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; color: #f6efe2; box-shadow: inset -3px 0 0 rgba(0,0,0,.18); touch-action: manipulation; }
@@ -632,8 +650,8 @@
   const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
                        blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down' };
   function faceFile(f) {
-    const key = C.key, suf = C.faces[f].slice(key.length + 1);
-    if (!R || !R.standing) return suf === 'bust' ? `${key}_s` : `${key}_s_${suf}`;
+    const v = C.faces[f], key = v.slice(0, v.indexOf('_')), suf = v.slice(key.length + 1);
+    if ((!R || !R.standing) && key === C.key) return suf === 'bust' ? `${key}_s` : `${key}_s_${suf}`;
     const set = (STAND_SET[key] || '').split(' ');
     let s = suf;
     if (s !== 'bust' && !set.includes(s)) s = STAND_NEAR[s] && set.includes(STAND_NEAR[s]) ? STAND_NEAR[s] : 'bust';
@@ -742,6 +760,8 @@
     logbook: { name: '部誌', img: 'g_item_log' },
     letter: { name: 'ハヤトの手紙', img: 'g_item_letter' },
     stackKey: { name: '閉架書庫の鍵', img: 'l_key' },
+    card: { name: 'ツムギの来室カード', img: 'ci_card_blank' },
+    roster: { name: '図書委員会の当番表', img: 'ci_inf_cabinet' },
   };
   const itemSrc = it => it.src || `img/${it.img}.webp`;
   Object.values(ITEM_INFO).forEach(it => { const i = new Image(); i.src = itemSrc(it); });
@@ -1637,6 +1657,12 @@
     // チャイムが鳴っている間は、左上の時計もチャイムの時刻（章の終わり）を指す
     R.loop++; R.ticks = CHIME_AT; R.cons = 0; bgm(null); bell(); flash(); render();
     const last = R.loop >= 3 && R.st !== 'unraveled';
+    if (last && !R.doom && C.lastOverride && C.lastOverride()) {
+      setCG(true);
+      await line(`${hm(chEnd())}。三度目のチャイムが鳴った。`, true, true);
+      hideCut(); setCG(false);
+      return C.lastOverride()();
+    }
     // 3回目のチャイム：心に触れていれば「間に合わなかった」消失、一度も触れていなければBAD1
     if (last && !R.doom && !R.touched) {
       setCG(true);
@@ -1648,7 +1674,7 @@
     setCG(true);
     await line(vanishing && !R.doom ? `${hm(chEnd())}。三度目のチャイムが鳴った。` : `${hm(chEnd())}。チャイムが鳴った。`, true, true);
     if (vanishing) R.st = 'vanished';
-    else { R.ticks = 0; R.taken = {}; R.stage = 0; R.drawerOpen = false; R.seen = new Set(); }
+    else { R.ticks = 0; R.taken = {}; R.stage = 0; R.drawerOpen = false; R.seen = new Set(); if (C.onLoopReset) C.onLoopReset(); }
     const hadItems = R.items.size > 0;
     if (!vanishing) R.items = new Set();
     render(); hideCut(); setCG(false);
@@ -1705,14 +1731,19 @@
   const TRIAL = ORDER_LEN => ORDER_LEN < 5;
   // 5章（試作版では最後の章）が終わったとき：結果からエンディングを決める
   async function runEnd() {
-    const res = P.cur.results, keys = ORDER.map(id => CHAPTERS[id].key);
+    // 容態の急変で息を引き取ったツムギ（died）は、消えた人数にも閉め出した人数にも数えない（主人公の責任にはしない）
+    const res = P.cur.results, died = ORDER.some(id => res[CHAPTERS[id].key] === 'died');
+    const keys = ORDER.map(id => CHAPTERS[id].key).filter(k => res[k] !== 'died');
     const v = keys.filter(k => res[k] === 'vanished').length, sh = keys.filter(k => res[k] === 'shut').length;
     let end;
     // [タグ, 題, ストーリーの文章, BGM, 背景]
     if (v >= 3) end = ['BAD5', '空席の教室', [], 'vanish'];
     else if (v >= 1) end = ['BAD6', 'わすれものの重さ', ['屋上へ続く階段の途中で、足が止まった。', '踊り場に、自分と同じ顔をした誰かが立っている。', '「救えなかったくせに」', '差し出されたわすれものは、どれも紙切れのように軽いはずなのに、両腕で抱えきれないほど重く感じた。'], 'vanish', 'stairs'];
-    else if (sh === keys.length) end = ['BAD4', '閉ざされた校舎', [], 'shut'];
-    else if (sh >= 1) end = ['NORMAL', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。', '振り返ると、閉ざされた扉の教室には、まだ明かりがついていた。', '門の手前で、足が止まる。まだ、ここは通れない。'], 'unravel', 'chime_sky'];
+    else if (keys.length && sh === keys.length) end = ['BAD4', '閉ざされた校舎', [], 'shut'];
+    else if (sh >= 1 || died) end = ['NORMAL', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。',
+      ...(sh ? ['振り返ると、閉ざされた扉の教室には、まだ明かりがついていた。'] : []),
+      ...(died ? ['一階の保健室の窓だけが、暗いままだった。'] : []),
+      '門の手前で、足が止まる。まだ、ここは通れない。'], 'unravel', 'chime_sky'];
     else end = ['GOOD', '送り出した屋上', ['全員の背中を、校門の向こうへ見送った。', '夕焼けの屋上に、一人で立つ。', '足もとに、生徒手帳が一冊、落ちていた。'], 'unravel', 'chime_sky'];
     P.endings[end[0]] = true;
     // 朝を迎えるエンディングは、ほどけたあとの曲が流れていれば続けて聴かせる。BADは、その結末の曲が流れていなければ切り替える
@@ -1723,7 +1754,7 @@
     if (end[2].length) { await endScene(end[4]); await say(end[2]); $('#bgImg').style.opacity = ''; }
     overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
         <p class="eyebrow">${end[0] === 'NORMAL' || end[0] === 'GOOD' ? end[0] : 'BAD END'}「${end[1]}」</p></div>
-      ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。${end[0] === 'GOOD' ? '（屋上への道は、製品版で開きます）' : ''}</p>` : ''}
+      ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。${end[0] === 'GOOD' ? '（屋上への道は、製品版で開きます）' : ''}</p>` : (end[0] === 'GOOD' ? '<p class="note">（屋上への道は、製品版で開きます）</p>' : '')}
       <p class="note">この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。</p>
       `,
       end[0] === 'NORMAL' || end[0] === 'GOOD' ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
@@ -4191,8 +4222,562 @@
   })();
 
   /* ---------- 章の切り替え ---------- */
-  const CHAPTERS = { art: ART, music: MUSIC, library: LIBRARY, gym: GYM };
-  const ORDER = ['art', 'music', 'library', 'gym'];
+
+  /* ---------- 第五章 保健室（ツムギ） ---------- */
+  // 来室カード：6/10から毎日。退室は下校の15:30がほとんどで、ミオの当番の日（火・金）だけ17:00。今日7/15の行は空欄
+  const CARD_ROWS = [
+    ['6/10', '8:50', '12:40', '頭痛'],
+    ['6/11', '8:40', '15:30', 'だるい'],
+    ['6/12', '9:05', '15:30', 'だるい'],
+    ['6/13', '8:40', '17:00', 'だるい'],
+    ['6/16', '8:40', '15:30', 'だるい'],
+    ['6/17', '8:40', '17:00', 'だるい'],
+    ['6/18', '9:05', '15:30', 'だるい'],
+    ['6/19', '8:40', '15:30', 'だるい'],
+    ['6/20', '8:40', '17:00', '頭痛'],
+    ['6/23', '8:40', '15:30', ''],
+    ['6/24', '9:05', '17:00', ''],
+    ['6/25', '8:40', '15:30', '頭痛'],
+    ['6/26', '8:40', '15:30', ''],
+    ['6/27', '9:05', '17:00', ''],
+    ['6/30', '9:05', '15:30', '頭痛'],
+    ['7/1', '8:40', '17:00', ''],
+    ['7/2', '8:40', '15:30', ''],
+    ['7/3', '9:05', '15:30', ''],
+    ['7/4', '8:40', '17:00', ''],
+    ['7/7', '8:40', '15:30', ''],
+    ['7/8', '8:40', '17:00', ''],
+    ['7/9', '9:05', '15:30', ''],
+    ['7/10', '8:40', '15:30', '頭痛'],
+    ['7/11', '8:40', '17:00', ''],
+    ['7/14', '8:40', '15:30', ''],
+    ['7/15', '', '', '']];
+  const TRACE_DAYS = ['6/13', '6/17', '6/20', '6/24', '6/27', '7/1', '7/4', '7/8', '7/11'];
+  // 視力検査表：段ごとの輪の切れ目の向き。0.7の段の下にだけ、鉛筆の線（先生の覚え書き）
+  const CHART = [['0.1', ['R']], ['0.2', ['U', 'L']], ['0.3', ['D', 'R', 'U']], ['0.4', ['L', 'D', 'R', 'U']], ['0.5', ['U', 'R', 'D', 'L']],
+                 ['0.7', ['L', 'U', 'U', 'R']], ['1.0', ['D', 'L', 'R', 'D', 'U']]];
+  const DIR_ANSWER = 'LUUR';
+  const ARROW = { U: '↑', D: '↓', L: '←', R: '→' };
+  const mioRes = () => P.cur.results.mio;   // 3章のミオ：saved（ほどけた）／vanished（消えた）／shut（閉め出した）
+  function eyeChartSVG() {
+    let y = 18, out = '';
+    CHART.forEach(([lab, dirs], i) => {
+      const r = [16, 13, 11, 9, 7.5, 6, 4.6][i], gap = r * 0.42, sw = r * 0.38;
+      const w = dirs.length * r * 3.2, x0 = 160 - w / 2 + r * 1.6;
+      out += `<text x="16" y="${y + 4}" font-size="11" fill="#444">${lab}</text>`;
+      dirs.forEach((d, k) => {
+        const cx = x0 + k * r * 3.2, rot = { R: 0, D: 90, L: 180, U: 270 }[d];
+        const a = Math.asin(gap / 2 / r), x1 = cx + r * Math.cos(a), y1 = y - r * Math.sin(a), x2 = cx + r * Math.cos(a), y2 = y + r * Math.sin(a);
+        out += `<path d="M${x1} ${y1} A${r} ${r} 0 1 0 ${x2} ${y2}" fill="none" stroke="#111" stroke-width="${sw}" transform="rotate(${rot} ${cx} ${y})"/>`;
+      });
+      if (lab === '0.7') out += `<line x1="${x0 - r * 2}" y1="${y + r + 5}" x2="${x0 + (dirs.length - 1) * r * 3.2 + r * 2}" y2="${y + r + 6}" stroke="#9a948a" stroke-width="0.9" opacity=".7"/>`;
+      y += r * 2 + 16;
+    });
+    return `<svg viewBox="0 0 300 ${y}" role="img" aria-label="視力検査表。大きさの違う輪が段ごとに並んでいる">${out}</svg>`;
+  }
+  async function viewChart() {
+    await overlayWait(`<p class="eyebrow">掲示板</p><h2>視力検査表</h2><div class="eye-chart">${eyeChartSVG()}</div>`, '', ['閉じる']);
+    closeOverlay();
+  }
+  function dirLock() {
+    const r = replayed(); if (r) return Promise.resolve(r.v);
+    return new Promise(res0 => {
+      const res = v => res0(rec(v));
+      let seq = '';
+      openOverlay(`<p class="eyebrow">先生の机の引き出し</p><h2>方向錠</h2>
+        <p class="note">つまみを、上下左右に4回動かす。錠の表に、白い丸いシール。黒い「C」の形の輪が描いてある。</p>
+        <div class="dl-show" id="dlShow"></div>
+        <div class="dl-pad"><span></span><button type="button" data-d="U" aria-label="上">↑</button><span></span>
+          <button type="button" data-d="L" aria-label="左">←</button><span class="knob"></span><button type="button" data-d="R" aria-label="右">→</button>
+          <span></span><button type="button" data-d="D" aria-label="下">↓</button><span></span></div>
+        <div class="row"><button type="button" class="btn primary" id="dlOpen">開ける</button><button type="button" class="btn" id="dlClear">やり直す</button><button type="button" class="btn" id="dlNo">やめる</button></div>`);
+      const draw = () => { $('#dlShow').innerHTML = [0, 1, 2, 3].map(i => `<span>${seq[i] ? ARROW[seq[i]] : ''}</span>`).join(''); };
+      card.querySelectorAll('.dl-pad button').forEach(b => {
+        const go = () => { if (seq.length < 4) { seq += b.dataset.d; draw(); } };
+        b.addEventListener('pointerdown', e => { if (e.button > 0) return; e.preventDefault(); go(); });
+        b.onclick = e => { if (e.detail === 0) go(); };
+      });
+      draw();
+      $('#dlClear').onclick = () => { seq = ''; draw(); };
+      $('#dlOpen').onclick = () => { closeOverlay(); res(seq); };
+      $('#dlNo').onclick = () => { closeOverlay(); res(null); };
+    });
+  }
+  async function viewCard() {
+    await overlayWait(`<p class="eyebrow">持ち物</p><h2>ツムギの来室カード</h2>
+      <p class="note">2年3組　白石ツムギ</p>
+      <div class="card-scroll"><table class="card-table"><tr><th>日付</th><th>来室</th><th>退室</th><th>来室理由</th></tr>
+      ${CARD_ROWS.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table></div>`, '', ['閉じる']);
+    closeOverlay();
+  }
+  // 当番表：曜日ごと。ツムギが17:00まで残っていた曜日を選んで、照らし合わせる
+  function viewRoster() {
+    const r = replayed(); if (r) return Promise.resolve(r.v);
+    return new Promise(res0 => {
+      const res = v => res0(rec(v));
+      const on = new Set();
+      openOverlay(`<p class="eyebrow">持ち物</p><h2>図書委員会　当番表（2年・6〜7月）</h2>
+        <table class="roster-table"><tr><th>月</th><td>佐藤・中村</td></tr><tr><th>火</th><td>水野・<s>白石</s>（休み）</td></tr>
+          <tr><th>水</th><td>吉田・小林</td></tr><tr><th>木</th><td>加藤・伊藤</td></tr><tr><th>金</th><td>水野（白石の代わり）・山本</td></tr></table>
+        <p class="note">来室カードと照らし合わせる：ツムギが17:00まで残っていた曜日を選ぶ</p>
+        <div class="wd-row">${'月火水木金'.split('').map(w => `<button type="button" data-w="${w}">${w}</button>`).join('')}</div>
+        <div class="row"><button type="button" class="btn primary" id="rsOk">照らし合わせる</button><button type="button" class="btn" id="rsNo">閉じる</button></div>`);
+      card.querySelectorAll('.wd-row button').forEach(b => { b.onclick = () => { const w = b.dataset.w; if (on.has(w)) on.delete(w); else on.add(w); b.classList.toggle('on', on.has(w)); }; });
+      $('#rsOk').onclick = () => { closeOverlay(); res([...on].sort().join('')); };
+      $('#rsNo').onclick = () => { closeOverlay(); res(null); };
+    });
+  }
+  async function useRoster() {
+    const v = await viewRoster();
+    if (v === null) return;
+    if ([...v].sort().join('') !== [...'火金'].sort().join('')) { await say(['来室カードと当番表を見比べた。……どこか、合わない気がする。']); return; }
+    if (R.know.has('match')) { await say(['17:00まで残っていたのは、火曜と金曜。……どちらも、「水野」の当番の日だ。']); return; }
+    R.know.add('match'); R.seen.add('match');
+    await say(['来室カードの17:00の日を、一つずつ数えていく。', '……17:00まで残っていた日は、どれも火曜と金曜だった。',
+               '当番表の、火曜と金曜。どちらにも「水野」の名前がある。金曜は「白石の代わり」。',
+               '図書室が閉まるのは、17:00。……ツムギは、ミオの当番の日だけ、帰りを遅らせていたんだ。']);
+  }
+  async function viewTraces() {
+    showCut('ci_inf_window_dark');
+    await overlayWait(`<img class="cg" src="img/ci_inf_window_dark.webp" alt="明かりを消した保健室から見た窓。ガラスに、指でなぞった跡が透けている">
+      <p class="trace-note">外の明かりに透けて、ガラスの内側に、指でなぞった跡が浮かんでいる。</p>
+      <p class="quote trace-note">${TRACE_DAYS.map(d => `${d}　またね`).join('<br>')}</p>`, '', ['閉じる']);
+    closeOverlay();
+  }
+  function setDark(on) {
+    R.taken.dark = on;
+    $('#bgImg').src = `img/${on ? 'infirmary_unlit' : 'infirmary'}.webp`;
+  }
+  // ミオを閉め出した周回：ツムギの容態が急に悪くなる（主人公の責任にはしない。表現はぼかす）
+  async function tsumugiDies() {
+    bgm(null); hideCut();
+    await say(['ツムギが、急に胸を押さえて、うずくまった。', '「ツムギさん！」', '浅く、苦しそうな息。額に、汗がにじんでいる。',
+               '扉に駆け寄った。……開かない。何度叩いても、叫んでも、廊下には誰もいなかった。',
+               'ベッドに戻って、ツムギの手を握った。',
+               ['ツムギ', '……ごめんね。……びっくり、させて', 'despair'],
+               ['ツムギ', '……ミオに、……またね、って……', 'despair'],
+               'ツムギの指から、ゆっくりと力が抜けていった。']);
+    setTalk(false);
+    $('#sitFig').classList.add('gone');
+    setDark(true);
+    await say(['……保健室の明かりが、ふっと消えた。', '握った手のぬくもりだけが、いつまでも残っていた。']);
+    R.st = 'died'; R.over = true; clearRun(); saveP(); render(); idle();
+    const next = recordResult('died');
+    overlayWait(`<p class="eyebrow">保健室</p><h2>保健室の明かりが消えた</h2>
+      <p class="note">誰のせいでもなかった。……それでも、この手を離したくなかった。</p>
+      <p class="note">この放課後では、もう保健室には戻れない。</p>`,
+      '', [next ? '次の章に進む' : '放課後の終わりへ', 'タイトルへ']).then(v => v === 0 ? goNext(next) : showTitle(true));
+  }
+  const INFIRMARY = {
+    id: 'infirmary', key: 'tsumugi', name: 'ツムギ', who: 'この子', startMin: 120, room: '保健室', hall: 'hall_infirmary', label: '第五章「保健室」',
+    bg: 'infirmary', bgClock: { cx: 830, cy: 202, rx: 40, ry: 40 },
+    sit: { src: 'blank', style: 'left:0;top:0;width:1px;height:1px' },
+    leftover: 'left:88%;top:60%;width:3.6%;height:1.6%;transform:rotate(-4deg)',
+    faces: { normal: 'tsumugi_bust', smile: 'tsumugi_bust', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
+             grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile',
+             mioNormal: 'mio_bust', mioSad: 'mio_sad', mioDown: 'mio_down', mioSurprise: 'mio_surprise', mioGrief: 'mio_grief', mioCrySmile: 'mio_crysmile' },
+    lost: '保健室の来室カード',
+    clock: { img: 'ci_clock_infirmary', cx: 782, cy: 430, s: 1.01 },
+    clock2: ['時計の下に、行事予定の紙が貼ってある。', '「7/16（水）　終業式」', 'その下に、先生の字で小さく。「7/22（火）　白石さん　入院」'],
+    idleFree: '（ツムギが待っている。チャイムが鳴る前に）',
+    // 来室カード（引き出し）・当番表との照らし合わせ・窓の指の跡の3つがそろったら、対話に入れる
+    ready: () => R.know.has('card') && R.know.has('match') && R.know.has('traces'),
+    onLoopReset() { if (R.taken.dark) setDark(false); R.taken.dark = false; },
+    // ミオを閉め出した周回は、3回目のチャイムで消えるのではなく、容態が急変する
+    lastOverride: () => mioRes() === 'shut' ? tsumugiDies : null,
+    async onTick() {
+      if (R.st !== 'here' || R.seen.has('sign') || R.ticks < (R.loop ? 2 : 4)) return;
+      R.seen.add('sign'); hideCut();
+      if (mioRes() === 'saved') await say(['……扉の窓の向こうに、人影が見えた気がした。', '本を胸に抱えた、細い影。……ノックの音は、しない。', 'ツムギは気づかずに、窓の外を見ていた。']);
+      else if (mioRes() === 'shut') await say(['ツムギが、胸のあたりを押さえて、浅く息をした。', ['ツムギ', '……平気。いつものことだから', 'sad'], '顔色が、さっきより白い。']);
+      else await say(['ツムギが、小さく咳きこんだ。', ['ツムギ', '……平気平気。慣れてるから', 'normal']]);
+    },
+    giveUp: ['ツムギは「だよね」と笑って、窓の外を見た。', '伸ばしかけた手を、そのまま下ろした。'],
+    badSubTalk: ['気づけば、机の上の来室カードを手に取っていた。', '「……明日から、ここには、代わりに来るよ」',
+                 ['ツムギ', '……え？', 'surprise'], ['ツムギ', '何それ。意味わかんない', 'angry'],
+                 '「いいから」', '自分でも驚くくらい、有無を言わせない声が出た。',
+                 'まっすぐ見つめ返すと、ツムギは言いかけた言葉を飲み込んだ。何を言っても、こちらが引かないとわかったのかもしれない。',
+                 ['ツムギ', '……ほんとに、いいの？', 'sad'], '「いいから。……ツムギは、もう行っていいよ」',
+                 'ツムギは長いあいだこちらを見つめてから、ゆっくり立ち上がった。扉が、ツムギの前でだけ開いた。', ['ツムギ', '……ありがとう', 'sad']],
+    badSub: ['ツムギの足音が、昇降口のほうへ遠ざかっていった。', '白いベッドのふちに、ひとりで座る。',
+             '誰かが扉の外から声をかける。「……まだ、いたの？」', '「どうせ私は、いてもいなくても同じだから」', '口が勝手に、そう答えて、笑っていた。'],
+    badDepTalk: [['ツムギ', '……ほんと？ ずっと？', 'surprise'], 'うなずくと、ツムギは安心したように笑って、ベッドのとなりを、ぽんぽんと叩いた。',
+                 ['ツムギ', 'じゃあ、ここ。……座って', 'normal'], 'ベッドのふちに、二人で並んで座った。'],
+    badDep: ['チャイムが鳴った。ツムギは、こちらの袖をつまんだまま、窓の外を見ていた。', '「……今の、聞こえなかったことにしよ」', 'うなずいた。',
+             '「入院なんて、行かない。ここにいれば、誰にも置いていかれないもん」', '来室カードの空欄に、ツムギが二人ぶんの名前を書いた。',
+             '「明日も、あさっても、ここに来ようね」', '窓ガラスの「またね」は、いつのまにか、指でこすって消されていた。',
+             '扉は、どちらからも開けようとしなかった。夕焼けは、ずっと同じ色のままだった。'],
+    samePose: 'ベッドのふちに、さっきとまったく同じ姿勢で、ツムギが座っていた。',
+    loopReply: [['ツムギ', 'チャイム？ ……もう、そんな時間？', 'surprise'], ['ツムギ', 'あれ、お客さん？ 先生なら、職員会議だよ', 'normal']],
+    get lastWords() {
+      if (mioRes() === 'shut') return null;
+      return [['ツムギ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ツムギ', '……もう、ここにも来なくていいんだって', 'despair'],
+              ['ツムギ', '教室にも、保健室にも、私の椅子はないの。……だったら、もう、どこにもいなくていいよね', 'despair'],
+              'ツムギは、窓の外の正門のほうを、じっと見ていた。', ['ツムギ', '……またね', 'despair']];
+    },
+    closeLines: ['ツムギは笑ったまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが18:30へ近づいていった。'],
+    hotspots: [
+      ['window', '窓', 'left:0;top:0;width:20%;height:46%'],
+      ['clock', '時計', 'left:50%;top:13%;width:8%;height:12%'],
+      ['notice', '掲示板', 'left:46%;top:26.5%;width:17%;height:15%'],
+      ['desk', '先生の机', 'left:40%;top:43%;width:16%;height:16%'],
+      ['switch', '照明のスイッチ', 'left:22.5%;top:37%;width:2.8%;height:5.5%'],
+      ['shelf', '薬品棚', 'left:68%;top:27%;width:8%;height:31%'],
+      ['scale', '身長計', 'left:63.5%;top:19%;width:4.5%;height:40%'],
+      ['bed', '奥のベッド', 'left:76%;top:46%;width:7%;height:18%'],
+      ['stool', '丸椅子', 'left:41.5%;top:62%;width:10.5%;height:21%'],
+      ['char', 'ツムギ', 'left:83%;top:44%;width:17%;height:48%'],
+    ],
+    async intro(rem) {
+      if (!rem) {
+        if (mioRes() === 'saved') {
+          // ミオは予約の本を抱えて保健室の前まで来ているが、扉を叩けずにいる
+          const bg = $('#bgImg'), hs = $('#hsLayer');
+          bg.src = 'img/hall_infirmary.webp'; hs.style.visibility = 'hidden';
+          await say(['……気がつくと、薄暗い廊下に立っていた。', '本校舎の一階。廊下の明かりは消えていて、少し先の扉の窓だけが、白く光っている。札には「保健室」。',
+                     '扉の前に、ミオが立っていた。『ひとりぶんの椅子』を、胸に抱えたまま。',
+                     ['ミオ', '……あ', 'mioSurprise'], ['ミオ', 'ここまで、来たんだけど。……ノックが、できなくて', 'mioDown'],
+                     ['ミオ', '……先に、入って。私、もう少しだけ、ここにいる', 'mioSad'],
+                     '扉を開けて、保健室に入った。']);
+          setTalk(false); bg.src = `img/${C.bg}.webp`; hs.style.visibility = '';
+          await say(['振り返ると、扉はもう、内側からも外側からも開かなかった。']);
+        } else {
+          await say(['……気がつくと、保健室にいた。', '窓の外は、南の空の夕焼け。時計は18:00を指している。', ...locked('保健室')]);
+        }
+        await say(['白いベッドのふちに、女子生徒がひとり、座っていた。', 'クリーム色のカーディガン。白いヘアピン。',
+                   ['ツムギ', 'あれ。……こんな時間に、お客さん？', 'surprise'],
+                   ['ツムギ', '先生なら、職員会議だよ。……白石ツムギ。2年。ここの常連', 'normal'],
+                   ['ツムギ', 'けがしたの？ それとも、具合悪い？', 'normal'],
+                   '「……ううん。ちょっと、迷いこんで」',
+                   ['ツムギ', 'ふふ。迷子なら、少し休んでいけば？ ここ、誰が来ても怒られないから', 'normal'],
+                   ['ツムギ', '……私なんか、いてもいなくても同じだし', 'normal'],
+                   'さらりと、笑って言った。冗談みたいに。',
+                   '【操作】気になる場所をタップすると調べられます。この部屋の時間は30分。調べるたびに時計が3分進み、18:30になるとチャイムが鳴ります。話しかけても時間は進みません。']);
+      } else {
+        await say(['……また、この保健室だ。', '扉は、今度も開かない。', '18:00。ベッドのふちには、ツムギがいる。',
+                   ['ツムギ', '……私なんか、いてもいなくても同じだし', 'normal'],
+                   ...(hasKey('tsumugi') ? ['（あの来室カードの、空欄の行を覚えている）'] : ['（この部屋で見たものは、覚えている）'])]);
+      }
+    },
+    inv(add) {
+      if (R.items.has('card')) add('ツムギの来室カード', '', viewCard, 'img/ci_card_blank.webp');
+      if (R.items.has('roster')) add('図書委員会の当番表', '', useRoster, 'img/ci_inf_cabinet.webp');
+    },
+    H: {
+      async window() {
+        if (R.taken.dark) {
+          await viewTraces();
+          if (!R.know.has('traces')) {
+            R.know.add('traces'); R.seen.add('traces');
+            await say(['明かりを消すと、窓ガラスは鏡ではなくなった。', '植え込みの向こうに校庭が広がり、その先に、正門が見える。',
+                       ...(R.know.has('match') ? ['……当番の日、ツムギは、ここから見ていたんだ。正門を出ていく、ミオの背中を。', '向こうからは見えないガラスに、「またね」と書いて。']
+                                               : ['ガラスに並んだ日付。……誰かを、ここから見送っていたのだろうか。']),
+                       'ツムギは、こちらを見ないまま、膝の上で指を組んでいた。']);
+            await tick();
+          }
+          return;
+        }
+        showCut('ci_inf_window');
+        if (!R.know.has('window')) {
+          await say(['窓の外は、南の空の夕焼け。すぐ外の植え込みの向こうに、校庭が広がっている。', windowLine()]);
+          R.know.add('window'); await tick();
+        } else if (!R.know.has('window2')) {
+          R.know.add('window2');
+          await say(['窓ガラスに、蛍光灯の部屋が映りこんでいる。外は、よく見えない。', 'ガラスの真ん中あたりに、くもりを指でこすったような跡がある気がした。']);
+          await tick();
+        } else await say(['窓ガラスに、明るい部屋が映りこんでいる。']);
+      },
+      async switch() {
+        if (!R.taken.dark) {
+          setDark(true);
+          await say(['照明のスイッチを切った。蛍光灯が消えて、保健室が夕焼けの色に沈む。', ['ツムギ', 'わ。……暗い', 'surprise'], ['ツムギ', '……でも、このくらいが、落ち着くかも', 'normal']]);
+        } else {
+          setDark(false);
+          await say(['照明のスイッチを入れた。蛍光灯が、白く光る。']);
+        }
+      },
+      async notice() {
+        showCut('ci_inf_notice');
+        if (!R.know.has('column')) {
+          R.know.add('column');
+          await say(['掲示板に、保健だより7月号。', 'すみの小さなコラム。「夜の窓ガラスは、鏡になります。外の景色を見たいときは、部屋の明かりを消してみましょう」',
+                     'となりに「保健室の使い方」。「休養は1時間まで」。', '右下に、視力検査表が貼ってある。']);
+          await tick();
+        } else if (!R.know.has('note')) {
+          R.know.add('note');
+          await say(['掲示板のすみに、小さなメモ用紙。', 'ていねいな字で、「いつもご迷惑をおかけしています　2-3 白石」。', '……毎日来ている子が、毎日、謝っているみたいだった。']);
+          await tick();
+        } else await say(['保健だよりのコラム。「夜の窓ガラスは、鏡になります」。']);
+        if (R.over) return;
+        const c = await choose(['視力検査表を近くで見る', 'やめる']);
+        if (c === 0) await viewChart();
+      },
+      async desk() {
+        showCut('ci_inf_desk');
+        // 開け方を覚えていれば、チャイムのあとも、すぐに開けられる
+        if (R.know.has('drawer') && !R.taken.drawer) {
+          R.taken.drawer = true;
+          await say(['つまみの動かし方は覚えている。左、上、上、右。']); lockClick();
+          await say(['引き出しの中に、ツムギの来室カード。予約票の控えと、先生のメモ。']);
+          await gotItem('card'); await tick(); return;
+        }
+        if (R.taken.drawer) {
+          if (!R.know.has('hospital')) {
+            R.know.add('hospital');
+            await say(['机の上に、入院の案内が置いてある。「白石ツムギさん　7月22日（火）入院」', '付箋に、先生の字。「本の予約　図書室へ連絡済み（7/14）」']);
+            await tick(); return;
+          }
+          await say(['引き出しの、先生のメモ。「床頭台（奥）のかぎ　→　いつもの赤十字の箱、二段目」']); return;
+        }
+        if (!R.seen.has('desk1')) {
+          R.seen.add('desk1');
+          await say(['養護の先生の机。来室カードの箱が置いてある。', '名前の順に並んだカードの中で、「白石」のところだけが空いている。',
+                     '右の引き出しに、小さな錠。数字も文字もない。丸いつまみがひとつだけついていて、上下左右にしか動かない。', '錠の表に、白い丸いシール。黒い「C」の形の輪が描いてある。']);
+          await tick();
+        } else await say(['先生の机の引き出し。上下左右にしか動かない錠。シールには、「C」の形の輪。']);
+        if (R.over) return;
+        const c = await choose(['つまみを動かす', 'やめる']);
+        if (c !== 0) return;
+        const v = await dirLock();
+        if (v === null) return;
+        if (v !== DIR_ANSWER) { await say(['ガチ。……錠は開かない。']); await tick(); return; }
+        lockClick();
+        R.know.add('drawer'); R.taken.drawer = true;
+        await say(['カチリ。引き出しが開いた。', '中に、来室カードが一枚。「2年3組　白石ツムギ」。……6月10日から、毎日の日付がびっしり並んでいる。',
+                   'カードの下に、予約票の控え。「『ひとりぶんの椅子』　2年3組　白石ツムギ　受け取り：保健室　7/14」',
+                   '余白に、先生の字。「白石さんより：借りている人に、急がなくていいと伝えてください」',
+                   'もう一枚、先生のメモ。「床頭台（奥）のかぎ　→　いつもの赤十字の箱、二段目」']);
+        R.know.add('card');
+        await gotItem('card'); await tick();
+      },
+      async shelf() {
+        showCut('ci_inf_shelf');
+        if (R.know.has('drawer') && !R.taken.key) {
+          await say(['薬品棚のガラス戸の中。上から二段目に、赤い十字の救急箱。']);
+          if (R.over) return;
+          const c = await choose(['救急箱を開ける', 'やめる']);
+          if (c !== 0) return;
+          R.taken.key = true;
+          await say(['救急箱のふたの裏に、小さな鍵がテープでとめてあった。札に「床頭台（奥）」。']);
+          await tick(); return;
+        }
+        if (R.taken.key) { await say(['薬品棚。救急箱は、元の場所に戻した。']); return; }
+        if (!R.seen.has('shelf1')) {
+          R.seen.add('shelf1');
+          await say(['ガラス戸の薬品棚。消毒液のびん、包帯の箱、体温計。', 'ほかの段と同じように、救急箱や白い箱が並んでいる。']);
+          await tick();
+        } else await say(['薬品棚。きちんと並んだびんと箱。ガラス戸には、鍵がかかっていない。']);
+      },
+      async bed() {
+        showCut('ci_inf_cabinet');
+        if (R.taken.key && !R.taken.cabinet) {
+          R.taken.cabinet = true;
+          if (R.know.has('roster')) {
+            await say(['床頭台の扉を、鍵で開けた。図書委員会の当番表を、もう一度取り出す。']);
+          } else {
+            R.know.add('roster');
+            await say(['奥のベッドの床頭台。扉の鍵穴に、救急箱の鍵を差しこんだ。……開いた。',
+                       '中に、クリアファイルが一冊。図書委員会から届いた、6〜7月の当番表だった。', '二年の欄。曜日ごとに、当番の名前が並んでいる。',
+                       '……ツムギは、委員のままなんだ。']);
+          }
+          await gotItem('roster'); await tick(); return;
+        }
+        if (R.taken.cabinet) {
+          if (!R.know.has('bag')) {
+            R.know.add('bag');
+            await say(['奥のベッドの下に、紙袋。入院の持ち物のリストが、ホチキスでとめてある。', '「パジャマ、タオル、歯ブラシ、本（予約中）」', '「本（予約中）」にだけ、丸がついていた。']);
+            await tick(); return;
+          }
+          await say(['奥のベッドの床頭台。扉は開いたまま。']); return;
+        }
+        if (!R.seen.has('bed1')) {
+          R.seen.add('bed1');
+          await say(['カーテンで仕切られた、奥のベッド。枕もとに、白い床頭台。', '扉に、小さな鍵穴。……開かない。']);
+          await tick();
+        } else await say(['奥のベッドの床頭台。扉に鍵がかかっている。']);
+      },
+      async stool() {
+        showCut('ci_inf_stool');
+        if (!R.know.has('stool')) {
+          R.know.add('stool');
+          await say(['ベッドの向かいに、丸椅子がひとつだけ。', '座面のふちが、すり切れている。……ベッドに向いた側だけ。']);
+          await tick();
+        } else if (!R.know.has('stool2')) {
+          R.know.add('stool2');
+          await say(['ツムギは、ときどき、この丸椅子を見ている。', '……誰かが座るのを、待っているみたいに。']);
+          await tick();
+        } else await say(['ベッドの向かいの、丸椅子。']);
+      },
+      async scale() {
+        showCut('ci_inf_scale');
+        if (!R.know.has('scale')) {
+          R.know.add('scale');
+          await say(['身長計。横の壁に、4月の身体測定の記録が貼ってある。', '2年3組の欄に、「白石（欠）」。']);
+          await tick();
+        } else if (!R.know.has('scale2')) {
+          R.know.add('scale2');
+          await say(['記録の紙のすみに、鉛筆で小さく。「6/10　158.2　白石」。', '……誰もいないときに、ひとりで測ったらしい。']);
+          await tick();
+        } else await say(['身長計。「白石（欠）」の欄。']);
+      },
+    },
+    hint() {
+      if (!R.know.has('drawer')) {
+        if (!R.seen.has('desk1')) return ['部屋の中で、気になる場所を調べてみましょう。', 'ツムギの来室カードが、箱にないようです。どこかにしまわれていないでしょうか。'];
+        return ['先生の机の引き出しには、上下左右にしか動かない錠がかかっています。錠のシールの絵は、何に似ていますか。',
+                'シールの「C」の形の輪は、視力検査で使う記号です。この部屋の掲示板を見てみましょう。',
+                '掲示板の視力検査表を、近くで見てみましょう。ひとつの段にだけ、鉛筆の線が引いてあります。',
+                '鉛筆の線のある段の輪の、切れ目の向きを、左から順に、つまみで入れます。',
+                '「0.7」の段。切れ目の向きは、左・上・上・右です。'];
+      }
+      if (!R.taken.key && !R.know.has('roster')) return ['引き出しの先生のメモ「いつもの赤十字の箱、二段目」。赤い十字の箱は、どこにありましたか。', '薬品棚のガラス戸の中を、もう一度見てみましょう。'];
+      if (!R.know.has('roster')) return '救急箱の鍵で、奥のベッドの床頭台を開けてみましょう。';
+      if (!R.know.has('match')) return ['持ち物の来室カードと当番表を、見比べてみましょう。',
+                                        '来室カードの退室の時刻は、たいてい15:30。ところどころ、17:00の日があります。',
+                                        '当番表は曜日ごとです。来室カードの日付が何曜日かは、時計の下の行事予定（7/16は水曜）から数えられます。',
+                                        '17:00まで残っていたのは、何曜日でしょう。持ち物の当番表を開いて、その曜日を選び、照らし合わせます。'];
+      if (!R.know.has('traces')) return ['掲示板の保健だよりの、コラムを読んでみましょう。',
+                                         '「夜の窓ガラスは、鏡になります」。部屋の明かりを消すには、どこを押せばいいでしょう。',
+                                         '流しの左の柱に、照明のスイッチがあります。明かりを消してから、窓を調べてみましょう。'];
+      return 'ツムギに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
+    },
+    async vanishScene() {
+      await say(['ベッドのふちに、ツムギの姿はなかった。', '白いシーツの上に、カードが一枚だけ残っている。']);
+      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>保健室の来室カード</h2><img class="cg" src="img/ci_card_blank.webp" alt="保健室の来室カード">
+        <p>6月10日から、毎日の日付がびっしり並んでいる。最後の一行、7月15日だけが、空欄のままだった。</p>`, '', ['空欄を、明かりにかざす']);
+      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>空欄の行</h2>
+        <p>「来室理由」の欄に、消しゴムで消した跡がある。……うっすらと、読める。</p>
+        <p class="quote">「図書室へ」</p>
+        <p class="note">最後の日、ツムギは、保健室ではなく図書室へ行くつもりだったのかもしれない。</p>`, '', ['閉じる']);
+    },
+    shelfItem(saved) {
+      return saved
+        ? { thumb: 'ci_card_blank', title: '最後の行まで書いた来室カード', body: `<img class="cg" src="img/ci_card_blank.webp" alt="来室カード"><p>空いていた最後の行に、ツムギの字。「7/15　退室　18:30」。来室理由の欄には、「図書室へ」。</p>` }
+        : { thumb: 'ci_card_blank', title: '保健室の来室カード', body: `<img class="cg" src="img/ci_card_blank.webp" alt="来室カード"><p>最後の一行だけ空欄。来室理由の欄に、消しゴムで消した「図書室へ」の跡。</p>` };
+    },
+    async talk() {
+      if (R.st === 'vanished') return say(['白いシーツの上には、来室カードだけが残っている。']);
+      if (!remembered('tsumugi')) {
+        const n = [R.know.has('card'), R.know.has('match'), R.know.has('traces')].filter(Boolean).length;
+        if (n === 0) return say([['ツムギ', '先生なら、もうすぐ戻ってくるんじゃないかな。……たぶん', 'normal'], '（この子のことを、まだ何も知らない。部屋を調べてみよう）']);
+        if (n < 3) return say([['ツムギ', '……さっきから、何を探してるの？', 'surprise'], '（ツムギについて、まだ知らないことがある気がする）']);
+      } else {
+        await say(['（来室カードの17:00の日も、窓ガラスの「またね」も、もう知っている）']);
+      }
+
+      // 1段目
+      await say(['丸椅子を引き寄せて、ベッドの向かいに座った。', ['ツムギ', 'あ、その椅子。座ってくれる人、久しぶり', 'normal'],
+                 '「……来室カード、見たよ。6月から、毎日ここに来てるんだね」', ['ツムギ', '……見られちゃったか', 'down'],
+                 ['ツムギ', '教室には、行けなくなっちゃって。……ここなら、先生もいるし、静かだし', 'normal'],
+                 ['ツムギ', 'でも、もうすぐここにも来なくなるんだ。来週から、入院。小さいころから、慣れっこだけどね', 'normal'],
+                 ['ツムギ', '先生にも、言われちゃった。『入院中は、もう保健室には来なくていいのよ』って。……やさしい声だったな', 'down']]);
+      await line(['ツムギ', '……ね。私なんか、いてもいなくても同じなんだよ', 'normal'], false);
+      let a = await ask([['……ここが、ツムギさんの居場所だったんだね', 'yori'], ['入院するなら、今は治療に専念しないと', 'seiron'], ['黒板にそう書いたの、ミオさんでしょ', 'oitsu']], 1);
+      if (a === 'seiron') { await say([['ツムギ', '……うん、わかってる', 'normal'], ['ツムギ', 'ちゃんと治すよ。……治して、また、どこにも行く場所がないだけ', 'down'], 'ツムギは笑ったまま、窓のほうへ顔を向けた。']); return closeHeart(); }
+      if (a === 'oitsu') return shutOut([['ツムギ', '……え', 'surprise'], ['', 'ツムギの笑顔が、すっと消えた。', 'reject'],
+                                         ['ツムギ', '……どうして、それを知ってるの', 'reject'], ['ツムギ', 'ごめん。今日は、もう帰って', 'reject']],
+                                        ['扉を叩いた。返事はない。', '……扉の窓の明かりが、ふっと消えた。',
+                                         ...(mioRes() === 'saved' ? ['廊下の先で、ミオが本を抱えたまま、立ちつくしていた。'] : [])]);
+      await say([['ツムギ', '……居場所、かあ', 'surprise'], ['ツムギ', 'うん。教室にいられなくなってから、ずっとここ', 'normal'],
+                 ['ツムギ', 'この窓、景色がいいんだよ。植え込みの向こうに、校庭と、正門が見えるの', 'normal']]);
+
+      // 2段目
+      await say([['ツムギ', '……小さいころから、入院ばっかりでさ', 'down'],
+                 ['ツムギ', '退院して教室に戻ると、私の机だけ、いつも後ろのすみに移されてるの。……誰も、悪気はないんだけどね', 'down'],
+                 ['ツムギ', 'だから高校は、すごく楽しみだったんだ。図書委員になって、当番で、ひとりで座ってる子に話しかけて', 'normal'],
+                 ['ツムギ', '……その子と、本の話ばっかりしてた', 'normal'],
+                 ['ツムギ', '二年で、同じクラスになれたのに。……クラスの子たちに、目をつけられちゃって', 'sad'],
+                 ['ツムギ', 'その子、固まっちゃってた。……昔、同じようなことがあった子だったから', 'sad'],
+                 ['ツムギ', 'だから、私から言ったの。『教室では、しばらく別々にいよう』って', 'down'],
+                 ['ツムギ', 'そしたら、ある朝、黒板に。……『いてもいなくても同じ』', 'down'],
+                 ['ツムギ', '字を見て、すぐわかった。その子の字だって', 'sad'],
+                 ['ツムギ', '……怒ってないよ。あの子が、書かされたんだって、わかってたから', 'sad'],
+                 ['ツムギ', 'でもね。それから、自分で言うようになったの。いてもいなくても同じ、って', 'down'],
+                 ['ツムギ', 'そう思ってれば、誰のことも、恨まずにいられるから', 'sad'],
+                 ['ツムギ', '……今度は、再発だって。来週から、長い入院', 'sad']]);
+      await line(['ツムギ', '……教室にも、ここにも、もう私の椅子はないんだ', 'sad'], false);
+      a = await ask([['それは、いじめた子たちが悪い。先生に話すべきだよ', 'seiron'], ['……怒らないでいるのも、苦しかったんだね', 'yori'],
+                     ['大丈夫。入院しても、きっとすぐ戻ってこられるよ', 'nagu'], ['その子は、ツムギさんを裏切ったんだよ', 'oitsu']], 2);
+      if (a === 'seiron') { await say([['ツムギ', '……話したよ。先生たちも、ちゃんと動いてくれた', 'normal'], ['ツムギ', 'でも、教室に戻れるかどうかは、私の気持ちの問題なんだって。……そうだよね', 'down'], 'ツムギは笑おうとして、やめた。']); return closeHeart(); }
+      if (a === 'oitsu') return doom([['ツムギ', '……裏切った、か', 'despair'], ['ツムギ', 'そうだよね。私が勝手に、友だちだと思ってただけ', 'shadow'],
+                                      ['ツムギ', 'だったら、ほんとに、いてもいなくても同じだ', 'despair'], ['ツムギ', '……もう、どこにも行かなくていいなら、楽だね', 'despair']]);
+      if (a === 'nagu') {
+        R.cons++;
+        await say([['ツムギ', '……ほんと？', 'surprise'], ['ツムギ', 'じゃあ、戻ってきたら、また、ここで話してくれる？', 'sad'],
+                   'ツムギは、すがるようにこちらを見た。', '（……その約束に、うなずいていいのか、わからなかった）']);
+      } else {
+        await say([['ツムギ', '……うん', 'surprise'], ['ツムギ', '怒れたら、楽だったのかな', 'sad'], ['ツムギ', 'でも、怒ったら、あの子のこと、嫌いにならなきゃいけない気がして', 'sad']]);
+      }
+
+      // 3段目
+      if (mioRes() === 'shut') {
+        // ミオを閉め出した周回：最後の段の前に、容態が急に悪くなる
+        await say([['ツムギ', '……今日ね。最後に、ちょっとだけ、行きたいところがあったの', 'down'], 'ツムギの言葉が、途中で途切れた。']);
+        return tsumugiDies();
+      }
+      await say([['ツムギ', '……今日ね。最後に、ちょっとだけ、行きたいところがあったの', 'down'], ['ツムギ', 'でも、行かなかった。……行っても、迷惑なだけだから', 'sad']]);
+      if (hasKey('tsumugi')) {
+        await say([['ツムギ', '私なんか、いてもいなくても同じだもん', 'sad']]);
+        await line('……あの来室カードの、空欄の行が頭に浮かんだ。消しゴムで消した、「図書室へ」の跡。', false);
+      } else {
+        await line(['ツムギ', '私なんか、いてもいなくても同じだもん', 'sad'], false);
+      }
+      const opts = [['迷惑かどうかは、相手が決めることだよ', 'seiron'], ['ツムギさんがいなくなったら、さびしいよ', 'nagu'], ['そうやって、ずっと逃げてるだけだよね', 'oitsu']];
+      if (hasKey('tsumugi')) opts.splice(1, 0, ['……今日は、保健室じゃなくて、図書室に行くつもりだったんだね', 'key']);
+      a = await ask(opts, 3);
+      const missing = hasKey('tsumugi') ? [] : ['（何か、あと一つ足りない気がする。この子が、口にできずにいる何かが）'];
+      if (a === 'nagu' && R.cons >= 1) {
+        await say([['ツムギ', '……さびしい？ 私がいないと？', 'surprise'], ['ツムギ', '……そっか', 'normal'],
+                   'ツムギは、ベッドのとなりを、ぽんぽんと叩いた。', ['ツムギ', 'じゃあ、ここにいて。……ずっと', 'sad'], 'その手を、振りほどけなかった。']);
+        return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
+      }
+      if (a === 'nagu') { R.cons++; await say([['ツムギ', '……ありがと', 'normal'], ['ツムギ', 'でも、みんなそう言うの。いなくなるまでは', 'sad'], ...missing]); return lastWrong(); }
+      if (a === 'seiron') { await say([['ツムギ', '……相手が、決めること', 'down'], ['ツムギ', 'だったら、なおさら行けないよ。……答えを聞くのが、こわいもん', 'sad'], ...missing]); return lastWrong(); }
+      if (a === 'oitsu') return doom([['ツムギ', '……うん。そうだよ', 'shadow'], ['ツムギ', '教室からも、ここからも、逃げてきた', 'despair'],
+                                      ['ツムギ', 'だったら、最後まで逃げちゃえばいいよね', 'despair'], ['ツムギ', '……ミオ、またね', 'despair']]);
+      // わすれもの（来室カードの空欄）から出る言葉
+      await say([['ツムギ', '……どうして', 'surprise'], ['ツムギ', '誰にも、言ってないのに', 'surprise'], '答えられなかった。ただ、あのカードの空欄を覚えていた。']);
+      await say(['「……当番の日は、17時まで残って、窓から正門を見てたんだね」', '「ガラスに、『またね』って書いて」',
+                 ['ツムギ', '……見てたんだ、あれ', 'sad'],
+                 ['ツムギ', 'あの子の当番の日はね、帰りを遅らせたの。正門を出ていくのを、ここから見送って……ガラスに、またね、って', 'sad'],
+                 ['ツムギ', '向こうからは、見えないのにね', 'crySmile'],
+                 ['ツムギ', '……最後の日くらい、ちゃんと言いたかったんだ。目を見て、『またね』って', 'grief']]);
+      if (mioRes() === 'saved') {
+        bgm('tension');
+        await say(['そのとき、扉が、小さく二回、叩かれた。', ['ツムギ', '……え', 'surprise'], '扉が、ゆっくり開いた。',
+                   ['ミオ', '……失礼します', 'mioDown'], ['ツムギ', '……ミオ', 'surprise'],
+                   ['ミオ', '図書委員の、水野です。……予約の本を、届けに来ました', 'mioSad'],
+                   'ミオは、胸に抱えていた本を、両手で差し出した。『ひとりぶんの椅子』。', ['ミオ', '……当番、だから', 'mioSad'],
+                   'ツムギは本を受け取って、そっと表紙を撫でた。ページのあいだから、しおりがのぞいている。']);
+        bgm('musicbox');
+        await say(['ツムギが、しおりを開いた。', '「一年のとき、この本を教えてくれてありがとう。一人で座っていた私に、最初に話しかけてくれたのは、ツムギだった。」',
+                   '「黒板の字を書いたのは、私です。ごめんなさい。いてもいなくても同じなんかじゃない。」',
+                   ['ミオ', '……ごめんなさい', 'mioGrief'], ['ミオ', 'ずっと、謝りたかった。……謝ったら、許してもらうのを待つことになるって、思ってた', 'mioGrief'],
+                   ['ツムギ', '……ばか', 'grief'], ['ツムギ', '怒ってないって、言いたかったのは、私のほうだよ', 'grief'],
+                   'ミオが、ツムギの手を握った。二人とも、声を出して泣いていた。',
+                   ['ツムギ', '……またね、って。言いたかったの', 'crySmile'], ['ミオ', '……うん。……またね', 'mioCrySmile']]);
+        R.st = 'unraveled'; render(); bgm('unravel');
+        await say([`……保健室の空気が、ふっとやわらいだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`]);
+        return ending({ lines: ['ミオとツムギと一緒に、保健室を出た。', '昇降口で靴をはきかえると、二人は並んで、正門へ歩いていった。',
+                                '正門の手前で、ツムギが一度だけ振り返って、手を振った。……その隣で、ミオも、小さく手を振った。'],
+                        img: 'gate', alt: '夕焼けの正門' });
+      }
+      // ミオが消えた周回：ツムギはほどけるが、ミオには会えない
+      bgm('musicbox');
+      await say([['ツムギ', '……行けば、よかったな', 'grief'], ['ツムギ', '迷惑でも、こわくても。……一回くらい', 'grief'],
+                 'ツムギは、しばらく声を出さずに泣いていた。', ['ツムギ', '……今からでも、行ってみる。図書室', 'crySmile'],
+                 ['ツムギ', 'いなくても、いいの。……あの子の椅子に、座ってみたいだけ', 'crySmile']]);
+      R.st = 'unraveled'; render(); bgm('unravel');
+      await say([`……保健室の空気が、ふっとやわらいだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`]);
+      return ending({ lines: ['ツムギと一緒に、保健室を出た。', 'ツムギは来室カードの最後の行に、自分で書きこんだ。「18:30　退室　図書室へ」',
+                              '昇降口で、ツムギは特別教室棟のほうを見上げた。図書室の窓に、明かりはついていなかった。',
+                              'それでもツムギは、小さく「またね」と言って、渡り廊下のほうへ歩いていった。'],
+                      img: 'gate', alt: '夕焼けの正門' });
+    },
+  };
+
+  const CHAPTERS = { art: ART, music: MUSIC, library: LIBRARY, gym: GYM, infirmary: INFIRMARY };
+  const ORDER = ['art', 'music', 'library', 'gym', 'infirmary'];
   // 章は順番に開放：前の章を終えると（ほどけた・追い出された）次の章が選べる
   // 章は1章から順に進む。この周回で終えた章には戻れず、次の章だけが選べる
   const done = id => !!P.cur.results[CHAPTERS[id].key];
@@ -4226,7 +4811,11 @@
     if (C.leftoverImg) { lo.innerHTML = `<img src="img/${C.leftoverImg}.webp" alt="" style="width:100%;height:100%;display:block">`; lo.setAttribute('style', 'inset:0;width:100%;height:100%;background:none;box-shadow:none;display:none'); }
     else { lo.innerHTML = ''; lo.setAttribute('style', C.leftover + ';display:none'); }
     face = ''; setTalk(false);
-    Object.values(C.faces).flatMap(f => { const suf = f.slice(C.key.length + 1); return suf === 'bust' ? [`${C.key}_s`, `${C.key}_p`] : [`${C.key}_s_${suf}`]; }).forEach(f => {
+    Object.values(C.faces).flatMap(f => {
+      const key = f.slice(0, f.indexOf('_')), suf = f.slice(key.length + 1);
+      if (key !== C.key) return [suf === 'bust' ? `${key}_p` : `${key}_p_${suf}`];
+      return suf === 'bust' ? [`${key}_s`, `${key}_p`] : [`${key}_s_${suf}`];
+    }).forEach(f => {
       const url = `img/${f}.webp`;
       if (!FACE_CACHE[url]) { const i = new Image(); i.src = url; if (i.decode) i.decode().catch(() => {}); FACE_CACHE[url] = i; }
     });
@@ -4327,7 +4916,7 @@
   const nextCh = () => CHAPTERS[ORDER.find(id => selectable(id)) || ORDER[0]];
   // タイトルに出す、この周回の記録（終えた教室と結果）
   function runRecord() {
-    const RES = { saved: 'ほどけた', shut: '閉ざされた扉', vanished: '消えた' };
+    const RES = { saved: 'ほどけた', shut: '閉ざされた扉', vanished: '消えた', died: '明かりが消えた' };
     return ORDER.map(id => CHAPTERS[id]).filter(ch => P.cur.results[ch.key]).map(ch => `${ch.room}：${RES[P.cur.results[ch.key]]}`).join('　');
   }
   // 「〇〇へ向かう」／「〇〇の放課後をやり直す」：わすれもの棚や記録は引き継いだまま、次の教室を17:00（その章のはじめ）から始める
