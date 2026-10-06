@@ -1493,13 +1493,15 @@
       return b * 3 + (bar === 2 ? -0.12 : bar === 6 ? 0.22 : 0);
     },
     // 追い出される・追い出されたとき：重い低音と、ゆっくり沈んでいくチェロ、扉を叩くような音
-    shut(t, i) {
+    // 『閉ざされた扉』の差分（サウンドトラックには入れない）：追い出される前、チャイムが鳴るまで。扉を叩く音だけを抜く
+    shutIn(t, i) { return BGM.shut(t, i, true); },
+    shut(t, i, quiet) {
       const d = 4, bar = i % 8;
       contrabass(33, t, d + 0.4, 0.03); tone(nf(21), t, d + 0.6, 0.05, 'sine', 0.8);
       cello([45, 44, 43, 42, 41, 42, 43, 44][bar], t, d + 0.2, 0.016);
       if (bar % 4 === 3) viola(57, t + 1, 2.8, 0.008);
       // 扉を叩く音：2小節に1回「ドン、ドン、ドン」。返事はない（4小節目ごとに、叩く手が弱くなる）
-      if (i % 2 === 1) { const w = bar % 4 === 3 ? 0.6 : 1; [0, 0.5, 1.0].forEach((o, k) => knock(t + 1.6 + o, (0.34 - k * 0.03) * w)); }
+      if (!quiet && i % 2 === 1) { const w = bar % 4 === 3 ? 0.6 : 1; [0, 0.5, 1.0].forEach((o, k) => knock(t + 1.6 + o, (0.34 - k * 0.03) * w)); }
       return d;
     },
     // 緊張（ミオとツムギを引き合わせる場面用）：ゆっくり重い弦の旋律の下で、心臓の音が鳴り続ける（ハ短調）
@@ -1915,7 +1917,7 @@
 
   // 消失とは別のBAD：相手に完全に拒まれ、部屋から閉め出される。わすれものは残らない
   async function shutOut(lines, after) {
-    bgm('shut');
+    bgm('shutIn');   // チャイムが鳴るまでは、扉を叩く音のない差分
     await say(lines);
     R.loop++; R.ticks = CHIME_AT; bgm(null); bell(); flash(); render();
     setCG(true);
