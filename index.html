@@ -620,7 +620,7 @@
                       mio: 'angry crysmile despair down grief sad smile surprise', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
-                       blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down' };
+                       blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down' };
   function faceFile(f) {
     const key = C.key, suf = C.faces[f].slice(key.length + 1);
     if (!R || !R.standing) return suf === 'bust' ? `${key}_s` : `${key}_s_${suf}`;
@@ -2000,7 +2000,7 @@
     // 核心の曲は「破ったのは、お母さん」（選択のあと5文目）から始める
     coreAt: 5,
     id: 'art', key: 'hina', name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom', bgClock: { cx: 755, cy: 163, rx: 34, ry: 35 },
-    sit: { src: 'hina_sit', style: 'left:1%;top:36.7%;height:20%' },
+    sit: { src: 'hina_sit', style: 'left:2.9%;top:36.7%;height:20.0%' },
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
     faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout' },
     lost: '顔のないスケッチブック',
@@ -2625,7 +2625,7 @@
     window2: ['窓際の机に、ソウタの鞄が置いてある。開いた口から、紙が一枚のぞいていた。', '模試の結果だ。「第一志望　E判定」。……何度も握りつぶしたように、しわだらけになっている。'],
     clock2: ['時計の針の音が、やけに大きく聞こえる。', '……ソウタは、時計のほうを見ないようにしているみたいだった。17:00。リハーサルが始まるはずだった時間を。'],
     id: 'music', key: 'sota', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room', bgClock: { cx: 756, cy: 245, rx: 36, ry: 37 },
-    sit: { src: 'sota_sit', style: 'left:54.3%;top:46.5%;height:29.5%' },
+    sit: { src: 'sota_sit', style: 'left:54.2%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
     faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
     lost: 'ソウタのパートだけの楽譜',
@@ -3175,10 +3175,10 @@
     window2: ['窓の外、渡り廊下の向こうに、本校舎の一階が見える。', '……ほかの教室はみんな暗いのに、保健室の窓にだけ、まだ明かりがついていた。'],
     clock2: ['時計の下に、開館時間の札。「放課後　〜17:30」。', 'その下に、小さな付箋が貼ってある。「7/15　当番　水野」。……今日の当番は、ミオひとりだけらしい。'],
     id: 'library', key: 'mio', name: 'ミオ', who: 'この子', startMin: 60, room: '図書室', hall: 'hall_library', label: '第三章「図書室」', bg: 'library', bgClock: { cx: 1437, cy: 78, rx: 31, ry: 61 },
-    sit: { src: 'mio_sit', style: 'left:11%;top:42%;height:47%' },
+    sit: { src: 'mio_sit', style: 'left:12.2%;top:42.0%;height:46.5%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
-    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile' },
+    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide' },
     lost: '返却期限の過ぎた一冊',
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う。背景 infirmary の壁の時計は bgClock: { cx: 829, cy: 202, rx: 49, ry: 48 }
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
@@ -3450,7 +3450,7 @@
                  'ミオの腕に、ぎゅっと力がこもった。']);
       if (R.seen.has('acrostic')) {
         await say(['「掲示板の図書だよりも読んだ。……ゴミ箱に、下書きもあった」', ['ミオ', '……え', 'surprise'], ['ミオ', '……捨てたのに', 'surprise'],
-                   'ミオは本で口もとを隠すように、うつむいた。', ['ミオ', '……誰にも、気づかれないと思ってた', 'down']]);
+                   ['', 'ミオは本で口もとを隠すように、うつむいた。', 'bookHide'], ['ミオ', '……誰にも、気づかれないと思ってた', 'bookHide']]);
       } else {
         await say(['「……6月10日。黒板のことがあった次の日。ツムギさんが返したその日に、同じ本をきみが借りてる」',
                    ['ミオ', '……なんで、そんなことまで', 'surprise']]);
@@ -3659,7 +3659,7 @@
     clock2: ['時計の下に、体育館の使用予定表が貼ってある。', '「7/15（火）　16:00〜17:15（片付け〜17:30）　A面：男子バレー部　B面：男子バスケットボール部」',
              '「17:30〜18:00　延長（大会前）：男子バスケットボール部　全面　片付け・鍵の返却：部長」', '延長の欄にだけ、顧問の赤ペンで線が引かれていた。……今日の延長は、なくなったらしい。'],
     id: 'gym', key: 'kei', name: 'ケイ', who: 'この人', startMin: 90, room: '体育館', hall: 'hall_gym', label: '第四章「体育館」', bg: 'gym', bgClock: { cx: 1464, cy: 90, rx: 31, ry: 32 },
-    sit: { src: 'kei_sit', style: 'left:79.5%;top:45%;height:22%' },
+    sit: { src: 'kei_sit', style: 'left:79.5%;top:45.1%;height:21.8%' },
     // 消えたあと床に残るバッシュ（わすれものの絵と同じ靴を、ケイが座っていた床に置いた重ね絵）
     leftover: '', leftoverImg: 'g_left',
     faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', softSmile: 'kei_softsmile', serious: 'kei_serious', breath: 'kei_breath', blank: 'kei_blank', teary: 'kei_teary', sadGrip: 'kei_sadgrip' },
