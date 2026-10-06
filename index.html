@@ -4536,7 +4536,7 @@
         } else await say(['保健だよりのコラム。「夜の窓ガラスは、鏡になります」。']);
         if (R.over) return;
         const c = await choose(['視力検査表を近くで見る', 'やめる']);
-        if (c === 0) await viewChart();
+        if (c === 0) { await viewChart(); R.know.add('chart'); }
       },
       async desk() {
         showCut('ci_inf_desk');
@@ -4562,6 +4562,8 @@
           await tick();
         } else await say(['先生の机の引き出し。上下左右にしか動かない錠。シールには、「C」の形の輪。']);
         if (R.over) return;
+        // 1章のダイヤル錠と同じく、手がかり（視力検査表）を見るまでは、つまみを動かせない
+        if (!R.know.has('chart')) { await say(['どの向きに、どんな順で動かせばいいのか。……手がかりが、まだ見つからない。']); return; }
         const c = await choose(['つまみを動かす', 'やめる']);
         if (c !== 0) return;
         const v = await dirLock();
