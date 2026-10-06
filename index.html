@@ -203,7 +203,11 @@
   .eye-chart svg { display: block; width: 100%; height: auto; }
   .card-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fbf8f0; color: #2a2a2a; }
   .card-table th, .card-table td { border: 1px solid #b9b2a2; padding: 2px 4px; text-align: center; }
-  .card-scroll { max-height: 46vh; overflow-y: auto; border-radius: 4px; }
+  .card-scroll { max-height: 46vh; overflow-y: auto; border-radius: 4px; scrollbar-width: none; }
+  .card-scroll::-webkit-scrollbar { display: none; }
+  .sc-wrap { position: relative; padding-right: 12px; }
+  .sc-track { position: absolute; top: 0; right: 2px; bottom: 0; width: 5px; border-radius: 3px; background: rgba(255,255,255,.14); pointer-events: none; }
+  .sc-thumb { position: absolute; left: 0; width: 100%; border-radius: 3px; background: rgba(232,220,198,.75); }
   .roster-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fbf8f0; color: #2a2a2a; margin-bottom: 8px; }
   .roster-table th, .roster-table td { border: 1px solid #b9b2a2; padding: 4px 6px; }
   .roster-table s { color: #8a8478; }
@@ -213,14 +217,14 @@
   .trace-note { font-size: 14px; line-height: 1.8; }
   /* 913の棚：本の背を押して入れ替え、請求記号の順に並べ直す */
   .sh-row { display: flex; justify-content: center; align-items: flex-end; gap: 3px; padding: 10px 6px 0; background: linear-gradient(#5a3b24, #4a301d); border-radius: 4px 4px 0 0; box-shadow: inset 0 -6px 0 #3a2414; touch-action: manipulation; }
-  .sh-book { width: 34px; height: 168px; border: 0; border-radius: 3px 3px 0 0; padding: 6px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; color: #f6efe2; box-shadow: inset -3px 0 0 rgba(0,0,0,.18); touch-action: manipulation; }
+  .sh-book { width: 34px; height: 184px; border: 0; border-radius: 3px 3px 0 0; padding: 6px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; color: #f6efe2; box-shadow: inset -3px 0 0 rgba(0,0,0,.18); touch-action: manipulation; }
   .sh-book .t { writing-mode: vertical-rl; font-size: 12px; letter-spacing: .05em; line-height: 1; }
   .sh-book .lb { width: 28px; margin-bottom: 6px; background: #fbf8f0; color: #2a2a2a; border-radius: 2px; font-size: 9.5px; line-height: 1.25; text-align: center; padding: 2px 0; }
   .sh-book.gap { background: rgba(0,0,0,.35); box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
   .sh-book.gap .t { color: rgba(255,255,255,.55); }
   .sh-book.sel { outline: 3px solid var(--gold); outline-offset: 1px; }
   .sh-sign { font-size: 12px; color: #e8dcc6; text-align: center; margin: 2px 0 6px; }
-  @media (max-width: 400px) { .sh-book { width: 30px; height: 150px; } .sh-book .lb { width: 26px; font-size: 9px; } .sh-row { gap: 2px; } }
+  @media (max-width: 400px) { .sh-book { width: 30px; height: 168px; } .sh-book .lb { width: 26px; font-size: 9px; } .sh-row { gap: 2px; } }
   /* 作戦ボード：コートの図にマグネットを置く。押したマグネットと、次に押した場所が入れ替わる */
   .lu-court { position: relative; aspect-ratio: 10 / 7; background: #f3f0e8; border-radius: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.4); margin: 4px 0 8px; touch-action: manipulation; }
   .lu-court svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -2730,7 +2734,7 @@
              '鍵盤には、どちらも触れなかった。続きを弾いたら、終わってしまう気がしたから。',
              '扉は、どちらからも開けようとしなかった。夕焼けは、ずっと同じ色のままだった。'],
     samePose: 'ピアノの前には、さっきとまったく同じ姿勢で、ソウタが座っていた。',
-    loopReply: [['ソウタ', '……チャイム？ 鳴ってないだろ', 'angry'], ['ソウタ', 'ていうか、誰', 'angry']],
+    loopReply: [['ソウタ', '……チャイム？ 鳴ってないだろ', 'angryUp'], ['ソウタ', 'ていうか、誰', 'angryUp']],
     // ソウタは、ハルがまだ怒っていると思いこんでいる（楽譜の裏を見ていない）。再会の救いではなく、許されなくても謝りに行く向かい方にする
     lastWords: [['ソウタ', '……そろそろ、行かないと', 'down'], '「行くって、どこへ？」', ['ソウタ', '……ハルのところ', 'despair'],
                 ['ソウタ', 'あいつ、まだ怒ってると思う。最後に読んだのが、あんな言葉だったんだから', 'despair'],
@@ -2981,8 +2985,8 @@
                  ['ソウタ', '部屋に戻ったら、ハルから。テンポ上げようって。……何も知らないで、楽しそうに', 'angry'],
                  ['ソウタ', '……あいつ、勉強もピアノも、いつも俺の一歩先にいて。それがちょっと、悔しかったのもある', 'down'],
                  ['ソウタ', 'それで……『お前はいいよな、楽しててもできるんだから』って送った。そんなこと、思ってもないのに', 'sad'],
-                 ['ソウタ', 'ほんとは、父さんに言い返したかった。……言えなかったぶん、全部ハルにぶつけた', 'blame'],
-                 ['ソウタ', 'あいつが毎晩、予備校のあとに練習してたの、知ってたのに', 'blame'],
+                 ['ソウタ', 'ほんとは、父さんに言い返したかった。……言えなかったぶん、全部ハルにぶつけた', 'angry'],
+                 ['ソウタ', 'あいつが毎晩、予備校のあとに練習してたの、知ってたのに', 'down'],
                  ['', 'ソウタは、ふうっと長く息を吐いた。', 'down'],
                  ['ソウタ', 'あいつ、『楽しみにしてた』って。それから、『最後ってなに』って聞いてきた', 'down'],
                  ['ソウタ', '……やめたくなんか、なかった。自分で決めたわけでもないのに、やめさせられるのが納得できなかった', 'down'],
@@ -3310,7 +3314,8 @@
     async onTick() {
       if (R.st !== 'here' || R.seen.has('buzz') || R.ticks < (R.loop ? 2 : 4)) return;
       R.seen.add('buzz'); hideCut();
-      await say([['……ミオのスマホが、また震えた。', 'ミオは画面を見ないまま、スマホをもっと奥へ押しやった。'],
+      await say([R.know.has('phone') ? ['……ミオのスマホが、また震えた。', 'ミオは画面を見ないまま、スマホをもっと奥へ押しやった。']
+                                       : ['……閲覧机の上で、伏せたスマホが震えた。', 'ミオは画面を見ないまま、スマホを机の奥へ押しやった。'],
                  ['スマホが、続けざまに震えている。止まらない。', 'ミオは両手で本を抱きしめて、じっと耐えていた。'],
                  ['震え続けるスマホの画面が、一瞬だけ明るくなった。「あした、たのしみだね」', 'ミオの肩が、小さく跳ねた。']][Math.min(R.loop, 2)]);
     },
@@ -3382,7 +3387,7 @@
         }
         if (!R.know.has('shelf')) {
           await say(['文学の書架。「913」の棚は、本の並びがばらばらだった。背のラベルの番号が、前後して入りまじっている。',
-                     '棚の端に、一冊ぶんのすき間。……貸出中の札も、差さっていない。', '棚の柱に、図書委員会の札。「本は、請求記号の順に」']);
+                     '棚の端に、一冊ぶんのすき間。……貸出中の札も、差さっていない。', '棚の柱に、図書委員会の札。「本は、左から請求記号の順に」']);
           R.know.add('shelf'); await tick();
         } else if (!R.know.has('notebook')) {
           R.know.add('notebook');
@@ -3394,7 +3399,7 @@
                      '最後のページの隅に、小さな字で一行。「ごめんね。あなたの椅子を、片づけてしまって」',
                      '……あの本には、一文字も書き込まれていなかった。結末を変えたのは、このノートの中だけだ。']);
           await tick();
-        } else await say(['913の棚。背のラベルの番号が、前後して入りまじっている。棚の端に、一冊ぶんのすき間。', '棚の柱の札。「本は、請求記号の順に」']);
+        } else await say(['913の棚。背のラベルの番号が、前後して入りまじっている。棚の端に、一冊ぶんのすき間。', '棚の柱の札。「本は、左から請求記号の順に」']);
         // 調べたことでチャイムが鳴ったら、本には触れない
         if (R.over || R.loop !== lp) return;
         const c = await choose(['本を並べ直す', 'やめる']);
@@ -3403,13 +3408,15 @@
         R.taken.shelf = v.b;
         if (!v.go) return;
         if (v.b.join() !== SHELF_ANSWER.join()) {
-          await say(['本を並べ終えて、棚を眺めた。', '……何かが違う気がする。']);
+          await say(['本を並べ終えて、棚を眺めた。', '背のラベルの下に、鉛筆で書いた小さな字が、一冊に一文字ずつ。……並びがばらばらで、読めない。']);
           await tick(); return;
         }
         R.know.add('sorted'); R.seen.add('sorted'); R.taken.key = true;
         await say(['最後の一冊を差しこんで、棚を眺めた。', '……すき間は、『ひとりぶんの椅子』のあるはずの場所に戻った。913.6 ヒ。',
-                   '誰かが、このすき間を見なくて済むように、まわりの本を詰めて隠していたのかもしれない。',
-                   'すき間の奥の棚板に、小さなフック。古い鍵が一本、掛かっていた。札に「閉架書庫」。']);
+                   '背のラベルの下に、鉛筆で書いた小さな字が、一冊に一文字ずつ。左から読むと、「あ・な・の・お・く・に・か・ぎ」。',
+                   '……穴の奥に、鍵。図書委員にだけわかる、鍵のありかの覚え書きだ。本が正しい順に並んでいないと、読めないようになっている。',
+                   'すき間に手を差しこむと、奥の棚板の裏に、小さなフック。古い鍵が一本、掛かっていた。札に「閉架書庫」。',
+                   '誰かが、このすき間を見なくて済むように、まわりの本を詰めて隠していたのかもしれない。']);
         await gotItem('stackKey'); await tick();
       },
       async notice() {
@@ -3603,7 +3610,7 @@
       a = await ask([['やったことは消えないよ。ちゃんと謝らなきゃ', 'seiron'], ['……怖かったんだね。次は自分だって', 'yori'],
                      ['ミオさんは悪くないよ。仕方なかったんだから', 'nagu'], ['今さら後悔しても、ツムギさんは戻ってこないよ', 'oitsu']], 2);
       if (a === 'seiron') { await say([['ミオ', '……わかってる。わかってるの', 'angry'], ['ミオ', '謝って済むなら、とっくにそうしてる', 'angry'], 'ミオは本を抱きしめたまま、動かなくなった。', '正しい言葉ほど、今のミオには重すぎるのかもしれない。']); return closeHeart(); }
-      if (a === 'oitsu') return doom([['ミオ', '……うん。知ってる', 'despair'], ['ミオ', '戻ってこないし、戻っちゃいけないんだよ。私のいる教室になんか', 'shadow'], ['ミオ', '私、最低だよね……人間、失格だ', 'despair'], ['ミオ', '……いてもいなくても同じなのは、私のほうだったね', 'despair']]);
+      if (a === 'oitsu') return doom([['ミオ', '……うん。知ってる', 'despair'], ['ミオ', '戻ってこないし、戻っちゃいけないんだよ。私のいる教室になんか', 'shadow'], ['ミオ', '私、最低だよね', 'despair'], ['ミオ', '……いてもいなくても同じなのは、私のほうだったね', 'despair']]);
       if (a === 'nagu') {
         R.cons++;
         await say([['ミオ', '……仕方、なかった？', 'surprise'],
@@ -3613,7 +3620,7 @@
                    '（……その言葉に、うなずいていいのか、わからなかった）']);
       } else {
         await say([['ミオ', '……うん', 'sad'], ['ミオ', '怖かった。……でも、怖かったなんて言ったら、ツムギのほうが、ずっと怖かったはずなのに', 'sad'],
-                   ['ミオ', '自分が助かるほうを選んで、それでまだ、怖かったなんて。……私、最低だよね。人間、失格だ', 'sad']]);
+                   ['ミオ', '自分が助かるほうを選んで、それでまだ、怖かったなんて。……私、最低だよね', 'sad']]);
       }
 
       // 3段目
@@ -3697,14 +3704,14 @@
       const cur = [...(R.taken.shelf || SHELF_START)]; let sel = null;
       openOverlay(`<p class="eyebrow">文学の書架</p><h2>913の棚</h2>
         <p class="note">本を押してから、入れ替えたい本（またはすき間）を押すと入れ替わる。</p>
-        <p class="sh-sign">棚の柱の札：「本は、請求記号の順に　図書委員会」</p>
+        <p class="sh-sign">棚の柱の札：「本は、左から請求記号の順に　図書委員会」</p>
         <div class="sh-row" id="shRow"></div>
         <div class="row"><button type="button" class="btn primary" id="shOk">並べ終える</button><button type="button" class="btn" id="shNo">やめる</button></div>`);
       const draw = () => {
         $('#shRow').innerHTML = cur.map((k, i) => {
           const b = SHELF_BOOKS[k];
-          return b ? `<button type="button" class="sh-book${sel === i ? ' sel' : ''}" data-i="${i}" style="background:${b[3]}" aria-label="${b[2]}　${b[0]} ${b[1]}"><span class="t">${b[2]}</span><span class="lb">${b[0]}<br>${b[1]}</span></button>`
-                   : `<button type="button" class="sh-book gap${sel === i ? ' sel' : ''}" data-i="${i}" aria-label="一冊ぶんのすき間"><span class="t">すき間</span><span class="lb" style="visibility:hidden">-<br>-</span></button>`;
+          return b ? `<button type="button" class="sh-book${sel === i ? ' sel' : ''}" data-i="${i}" style="background:${b[3]}" aria-label="${b[2]}　${b[0]} ${b[1]}"><span class="t">${b[2]}</span><span class="lb">${b[0].slice(0, 3)}<br>${b[0].slice(3)}<br>${b[1]}</span></button>`
+                   : `<button type="button" class="sh-book gap${sel === i ? ' sel' : ''}" data-i="${i}" aria-label="一冊ぶんのすき間"><span class="t">すき間</span><span class="lb" style="visibility:hidden">-<br>-<br>-</span></button>`;
         }).join('');
         $('#shRow').querySelectorAll('.sh-book').forEach(b => {
           b.onclick = () => {
@@ -3836,7 +3843,7 @@
     lastWords: [['ケイ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ケイ', '……もう、誰にも怒鳴られないところ', 'despair'],
                 ['ケイ', '守ってるつもりだった。……でも、もう、立ってるだけで精一杯なんだ', 'despair'],
                 'ケイは、テーピングの巻かれた自分の指を、じっと見つめていた。',
-                ['ケイ', '……次の部長には、悪いことしたな', 'despair']],
+                ['ケイ', '……あいつら、俺がいなくても、ちゃんと走れるよな', 'despair']],
     // 心を閉ざしたあと：直前の様子（ボールかごのほうを向く・タオルで顔を覆う）とつながるよう、表情には触れない
     closeLines: ['それきり、ケイはもうこちらを見なかった。', '沈黙のまま、時計の針だけが18:00へ近づいていった。'],
     hotspots: [
@@ -4172,7 +4179,7 @@
       if (a === 'oitsu') return doom([['ケイ', '……うん。そのつもりだった', 'shadow'],
                                 ['ケイ', '土曜の試合で俺が倒れれば、顧問も少しは懲りるだろ', 'despair'],
                                 ['ケイ', 'そしたら、あいつらは怒鳴られずに済む', 'despair'],
-                                ['ケイ', '……次の部長には、悪いことしたな', 'despair']]);
+                                ['ケイ', '……最後まで、あいつらの前に立っていたかったな', 'despair']]);
       await say([['ケイ', '……え', 'surprise'], ['ケイ', 'なんで、それ。……次の部長に書こうと思ってた言葉、誰にも言ってないのに', 'surprise'],
                  '答えられなかった。ただ、あのメモを覚えていた。']);
       await say(['「……作戦ボードの並び、見たよ。ハヤトをベンチで休ませて、自分は、いちばん走る場所に入れてた」',
@@ -4264,7 +4271,7 @@
   const ARROW = { U: '↑', D: '↓', L: '←', R: '→' };
   const mioRes = () => P.cur.results.mio;   // 3章のミオ：saved（ほどけた）／vanished（消えた）／shut（閉め出した）
   function eyeChartSVG() {
-    let y = 18, out = '';
+    let y = 26, out = '';
     CHART.forEach(([lab, dirs], i) => {
       const r = [16, 13, 11, 9, 7.5, 6, 4.6][i], gap = r * 0.42, sw = r * 0.38;
       const w = dirs.length * r * 3.2, x0 = 160 - w / 2 + r * 1.6;
@@ -4307,11 +4314,24 @@
       $('#dlNo').onclick = () => { closeOverlay(); res(null); };
     });
   }
+  function scrollBar(wrap) {
+    if (!wrap) return;
+    const box = wrap.firstElementChild, track = wrap.querySelector('.sc-track'), th = wrap.querySelector('.sc-thumb');
+    const upd = () => {
+      const h = box.clientHeight, sh = box.scrollHeight;
+      track.style.display = sh > h + 1 ? '' : 'none';
+      const t = Math.max(24, h * h / sh);
+      th.style.height = t + 'px'; th.style.top = (sh > h ? box.scrollTop / (sh - h) * (h - t) : 0) + 'px';
+    };
+    box.addEventListener('scroll', upd, { passive: true }); requestAnimationFrame(upd);
+  }
   async function viewCard() {
-    await overlayWait(`<p class="eyebrow">持ち物</p><h2>ツムギの来室カード</h2>
+    const shown = overlayWait(`<p class="eyebrow">持ち物</p><h2>ツムギの来室カード</h2>
       <p class="note">2年3組　白石ツムギ</p>
-      <div class="card-scroll"><table class="card-table"><tr><th>日付</th><th>来室</th><th>退室</th><th>来室理由</th></tr>
-      ${CARD_ROWS.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table></div>`, '', ['閉じる']);
+      <div class="sc-wrap"><div class="card-scroll"><table class="card-table"><tr><th>日付</th><th>来室</th><th>退室</th><th>来室理由</th></tr>
+      ${CARD_ROWS.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('')}</table></div><div class="sc-track"><i class="sc-thumb"></i></div></div>`, '', ['閉じる']);
+    scrollBar(card.querySelector('.sc-wrap'));
+    await shown;
     closeOverlay();
   }
   // 当番表：曜日ごと。ツムギが17:00まで残っていた曜日を選んで、照らし合わせる
@@ -4473,8 +4493,8 @@
           await viewTraces();
           if (!R.know.has('traces')) {
             R.know.add('traces'); R.seen.add('traces');
-            await say(['明かりを消すと、窓ガラスは鏡ではなくなった。', '窓のすぐ外に、正門へ続く通路。その向こうに、植え込みを挟んで校庭が広がっている。',
-                       ...(R.know.has('match') ? ['……当番の日、ツムギは、ここから見ていたんだ。窓の前の通路を通って、正門へ帰っていく、ミオの背中を。', '向こうからは見えないガラスに、「またね」と書いて。']
+            await say(['明かりを消すと、窓ガラスは鏡ではなくなった。', '窓のすぐ外に、植え込みと通路。右手のすぐ隣が昇降口で、そこから通路が正門へまっすぐのびている。', 'その向こうに、植え込みを挟んで校庭が広がっている。',
+                       ...(R.know.has('match') ? ['……当番の日、ツムギは、ここから見ていたんだ。昇降口を出て、正門へ帰っていく、ミオの背中を。', '向こうからは見えないガラスに、「またね」と書いて。']
                                                : ['ガラスに並んだ日付。……誰かを、ここから見送っていたのだろうか。']),
                        'ツムギは、こちらを見ないまま、膝の上で指を組んでいた。']);
             await tick();
@@ -4509,7 +4529,7 @@
           await tick();
         } else if (!R.know.has('note')) {
           R.know.add('note');
-          await say(['掲示板のすみに、小さなメモ用紙。', 'ていねいな字で、「いつもご迷惑をおかけしています　2-3 白石」。', '……毎日来ている子が、毎日、謝っているみたいだった。']);
+          await say(['掲示板のすみに、小さなメモ用紙。', 'ていねいな字で、「いつもご迷惑をおかけしています　2-3 白石」。', (R.know.has('card') ? '……毎日来ている子が、毎日、謝っているみたいだった。' : '……「いつも」と書くくらい、ここに通っている子なのだろうか。')]);
           await tick();
         } else await say(['保健だよりのコラム。「夜の窓ガラスは、鏡になります」。']);
         if (R.over) return;
@@ -4683,7 +4703,7 @@
                                         ['扉を叩いた。返事はない。', '……扉の窓の明かりが、ふっと消えた。',
                                          ...(mioRes() === 'saved' ? ['廊下の先で、ミオが本を抱えたまま、立ちつくしていた。'] : [])]);
       await say([['ツムギ', '……居場所、かあ', 'surprise'], ['ツムギ', 'うん。教室にいられなくなってから、ずっとここ', 'normal'],
-                 ['ツムギ', 'この窓、好きなんだ。すぐ前の通路を、正門へ帰っていく人が通るの。……みんなの帰り道が見える', 'normal']]);
+                 ['ツムギ', 'この窓、好きなんだ。となりが昇降口だから、正門へ帰っていく人が、斜めに見えるの。……みんなの帰り道が見える', 'normal']]);
 
       // 2段目
       await say([['ツムギ', '……小さいころから、入院ばっかりでさ', 'down'],
@@ -4741,9 +4761,9 @@
                                       ['ツムギ', 'だったら、最後まで逃げちゃえばいいよね', 'despair'], ['ツムギ', '……ミオ、またね', 'despair']]);
       // わすれもの（来室カードの空欄）から出る言葉
       await say([['ツムギ', '……どうして', 'surprise'], ['ツムギ', '誰にも、言ってないのに', 'surprise'], '答えられなかった。ただ、あのカードの空欄を覚えていた。']);
-      await say(['「……当番の日は、17時まで残って、窓の前の通路を見てたんだね」', '「ガラスに、『またね』って書いて」',
+      await say(['「……当番の日は、17時まで残って、ここから帰り道を見てたんだね」', '「ガラスに、『またね』って書いて」',
                  ['ツムギ', '……見てたんだ、あれ', 'sad'],
-                 ['ツムギ', 'あの子の当番の日はね、帰りを遅らせたの。窓の前を通って帰っていくのを、ここから見送って……ガラスに、またね、って', 'sad'],
+                 ['ツムギ', 'あの子の当番の日はね、帰りを遅らせたの。昇降口から出てきて、正門へ帰っていくのを、ここから見送って……ガラスに、またね、って', 'sad'],
                  ['ツムギ', '向こうからは、見えないのにね', 'crySmile'],
                  ['ツムギ', '……最後の日くらい、ちゃんと言いたかったんだ。目を見て、『またね』って', 'grief']]);
       if (mioRes() === 'saved') {
