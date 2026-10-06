@@ -1679,7 +1679,8 @@
     // チャイムが鳴っている間は、左上の時計もチャイムの時刻（章の終わり）を指す
     R.loop++; R.ticks = CHIME_AT; R.cons = 0; bgm(null); bell(); flash(); render();
     const last = R.loop >= 3 && R.st !== 'unraveled';
-    if (last && !R.doom && C.lastOverride && C.lastOverride()) {
+    // 一度も心に触れていなければ、どの章でもBAD1（ミオを閉め出した周回のツムギも同じ。容態の急変は、心に触れていたときだけ）
+    if (last && !R.doom && R.touched && C.lastOverride && C.lastOverride()) {
       setCG(true);
       await line(`${hm(chEnd())}。三度目のチャイムが鳴った。`, true, true);
       hideCut(); setCG(false);
@@ -4787,7 +4788,10 @@
       // 3段目
       if (mioRes() === 'shut') {
         // ミオを閉め出した周回：最後の段の前に、容態が急に悪くなる
-        await say([['ツムギ', '……今日ね。最後に、ちょっとだけ、行きたいところがあったの', 'down'], 'ツムギの言葉が、途中で途切れた。']);
+        // わすれもの（来室カード）を持っていても、ミオがいないのでほどける道はない。容態の急変より先に「かける言葉が見つからない」の3択を出す
+        await say([['ツムギ', '……今日ね。最後に、ちょっとだけ、行きたいところがあったの', 'down']]);
+        if (hasKey('tsumugi')) return lastWrong();
+        await say(['ツムギの言葉が、途中で途切れた。']);
         return tsumugiDies();
       }
       await say([['ツムギ', '……今日ね。最後に、ちょっとだけ、行きたいところがあったの', 'down'], ['ツムギ', 'でも、行かなかった。……行っても、迷惑なだけだから', 'sad']]);
