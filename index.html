@@ -5066,7 +5066,7 @@
     $('#oBack').onclick = () => showTitle();
   }
   function showShelf() {
-    const slots = [['ヒナ', 'hina', ART], ['ソウタ', 'sota', MUSIC], ['ミオ', 'mio', LIBRARY], ['ケイ', 'kei', GYM], ['ツムギ'], ['？？？']];
+    const slots = [['ヒナ', 'hina', ART], ['ソウタ', 'sota', MUSIC], ['ミオ', 'mio', LIBRARY], ['ケイ', 'kei', GYM], ['ツムギ', 'tsumugi', INFIRMARY], ['？？？']];
     P.shelfSeen = P.shelfSeen || {};
     const got = slots.filter(([, key]) => key && P.shelf[key]).length;
     const savedN = slots.filter(([, key]) => key && P.shelf[key] && P.saved[key]).length;
@@ -5088,7 +5088,7 @@
     slots.forEach(([, key]) => { if (key && P.shelf[key]) P.shelfSeen[key] = P.saved[key] ? 's' : 'v'; });
     saveP();
     $('#sBack').onclick = showTitle;
-    [['hina', ART], ['sota', MUSIC], ['mio', LIBRARY], ['kei', GYM]].forEach(([k, ch]) => {
+    [['hina', ART], ['sota', MUSIC], ['mio', LIBRARY], ['kei', GYM], ['tsumugi', INFIRMARY]].forEach(([k, ch]) => {
       const b = card.querySelector(`[data-k="${k}"]`);
       if (b) b.onclick = async () => {
         const it = ch.shelfItem(!!P.saved[k]);
