@@ -4269,13 +4269,25 @@
   };
 
   /* ---------- 書体の先読み ---------- */
+  // ページの読み込み途中に始めても書体が崩れないよう、書体のスタイルシートが届いてから、使う字の書体を読みこむ
+  // （スタイルシートより先に document.fonts.load を呼ぶと、まだ書体が登録されていないので、何も待たずに終わってしまう）
   const FONTS_READY = (() => {
     if (!document.fonts || !document.fonts.load) return Promise.resolve();
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const link = document.querySelector('link[rel="stylesheet"][href*="fonts.googleapis"]');
+    const sheet = new Promise(r => {
+      if (!link || link.sheet) return r();
+      link.addEventListener('load', r, { once: true }); link.addEventListener('error', r, { once: true });
+    });
     const chars = [...new Set(document.documentElement.innerHTML.replace(/[\x00-\x7f\s]/g, ''))].join('') + 'ABCabc0123456789!?';
-    const jobs = ['400 16px "Klee One"', '600 16px "Klee One"', '600 16px "Shippori Mincho B1"', '800 16px "Shippori Mincho B1"']
-      .map(f => document.fonts.load(f, chars).catch(() => {}));
+    const FACES = ['400 16px "Klee One"', '600 16px "Klee One"', '600 16px "Shippori Mincho B1"', '800 16px "Shippori Mincho B1"'];
+    const load = async () => {
+      await Promise.race([sheet, wait(8000)]);
+      await Promise.all(FACES.map(f => document.fonts.load(f, chars).catch(() => {})));
+      if (document.fonts.ready) await document.fonts.ready;
+    };
     // 通信が遅くても、いつまでも待たせない
-    return Promise.race([Promise.all(jobs), new Promise(r => setTimeout(r, 6000))]);
+    return Promise.race([load(), wait(12000)]);
   })();
 
   /* ---------- 章の切り替え ---------- */
