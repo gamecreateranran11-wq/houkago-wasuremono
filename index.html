@@ -620,7 +620,7 @@
                       mio: 'angry crysmile despair down grief sad smile surprise', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
-                       blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry' };
+                       blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad' };
   function faceFile(f) {
     const key = C.key, suf = C.faces[f].slice(key.length + 1);
     if (!R || !R.standing) return suf === 'bust' ? `${key}_s` : `${key}_s_${suf}`;
@@ -3662,7 +3662,7 @@
     sit: { src: 'kei_sit', style: 'left:79.5%;top:45%;height:22%' },
     // 消えたあと床に残るバッシュ（わすれものの絵と同じ靴を、ケイが座っていた床に置いた重ね絵）
     leftover: '', leftoverImg: 'g_left',
-    faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', softSmile: 'kei_softsmile', serious: 'kei_serious', breath: 'kei_breath', blank: 'kei_blank', teary: 'kei_teary' },
+    faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', softSmile: 'kei_softsmile', serious: 'kei_serious', breath: 'kei_breath', blank: 'kei_blank', teary: 'kei_teary', sadGrip: 'kei_sadgrip' },
     lost: '片方だけのバッシュ',
     clock: { img: 'ci_clock_gym', cx: 868, cy: 448, s: 0.86 },
     idleFree: '（ケイが待っている。チャイムが鳴る前に）',
@@ -3997,7 +3997,7 @@
       }
 
       // 3段目
-      await say(['ケイは、首のタオルをぎゅっと握りしめた。', ['ケイ', '……少しだけ、休みたいんだ', 'sad']]);
+      await say([['', 'ケイは、首のタオルをぎゅっと握りしめた。', 'sadGrip'], ['ケイ', '……少しだけ、休みたいんだ', 'sadGrip']]);
       if (hasKey('kei')) {
         await say([['ケイ', 'でも、俺が休んだら、あいつらが……', 'sad']]);
         await line('……あのバッシュの中敷きの下にあった、メモが頭に浮かんだ。', false);
