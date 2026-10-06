@@ -702,7 +702,7 @@
   const SCORE = { w: 1520, h: 388, overlap: 58, dmY: 264,
     notes: [220.9, 342.1, 533.2, 666.8, 870.8, 1009.2, 1211.1, 1341.9],
     pieces: [{ w: 425 }, { w: 386 }, { w: 397 }, { w: 475 }] };
-  // ピアノで3回間違えると、音符の下にハルの乱暴な字でドレミが浮かび上がる。anim=true でそのとき一文字ずつ現れる
+  // ピアノで5回間違えると、音符の下にハルの乱暴な字でドレミが浮かび上がる。anim=true でそのとき一文字ずつ現れる
   function doremiMarks(anim) {
     return SCORE.notes.map((x, i) => {
       const w = MELODY[i] === 'F4' ? 140 : 100;
@@ -1588,7 +1588,14 @@
       }
     } finally { scr = null; replay = null; busy = false; render(); if (!R.over) idle(); }
   }
-  const hintScript = async () => { await say([`【ヒント】${C.hint()}`]); };
+  // ヒントは段階式：同じところで押すたびに、少しずつ具体的になる（配列の最後が答えに近いヒント）
+  const hintScript = async () => {
+    const h = C.hint(), t = Array.isArray(h) ? h : [h];
+    R.hintLv = R.hintLv || {};
+    const k = C.id + ':' + t[0], lv = Math.min(R.hintLv[k] || 0, t.length - 1);
+    R.hintLv[k] = lv + 1;
+    await say([t.length > 1 ? `【ヒント ${lv + 1}／${t.length}】${t[lv]}` : `【ヒント】${t[0]}`]);
+  };
   const waitScript = async () => {
     await say(['窓の外を眺めて、チャイムを待った。']);
     R.ticks = CHIME_AT - 1; await tick();
@@ -1920,7 +1927,7 @@
   /* ================================================================
      第一章　美術室（ヒナ）
      ================================================================ */
-  function dial(n = 3, eyebrow = '画材棚の引き出し', title = '3桁のダイヤル錠') {
+  function dial(n = 3, eyebrow = '画材棚の引き出し', title = '3桁のダイヤル錠', chars = '0123456789') {
     const r = replayed(); if (r) return Promise.resolve(r.v);
     return new Promise(res0 => {
       const res = v => res0(rec(v));
@@ -1928,16 +1935,16 @@
       openOverlay(`<p class="eyebrow">${eyebrow}</p><h2>${title}</h2>
         <div class="dial">${d.map((_, i) => `<div class="wheel">
           <button type="button" data-i="${i}" data-d="1" aria-label="${i + 1}桁目を上げる">▲</button>
-          <output id="dg${i}">0</output>
+          <output id="dg${i}">${chars[0]}</output>
           <button type="button" data-i="${i}" data-d="-1" aria-label="${i + 1}桁目を下げる">▼</button></div>`).join('')}</div>
         <div class="row"><button type="button" class="btn primary" id="dOpen">開ける</button><button type="button" class="btn" id="dCancel">やめる</button></div>`);
       // ピアノの鍵盤と同じく、指が触れた瞬間に1つ動かす（クリックを待たないので、速く押してもダブルタップの拡大にならない）
-      const step = b => { const i = +b.dataset.i; d[i] = (d[i] + +b.dataset.d + 10) % 10; $('#dg' + i).textContent = d[i]; };
+      const step = b => { const i = +b.dataset.i; d[i] = (d[i] + +b.dataset.d + chars.length) % chars.length; $('#dg' + i).textContent = chars[d[i]]; };
       card.querySelectorAll('.wheel button').forEach(b => {
         b.addEventListener('pointerdown', e => { if (e.button > 0) return; e.preventDefault(); step(b); });
         b.onclick = e => { if (e.detail === 0) step(b); };  // キーボードで押したときだけ
       });
-      $('#dOpen').onclick = () => { closeOverlay(); res(d.join('')); };
+      $('#dOpen').onclick = () => { closeOverlay(); res(d.map(k => chars[k]).join('')); };
       $('#dCancel').onclick = () => { closeOverlay(); res(null); };
     });
   }
@@ -1951,7 +1958,7 @@
     ['pieceA', 'pieceB', 'pieceC'].forEach(p => R.items.delete(p));
     R.items.add('painting'); render();
     const p = overlayWait(`<p class="eyebrow">3枚の切れ端</p><h2>一枚の絵になった</h2>${flipCard()}
-      <p>窓から見た空の絵だ。右下に「7.14 Hina」とサインがある。</p>`, '', ['閉じる']);
+      <p>窓から見た空の絵だ。右下の隅に、小さくサインのようなものが書いてある。</p>`, '', ['閉じる']);
     wireFlip(true);
     await p;
     closeOverlay();
@@ -2141,7 +2148,7 @@
         if (R.know.has('drawer') && !R.drawerOpen) {
           R.drawerOpen = true; R.seen.add('drawer');
           showCut('ci_drawer');
-          await say(['番号は覚えている。7・1・4。']);
+          await say(['文字は覚えている。H・I・N・A。']);
           lockClick();
           await say(['カチリ。空の絆創膏の箱と、長袖のカーディガン。……前に見たときのままだ。']);
           await tick(); return;
@@ -2149,7 +2156,7 @@
         // 絵のサインを知っていれば、棚の下の切れ端は拾わずにダイヤル錠へ進める
         if (!R.taken.scrap && !R.know.has('painting')) {
           showCut('ci_shelf');
-          await say(['画材棚。いちばん上の引き出しに、3桁のダイヤル錠がかかっている。', '……棚の下に、紙切れが挟まっている。引き抜くと、絵の切れ端だった。']);
+          await say(['画材棚。いちばん上の引き出しに、英字4文字のダイヤル錠がかかっている。', '……棚の下に、紙切れが挟まっている。引き抜くと、絵の切れ端だった。']);
           R.taken.scrap = true; await gotItem('pieceB'); await tick(); return;
         }
         if (R.drawerOpen) {
@@ -2165,12 +2172,12 @@
         }
         showCut(R.taken.scrap ? 'ci_shelf_empty' : 'ci_shelf');
         if (!combined('painting') && !R.know.has('painting')) {
-          await say(['3桁のダイヤル錠。番号の手がかりが、まだ見つからない。']);
+          await say(['英字4文字のダイヤル錠。手がかりが、まだ見つからない。']);
           return;
         }
-        const code = await dial();
+        const code = await dial(4, '画材棚の引き出し', '英字4文字のダイヤル錠', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
         if (code === null) return;
-        if (code === '714') {
+        if (code === 'HINA') {
           R.drawerOpen = true; R.seen.add('drawer');
           showCut('ci_drawer'); lockClick();
           await say(['カチリ。引き出しが開いた。', '中には、空になった絆創膏の箱がいくつも。', 'それと、予備の長袖のカーディガンが一枚。', '……今は、七月だ。']);
@@ -2198,11 +2205,13 @@
       const pieces = partsHeld('painting');
       if (R.st === 'unraveled') return R.items.has('blue') ? 'ヒナに、青い絵の具を渡しましょう。' : 'ヒナは青い絵の具を探しています。水まわりを調べてみましょう。';
       if (!combined('painting') && !R.know.has('painting')) {
-        if (pieces === 3) return '絵の切れ端が3枚そろいました。持ち物の「絵の切れ端」を押してみましょう。';
-        if (pieces > 0) return '破れた紙は、まだ部屋のどこかに残っていそうです。捨てられた物や、物の下、布の下も調べてみましょう。';
+        if (pieces === 3) return ['絵の切れ端が3枚そろいました。持ち物を見てみましょう。', '持ち物の「絵の切れ端」を押すと、一枚の絵に戻せます。'];
+        if (pieces > 0) return ['破れた紙は、まだ部屋のどこかに残っていそうです。', '捨てられた物の中や、物の下、布の下も調べてみましょう。'];
         return '部屋の中で、気になる場所を調べてみましょう。';
       }
-      if (!R.know.has('drawer')) return 'ダイヤル錠は3桁です。空の絵を、すみずみまでよく見てみましょう。';
+      if (!R.know.has('drawer')) return ['画材棚の引き出しの錠は、英字4文字のダイヤル錠です。この部屋で手に入れた物に、英字は書かれていないでしょうか。',
+                                         '空の絵を、すみずみまでよく見てみましょう。虫めがねで拡大できる所があります。',
+                                         '空の絵の右下のサイン「7.14 Hina」。英字の部分を、大文字で入れてみましょう。'];
       if (!R.know.has('notice')) return '掲示板も調べてみましょう。';
       return 'ヒナに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
     },
@@ -2545,7 +2554,7 @@
         } else {
           pos = 0; prog();
           $('#kbMsg').textContent = '……音が違う。最初から。';
-          if (!R.know.has('doremi') && ++R.pianoMiss >= 3) {
+          if (!R.know.has('doremi') && ++R.pianoMiss >= 5) {
             R.know.add('doremi'); saveRun();
             $('#kbScore').innerHTML = fullScoreSVG(true);
             $('#kbMsg').textContent = '……音符の下に、鉛筆の字がにじむように浮かび上がってきた。ド、レ、ミ。読めるか怪しいくらいの、ハルの字だ。';
@@ -2839,11 +2848,15 @@
       const ready = R.items.has('secondo') || R.know.has('melody');
       if (R.st === 'unraveled') return ready ? 'ピアノで、ハルのパートを弾きましょう。' : 'ソウタが破いてしまったハルのパートを、部屋の中から集め直しましょう。';
       if (!ready) {
-        if (n === 4) return '五線譜の切れ端が4枚そろいました。持ち物の「五線譜の切れ端」を押して並べましょう。切れ端に番号はありません。破れ目の形がぴったり合うものどうしを隣に置きます。まっすぐな紙の端が、楽譜の左端と右端です。';
-        if (n > 0) return '五線譜の切れ端は、まだ部屋のどこかに残っていそうです。譜面台や楽器の陰、捨てられた物も調べてみましょう。';
+        if (n === 4) return ['五線譜の切れ端が4枚そろいました。持ち物から並べてみましょう。',
+                             '切れ端に番号はありません。破れ目の形がぴったり合うものどうしを、隣に置きます。',
+                             'まっすぐな紙の端が、楽譜の左端と右端です。左端の切れ端から順に、破れ目の形を合わせていきましょう。'];
+        if (n > 0) return ['五線譜の切れ端は、まだ部屋のどこかに残っていそうです。', '譜面台や楽器の陰、捨てられた物も調べてみましょう。'];
         return '部屋の中で、気になる場所を調べてみましょう。';
       }
-      if (!R.know.has('played')) return '並べた旋律を、ピアノで弾いてみましょう。五線のいちばん下の線にある音がミ。線と間をひとつ上がるごとにファ、ソ、ラ。下の線のすぐ下がレ、短い線を足した音がドです。';
+      if (!R.know.has('played')) return ['並べた旋律を、ピアノで弾いてみましょう。',
+                                         '五線のいちばん下の線にある音がミ。線と間をひとつ上がるごとにファ、ソ、ラ。下の線のすぐ下がレ、短い線を足した音がドです。',
+                                         '旋律は8つの音。ミ・ソ｜ラ・ソ｜ファ・ミ｜レ・ド。'];
       if (!R.know.has('board')) return '黒板も調べてみましょう。';
       if (!R.know.has('phone')) return 'ピアノの上も調べてみましょう。';
       return 'ソウタに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
@@ -3372,7 +3385,7 @@
           if (R.seen.has('door1') && !R.know.has('doorNote')) {
             // 手がかりがないうちの2回目：扉の横の貼り紙（番号は本に関係あるらしい）
             R.know.add('doorNote');
-            await say(['扉の横に、手書きの貼り紙がある。', '「閉架書庫　番号は、この部屋でいちばん借りられている本の“住所”です　図書委員会」', '……本の住所。背のラベルの番号のことだろうか。']);
+            await say(['扉の横に、手書きの貼り紙がある。', '「閉架書庫　番号は、この部屋でいちばん借りられている本の“住所”です　図書委員会」', '……本の、住所？']);
             await tick(); return;
           }
           R.seen.add('door1');
@@ -3410,11 +3423,15 @@
     },
     hint() {
       if (R.st === 'unraveled') return 'ミオに、カウンターのペンを渡しましょう。';
-      if (!R.know.has('ledger')) return '部屋の中で、気になる場所を調べてみましょう。本の貸し借りの記録が、どこかにありそうです。';
+      if (!R.know.has('ledger')) return ['部屋の中で、気になる場所を調べてみましょう。', '本の貸し借りの記録が、どこかにありそうです。'];
       if (!R.items.has('draft') && !R.know.has('acrostic')) return '捨てられた物の中に、何か残っていないでしょうか。';
       if (!R.know.has('dayori')) return '掲示板も調べてみましょう。';
-      if (!R.know.has('acrostic')) return '掲示板の図書だよりを調べて、その画面の下に出る持ち物「図書だよりの下書き」を押してみましょう。重ね合わせたら、マス目がぴったり合う位置まで下書きを動かします。赤い丸の中に透けた字を、右の列から順に読むと……。';
-      if (!R.know.has('diary')) return '奥の扉の番号は4桁です。貸出記録にあった、本の請求記号を思い出してみましょう。';
+      if (!R.know.has('acrostic')) return ['ゴミ箱の下書きと、掲示板の図書だより。マス目の形が同じです。',
+                                           '掲示板の図書だよりを見ている画面の下に、持ち物が出ます。「図書だよりの下書き」を押して、重ね合わせてみましょう。',
+                                           'マス目がぴったり合う位置まで下書きを動かすと、赤い丸の中に字が透けます。縦書きなので、右の列から順に読みます。'];
+      if (!R.know.has('diary')) return ['奥の扉の番号は4桁です。この部屋で見た記録の中に、4つの数字はなかったでしょうか。',
+                                        '扉の横の貼り紙「いちばん借りられている本の“住所”」。貸出記録で、何度も名前が並んでいた本は？',
+                                        '本の“住所”は、背のラベルの請求記号のこと。『ひとりぶんの椅子』の請求記号「913.6」から、数字だけを順に入れます。'];
       return 'ミオに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
     },
     async vanishScene() {
@@ -3896,13 +3913,16 @@
     },
     hint() {
       if (R.st === 'unraveled') return 'ケイのそばのボールを、調べてみましょう。';
-      if (!R.know.has('board')) return '部屋の中で、気になる場所を調べてみましょう。体育館の奥の作戦ボードが、気になります。';
+      if (!R.know.has('board')) return ['部屋の中で、気になる場所を調べてみましょう。', '体育館の奥の作戦ボードが、気になります。'];
       if (!R.know.has('lineup')) {
         const miss = [[!R.know.has('logbook'), '顧問の机'], [!R.know.has('shooters'), '得点板'], [!R.know.has('bag'), 'パイプ椅子のそばの荷物'],
                       [!R.know.has('basket'), 'ボールかご'], [!R.know.has('self'), '作戦ボード（もう一度）']].filter(([m]) => m).map(([, n]) => n);
-        if (miss.length) return `マグネットの並べ方の手がかりは、部屋のあちこちにあります。まだ見ていない場所：${miss.join('、')}。`;
-        if ((R.taken.miss || 0) < 2) return 'けがをしているのは誰か、外からシュートを決められるのは誰かを考えて、決まる位置から順に埋めていきましょう。ボードに書かれた位置の役目と、部屋のメモを見比べてみて。部誌は持ち物から読み返せます。';
-        return 'ハヤトはけがでベンチ。シューターはミナト。ダイチはゴール下。ボールを運べるのは誰か、後半まで走りきれないのは誰かを、位置の役目と見比べて。ケイの字のとおり、ケイの場所は最後に残ったところです。';
+        const t = ['ケイは、作戦ボードのマグネットを何度も動かしては戻していたようです。ケイが本当に組みたかった並びを考えてみましょう。',
+                   miss.length ? `並べ方の手がかりは、部屋のあちこちにあります。まだ見ていない場所：${miss.join('、')}。` : 'ボードに書かれた位置の役目と、部屋で見たメモを見比べてみましょう。部誌は持ち物から読み返せます。',
+                   'けがをしているのは誰か、外からシュートを決められるのは誰かを考えて、決まる位置から順に埋めていきましょう。'];
+        // 答えに近いヒントは、2回並べ間違えてから出す
+        if (!miss.length && (R.taken.miss || 0) >= 2) t.push('ハヤトはけがでベンチ。シューターはミナト。ダイチはゴール下。ボールを運べるのは誰か、後半まで走りきれないのは誰かを、位置の役目と見比べて。ケイの字のとおり、ケイの場所は最後に残ったところです。');
+        return t;
       }
       if (!R.know.has('logbook') || !R.know.has('bag')) return 'まだ調べていない場所がありそうです。';
       return 'ケイに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
