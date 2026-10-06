@@ -2148,7 +2148,7 @@
         if (R.know.has('drawer') && !R.drawerOpen) {
           R.drawerOpen = true; R.seen.add('drawer');
           showCut('ci_drawer');
-          await say(['文字は覚えている。H・I・N・A。']);
+          await say(['番号は覚えている。7・1・4。']);
           lockClick();
           await say(['カチリ。空の絆創膏の箱と、長袖のカーディガン。……前に見たときのままだ。']);
           await tick(); return;
@@ -2156,7 +2156,7 @@
         // 絵のサインを知っていれば、棚の下の切れ端は拾わずにダイヤル錠へ進める
         if (!R.taken.scrap && !R.know.has('painting')) {
           showCut('ci_shelf');
-          await say(['画材棚。いちばん上の引き出しに、英字4文字のダイヤル錠がかかっている。', '……棚の下に、紙切れが挟まっている。引き抜くと、絵の切れ端だった。']);
+          await say(['画材棚。いちばん上の引き出しに、3桁のダイヤル錠がかかっている。', '……棚の下に、紙切れが挟まっている。引き抜くと、絵の切れ端だった。']);
           R.taken.scrap = true; await gotItem('pieceB'); await tick(); return;
         }
         if (R.drawerOpen) {
@@ -2172,12 +2172,12 @@
         }
         showCut(R.taken.scrap ? 'ci_shelf_empty' : 'ci_shelf');
         if (!combined('painting') && !R.know.has('painting')) {
-          await say(['英字4文字のダイヤル錠。手がかりが、まだ見つからない。']);
+          await say(['3桁のダイヤル錠。番号の手がかりが、まだ見つからない。']);
           return;
         }
-        const code = await dial(4, '画材棚の引き出し', '英字4文字のダイヤル錠', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+        const code = await dial();
         if (code === null) return;
-        if (code === 'HINA') {
+        if (code === '714') {
           R.drawerOpen = true; R.seen.add('drawer');
           showCut('ci_drawer'); lockClick();
           await say(['カチリ。引き出しが開いた。', '中には、空になった絆創膏の箱がいくつも。', 'それと、予備の長袖のカーディガンが一枚。', '……今は、七月だ。']);
@@ -2209,9 +2209,9 @@
         if (pieces > 0) return ['破れた紙は、まだ部屋のどこかに残っていそうです。', '捨てられた物の中や、物の下、布の下も調べてみましょう。'];
         return '部屋の中で、気になる場所を調べてみましょう。';
       }
-      if (!R.know.has('drawer')) return ['画材棚の引き出しの錠は、英字4文字のダイヤル錠です。この部屋で手に入れた物に、英字は書かれていないでしょうか。',
+      if (!R.know.has('drawer')) return ['画材棚の引き出しの錠は、3桁のダイヤル錠です。この部屋で手に入れた物に、数字は書かれていないでしょうか。',
                                          '空の絵を、すみずみまでよく見てみましょう。虫めがねで拡大できる所があります。',
-                                         '空の絵の右下のサイン「7.14 Hina」。英字の部分を、大文字で入れてみましょう。'];
+                                         '空の絵の右下のサイン「7.14 Hina」。点を除いた3つの数字を、順に入れてみましょう。'];
       if (!R.know.has('notice')) return '掲示板も調べてみましょう。';
       return 'ヒナに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
     },
