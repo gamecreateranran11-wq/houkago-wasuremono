@@ -616,11 +616,11 @@
   const FACE_CACHE = {};
   // 立ち絵は「座った絵（_s）」と「立った絵（_p）」の2組。部屋では座っていて、立ち上がる場面から立った絵に切り替える（R.standing）
   // 立った絵は表情の数が少ないので、ない表情は近いものを使う
-  const STAND_SET = { hina: 'angry despair down grief sad smile surprise', sota: 'angry crysmile despair down grief sad smile surprise',
+  const STAND_SET = { hina: 'angry despair down grief sad smile surprise pout', sota: 'angry crysmile despair down grief sad smile surprise',
                       mio: 'angry crysmile despair down grief sad smile surprise', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
-                       blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad' };
+                       blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down' };
   function faceFile(f) {
     const key = C.key, suf = C.faces[f].slice(key.length + 1);
     if (!R || !R.standing) return suf === 'bust' ? `${key}_s` : `${key}_s_${suf}`;
@@ -2002,7 +2002,7 @@
     id: 'art', key: 'hina', name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom', bgClock: { cx: 755, cy: 163, rx: 34, ry: 35 },
     sit: { src: 'hina_sit', style: 'left:1%;top:36.7%;height:20%' },
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
-    faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry' },
+    faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout' },
     lost: '顔のないスケッチブック',
     idleFree: '（ヒナが待っている。チャイムが鳴る前に）',
     // 探索の途中、いないはずの母の視線を感じる（ループが進むほど、はっきりしていく）
@@ -2371,8 +2371,8 @@
       await say(['ぎゅっと鞄を抱えていた腕から、少しずつ力が抜けていく。',
                  'こわばっていた口元がゆるんで、ヒナは、小さく息を吐いた。']);
       bgm('musicbox');
-      await say([['ヒナ', '……描いても、いいのかな', 'grief'],
-                 ['ヒナ', 'お母さんが嫌な顔しても。……自分のこと、こんなに傷つけてる私でも', 'grief'],
+      await say([['ヒナ', '……描いても、いいのかな', 'confused'],
+                 ['ヒナ', 'お母さんが嫌な顔しても。……自分のこと、こんなに傷つけてる私でも', 'confused'],
                  ['ヒナ', '褒められるためじゃなくて。……こんな私の顔を、私が、大事に描いてあげても', 'grief'],
                  '「いいよ。……ヒナの顔は、ヒナが大事にしていいんだ」',
                  '「空も、ヒナの顔も。……見たいな、ヒナが描いたの」',
@@ -2406,7 +2406,7 @@
     await overlayWait(`<p class="eyebrow">ヒナの自画像</p><h2>顔を、描いた</h2>${SKETCH_FACE}
       <p>震えた線で描かれた、泣きそうで、少しだけ笑っている顔。</p>`, '', ['続ける']);
     closeOverlay();
-    await say([['ヒナ', '……へたくそ', 'smile'],
+    await say([['ヒナ', '……へたくそ', 'pout'],
                ['ヒナ', 'でも、これが今の私の顔なんだと思う。……もっと、ちゃんと描けるようになりたいな', 'smile']]);
     lockClick();
     await say(['美術室の扉の向こうで、カチリと鍵の外れる音がした。']);
