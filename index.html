@@ -5057,7 +5057,7 @@
     wireVol($('#sVolBgm'), $('#sVolSe'));
     $('#setBack').onclick = () => showTitle();
   }
-  /* ---------- サウンドトラック（放課後を一度終えると、タイトルに出る） ---------- */
+  /* ---------- サウンドトラック（BAD以外の結末＝NORMAL・GOOD・TRUEのどれかを初めて見ると、タイトルに出る。ボーナストラックはTRUEのあと） ---------- */
   // [曲, 題, 版の印, 説明]。ゲームの中で流れる順に並べる。『放課後』はソウタとハルの連弾曲。ソロなどの版は、題のあとの印でわかるようにする
   const OST = [
     ['title', '夕映えの校舎', '', 'アコースティックギターと、遠くで練習する吹奏楽のホルン'],
@@ -5072,14 +5072,15 @@
     ['codep', 'ふたりきりの子守唄', '', 'オルゴールとピアノの3拍子。穏やかなのに、どこか落ち着かない'],
     ['sotaDuet', '放課後', '連弾', 'ボーナストラック（本編には出てこない曲）。ソウタとハルが4本の手で弾く連弾版'],
   ];
-  const ostOpen = () => !!P.runs;
+  const ostOpen = () => !!(P.endings && (P.endings.NORMAL || P.endings.GOOD || P.endings.TRUE));
+  const ostList = () => OST.filter(([k]) => k !== 'sotaDuet' || !!(P.endings && P.endings.TRUE));
   const ostHeard = k => k === 'sotaDuet' || !!P.heard[k];
   function showSoundtrack() {
     let playing = bgmName && OST.some(([k]) => k === bgmName) ? bgmName : null;
-    const got = OST.filter(([k]) => ostHeard(k)).length;
+    const list = ostList(), got = list.filter(([k]) => ostHeard(k)).length;
     openOverlay(`<p class="eyebrow">おまけ</p><h2>サウンドトラック</h2>
-      <p class="note">聴いた曲　${got} / ${OST.length}　　押すと流れ、もう一度押すと止まります。</p>
-      <div class="ost">${OST.map(([k, ttl, ver, desc], i) => ostHeard(k)
+      <p class="note">聴いた曲　${got} / ${list.length}　　押すと流れ、もう一度押すと止まります。</p>
+      <div class="ost">${list.map(([k, ttl, ver, desc], i) => ostHeard(k)
         ? `<button type="button" class="ost-row${k === 'sotaDuet' ? ' bonus' : ''}" data-k="${k}"><span class="no">${k === 'sotaDuet' ? 'BONUS' : String(i + 1).padStart(2, '0')}</span>
             <span><span class="ttl">『${ttl}』${ver ? `<small>${ver}</small>` : ''}</span><span class="desc">${desc}</span></span><span class="st"></span></button>`
         : `<div class="ost-row locked"><span class="no">${String(i + 1).padStart(2, '0')}</span><span><span class="ttl">？？？</span><span class="desc">まだ聴いていない曲</span></span><span class="st"></span></div>`).join('')}</div>
