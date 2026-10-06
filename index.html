@@ -1155,17 +1155,31 @@
     // 2周目の前半：内声が主題を8分音符2つ遅れて追いかける（カノン）
     if (cyc && bar < 8) seq(P_.mel[bar], t + e * 2, e, (n, x2, len) => piano(n - 12, x2, 0.017, Math.max(0.5, len * 1.2)));
     // 左手：和音を低い音から順にアルペジオで（ペダルで長く残す）
-    let at = t;
-    P_.ch[bar].forEach(([v, len]) => {
+    // 一人で弾くので、左手は右手（旋律・後半のオクターブ・2周目の内声のカノン）より下に収め、両手が交差しないようにする。
+    // 右手のいちばん低い音より短3度以上下に、はみ出す音は1オクターブ下げ（ほかの音と2半音以内でぶつかるなら省く）
+    const rh = P_.mel[bar].map(([n]) => n).filter(Boolean);
+    const rhLow = Math.min(...rh.map(n => (bar >= 8 || (cyc && bar < 8)) ? n - 12 : n));
+    const cap = rhLow - 3;
+    const voice_ = v => {
+      const keep = v.filter(n => n <= cap);
+      v.filter(n => n > cap).forEach(n => { const d = n - 12; if (d > keep[0] && d <= cap && keep.every(k => Math.abs(k - d) > 2)) keep.push(d); });
+      return keep.sort((a, b) => a - b);
+    };
+    // シンコペーション：3・7・11・15小節目は、2拍目の裏と3拍目の裏に、左手が和音の上の3音をスタッカートで（その2か所はアルペジオを休む）
+    const sync = bar % 4 === 2 ? [3, 5] : [];
+    let at = t, a8 = 0;
+    P_.ch[bar].forEach(([v0, len]) => {
+      const v = voice_(v0);
       const pat = len >= 8 ? [0, 1, 2, 3, 4, 3, 2, 1] : len >= 4 ? [0, 2, 3, 4] : [0, 3];
       pat.forEach((k, m) => {
+        const pos = a8 + m * (len / pat.length);
+        if (sync.includes(pos)) return;
         const n = v[Math.min(k, v.length - 1)];
         piano(n, at + m * e * (len / pat.length), m === 0 ? 0.12 : k <= 1 ? 0.051 + (v.length - k) * 0.003 : (0.022 + (v.length - k) * 0.002) * 1.3, m === 0 ? 2.6 : 1.7);
       });
-      at += len * e;
+      sync.filter(k => k >= a8 && k < a8 + len).forEach(k => v.slice(-3).forEach(n => piano(n, t + k * e, 0.024, 0.16)));
+      at += len * e; a8 += len;
     });
-    // シンコペーション：3・7・11・15小節目は、2拍目の裏と3拍目の裏に、高い和音をスタッカートで
-    if (bar % 4 === 2) [3, 5].forEach(k => P_.ch[bar][0][0].slice(-3).forEach(n => piano(n + 12, t + k * e, 0.018, 0.16)));
     // 連弾版：ハルのパート
     if (duet) seq(P_.hal[bar], t, e, (n, x3, len) => { piano(n, x3, 0.034, Math.max(0.8, len * 1.2)); piano(n - 12, x3, 0.012, Math.max(0.8, len * 1.1)); });
     return e * 8;
