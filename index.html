@@ -203,6 +203,7 @@
   .eye-chart svg { display: block; width: 100%; height: auto; }
   .card-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fbf8f0; color: #2a2a2a; }
   .card-table th, .card-table td { border: 1px solid #b9b2a2; padding: 2px 4px; text-align: center; }
+  #scene.room-dark #portrait, #scene.room-dark #sitFig { filter: url(#fRoomDark); }
   .card-scroll { max-height: 46vh; overflow-y: auto; border-radius: 4px; scrollbar-width: none; }
   .card-scroll::-webkit-scrollbar { display: none; }
   .sc-wrap { position: relative; padding-right: 12px; }
@@ -421,6 +422,7 @@
       <div id="cutin" class="cutin" aria-live="polite"></div>
       <div id="getItem" class="get-item" role="status" hidden></div>
       <img id="portrait" class="portrait" alt="">
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fRoomDark" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".64 0 0 0 0  0 .54 0 0 0  0 0 .56 0 0  0 0 0 1 0"/></filter></svg>
       <img class="chime-cg" src="img/chime_sky.webp" alt="17:00の夕焼け空。チャイムが響いている">
     </div>
   </div>
@@ -4373,6 +4375,8 @@
   function setDark(on) {
     R.taken.dark = on;
     $('#bgImg').src = `img/${on ? 'infirmary_unlit' : 'infirmary'}.webp`;
+    // 明かりを消した部屋では、立ち絵と座り姿も部屋と同じ暗さ・色味にする（#fRoomDark）
+    $('#scene').classList.toggle('room-dark', !!on);
   }
   // ミオを閉め出した周回：ツムギの容態が急に悪くなる（主人公の責任にはしない。表現はぼかす）
   async function tsumugiDies() {
@@ -4817,7 +4821,7 @@
   function clearStage() {
     const scene = $('#scene');
     scene.classList.add('reset');
-    scene.classList.remove('cut', 'talk', 'cg', 'story');
+    scene.classList.remove('cut', 'talk', 'cg', 'story', 'room-dark');
     const ci = $('#cutin'); ci.classList.remove('show'); ci.innerHTML = '';
     $('#getItem').hidden = true;
     $('#sitFig').classList.remove('gone');
