@@ -193,6 +193,16 @@
   .align-wrap.ok .align-base span.mk i { font-weight: 700; color: #8f2f2a; }
   .align-wrap.ok .align-base span:not(.mk) i { opacity: .45; }
   .align-pad { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  /* 913の棚：本の背を押して入れ替え、請求記号の順に並べ直す */
+  .sh-row { display: flex; justify-content: center; align-items: flex-end; gap: 3px; padding: 10px 6px 0; background: linear-gradient(#5a3b24, #4a301d); border-radius: 4px 4px 0 0; box-shadow: inset 0 -6px 0 #3a2414; touch-action: manipulation; }
+  .sh-book { width: 34px; height: 168px; border: 0; border-radius: 3px 3px 0 0; padding: 6px 0 0; display: flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; color: #f6efe2; box-shadow: inset -3px 0 0 rgba(0,0,0,.18); touch-action: manipulation; }
+  .sh-book .t { writing-mode: vertical-rl; font-size: 12px; letter-spacing: .05em; line-height: 1; }
+  .sh-book .lb { width: 28px; margin-bottom: 6px; background: #fbf8f0; color: #2a2a2a; border-radius: 2px; font-size: 9.5px; line-height: 1.25; text-align: center; padding: 2px 0; }
+  .sh-book.gap { background: rgba(0,0,0,.35); box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
+  .sh-book.gap .t { color: rgba(255,255,255,.55); }
+  .sh-book.sel { outline: 3px solid var(--gold); outline-offset: 1px; }
+  .sh-sign { font-size: 12px; color: #e8dcc6; text-align: center; margin: 2px 0 6px; }
+  @media (max-width: 400px) { .sh-book { width: 30px; height: 150px; } .sh-book .lb { width: 26px; font-size: 9px; } .sh-row { gap: 2px; } }
   /* 作戦ボード：コートの図にマグネットを置く。押したマグネットと、次に押した場所が入れ替わる */
   .lu-court { position: relative; aspect-ratio: 10 / 7; background: #f3f0e8; border-radius: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.4); margin: 4px 0 8px; touch-action: manipulation; }
   .lu-court svg { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -702,7 +712,7 @@
   const SCORE = { w: 1520, h: 388, overlap: 58, dmY: 264,
     notes: [220.9, 342.1, 533.2, 666.8, 870.8, 1009.2, 1211.1, 1341.9],
     pieces: [{ w: 425 }, { w: 386 }, { w: 397 }, { w: 475 }] };
-  // ピアノで5回間違えると、音符の下にハルの乱暴な字でドレミが浮かび上がる。anim=true でそのとき一文字ずつ現れる
+  // ピアノで3回間違えると、音符の下にハルの乱暴な字でドレミが浮かび上がる。anim=true でそのとき一文字ずつ現れる
   function doremiMarks(anim) {
     return SCORE.notes.map((x, i) => {
       const w = MELODY[i] === 'F4' ? 140 : 100;
@@ -731,6 +741,7 @@
     draft: { name: '図書だよりの下書き', img: 'l_item_draft' },
     logbook: { name: '部誌', img: 'g_item_log' },
     letter: { name: 'ハヤトの手紙', img: 'g_item_letter' },
+    stackKey: { name: '閉架書庫の鍵', img: 'l_key' },
   };
   const itemSrc = it => it.src || `img/${it.img}.webp`;
   Object.values(ITEM_INFO).forEach(it => { const i = new Image(); i.src = itemSrc(it); });
@@ -2554,7 +2565,7 @@
         } else {
           pos = 0; prog();
           $('#kbMsg').textContent = '……音が違う。最初から。';
-          if (!R.know.has('doremi') && ++R.pianoMiss >= 5) {
+          if (!R.know.has('doremi') && ++R.pianoMiss >= 3) {
             R.know.add('doremi'); saveRun();
             $('#kbScore').innerHTML = fullScoreSVG(true);
             $('#kbMsg').textContent = '……音符の下に、鉛筆の字がにじむように浮かび上がってきた。ド、レ、ミ。読めるか怪しいくらいの、ハルの字だ。';
@@ -3292,6 +3303,7 @@
     },
     inv(add) {
       if (R.items.has('draft')) add('図書だよりの下書き', '', viewDraft, 'img/l_item_draft.webp');
+      if (R.items.has('stackKey')) add('閉架書庫の鍵', '', () => say(['古い鍵。札に「閉架書庫」。']), 'img/l_key.webp');
     },
     H: {
       async counter() {
@@ -3309,12 +3321,36 @@
       },
       async shelf() {
         showCut('lci_shelf');
+        const lp = R.loop;
+        // 並べ直したことがあれば、チャイムで時間が戻っても、並べ方は覚えている
+        if (R.know.has('sorted')) {
+          if (!R.taken.key) {
+            R.taken.key = true;
+            await say(['並べ方は、もう覚えている。背のラベルの順に、本を入れ替えていく。',
+                       '……すき間が、『ひとりぶんの椅子』のあるはずの場所に戻った。奥の棚板のフックに、閉架書庫の鍵が掛かっている。']);
+            await gotItem('stackKey'); await tick(); return;
+          }
+          if (!R.know.has('notebook')) {
+            // 2回目：あの本があるはずのすき間に、ミオのノート。空想に耽る癖で書いた『ひとりぶんの椅子』の、逆の結末の続き
+            // 物を大切にするので、本には一文字も書き込まず、自分のノートにだけ書いている
+            R.know.add('notebook');
+            await say(['913の棚の、一冊ぶんのすき間。……奥に、大学ノートが一冊、差しこまれていた。表紙には何も書かれていない。',
+                     '開くと、細い字で物語が書かれていた。……『ひとりぶんの椅子』の、続きのようだ。',
+                     '「椅子を運んでくれた人は、ある日から、来なくなった。」',
+                     '「わたしは、もうひとつの椅子を、部屋のすみに片づけた。それから、扉に鍵をかけた。」',
+                     '「これで、だれも来ない。だれも、傷つけない。」',
+                     '最後のページの隅に、小さな字で一行。「ごめんね。あなたの椅子を、片づけてしまって」',
+                     '……あの本には、一文字も書き込まれていなかった。結末を変えたのは、このノートの中だけだ。']);
+            await tick(); return;
+          }
+          await say(['913の棚。すき間は、『ひとりぶんの椅子』のあるはずの場所にある。', '奥には、椅子を片づけてしまう物語のノートが差しこまれている。']);
+          return;
+        }
         if (!R.know.has('shelf')) {
-          await say(['文学の書架。「913」の棚に、一冊ぶんのすき間があいている。', '……貸出中の札も、差さっていない。']);
+          await say(['文学の書架。「913」の棚は、本の並びがばらばらだった。背のラベルの番号が、前後して入りまじっている。',
+                     '棚の端に、一冊ぶんのすき間。……貸出中の札も、差さっていない。', '棚の柱に、図書委員会の札。「本は、請求記号の順に」']);
           R.know.add('shelf'); await tick();
         } else if (!R.know.has('notebook')) {
-          // 2回目：あの本があるはずのすき間に、ミオのノート。空想に耽る癖で書いた『ひとりぶんの椅子』の、逆の結末の続き
-          // 物を大切にするので、本には一文字も書き込まず、自分のノートにだけ書いている
           R.know.add('notebook');
           await say(['913の棚の、一冊ぶんのすき間。……奥に、大学ノートが一冊、差しこまれていた。表紙には何も書かれていない。',
                      '開くと、細い字で物語が書かれていた。……『ひとりぶんの椅子』の、続きのようだ。',
@@ -3324,7 +3360,23 @@
                      '最後のページの隅に、小さな字で一行。「ごめんね。あなたの椅子を、片づけてしまって」',
                      '……あの本には、一文字も書き込まれていなかった。結末を変えたのは、このノートの中だけだ。']);
           await tick();
-        } else await say(['913の棚の、一冊ぶんのすき間。', '奥には、椅子を片づけてしまう物語のノートが、そのまま差しこまれている。']);
+        } else await say(['913の棚。背のラベルの番号が、前後して入りまじっている。棚の端に、一冊ぶんのすき間。', '棚の柱の札。「本は、請求記号の順に」']);
+        // 調べたことでチャイムが鳴ったら、本には触れない
+        if (R.over || R.loop !== lp) return;
+        const c = await choose(['本を並べ直す', 'やめる']);
+        if (c !== 0) return;
+        const v = await sortShelf();
+        R.taken.shelf = v.b;
+        if (!v.go) return;
+        if (v.b.join() !== SHELF_ANSWER.join()) {
+          await say(['本を並べ終えて、棚を眺めた。', '……何かが違う気がする。']);
+          await tick(); return;
+        }
+        R.know.add('sorted'); R.seen.add('sorted'); R.taken.key = true;
+        await say(['最後の一冊を差しこんで、棚を眺めた。', '……すき間は、『ひとりぶんの椅子』のあるはずの場所に戻った。913.6 ヒ。',
+                   '誰かが、このすき間を見なくて済むように、まわりの本を詰めて隠していたのかもしれない。',
+                   'すき間の奥の棚板に、小さなフック。古い鍵が一本、掛かっていた。札に「閉架書庫」。']);
+        await gotItem('stackKey'); await tick();
       },
       async notice() {
         showCut('lci_notice');
@@ -3367,7 +3419,8 @@
         showCut('lci_door');
         if (R.know.has('diary')) {
           if (!R.seen.has('diary')) {
-            R.seen.add('diary'); await say(['番号は覚えている。9・1・3・6。']); lockClick();
+            if (!R.items.has('stackKey')) { await say(['鍵穴の錠。……鍵は、913の棚の奥のフックに掛かっているはずだ。']); return; }
+            R.seen.add('diary'); await say(['鍵を差しこんで、回す。']); lockClick();
             await say(['閉架書庫の中。段ボールの学級日誌。6月9日のページだけが、途中まで破られている。', '余白に写された言葉。「いてもいなくても同じ」']);
             return;
           }
@@ -3381,29 +3434,25 @@
           await say(['閉架書庫の中。段ボールの学級日誌と、去年の委員会ファイル。', '当番表の「白石・水野」の枠が、ほこりの中で並んでいる。']);
           return;
         }
-        if (!R.know.has('ledger')) {
+        if (!R.items.has('stackKey')) {
           if (R.seen.has('door1') && !R.know.has('doorNote')) {
-            // 手がかりがないうちの2回目：扉の横の貼り紙（番号は本に関係あるらしい）
+            // 2回目：扉の横の貼り紙（鍵は、いつもの棚の奥にあるらしい）
             R.know.add('doorNote');
-            await say(['扉の横に、手書きの貼り紙がある。', '「閉架書庫　番号は、この部屋でいちばん借りられている本の“住所”です　図書委員会」', '……本の、住所？']);
+            await say(['扉の横に、手書きの貼り紙がある。', '「閉架書庫　鍵は使い終わったら、いつもの棚の奥へ　図書委員会」']);
             await tick(); return;
           }
           R.seen.add('door1');
-          await say(['「閉架書庫」の扉。4桁の番号を押す錠がついている。', '……番号の手がかりが、まだない。']); return;
+          await say(['「閉架書庫」の扉。鍵穴の錠がかかっている。', '……鍵がない。']); return;
         }
-        const code = await dial(4, '閉架書庫の扉', '4桁の番号錠');
-        if (code === null) return;
-        if (code === '9136') {
-          lockClick();
-          await say(['……カチッ。錠が外れた。', '書庫の中は、ほこりっぽい。古い学級日誌が、段ボールに押しこまれていた。']);
-          showCut('lci_diary');
-          await say(['「2年3組 学級日誌」。6月9日のページだけが、途中まで破られている。',
-                     '残った部分に、担任の字。「朝、黒板にいたずら書き。書いた者は名乗り出ること」',
-                     '書かれていた言葉は、ページの余白に、誰かの細い字で小さく写してあった。',
-                     '「いてもいなくても同じ」',
-                     'ページの間に、図書室の貸出カードが一枚、しおりのように挟まっている。借りた人は「水野ミオ」。']);
-          R.know.add('diary'); R.seen.add('diary'); await tick();
-        } else { await say(['ブッ、と低い音。錠は開かない。']); await tick(); }
+        lockClick();
+        await say(['鍵を差しこんで回すと、カチッと錠が外れた。', '書庫の中は、ほこりっぽい。古い学級日誌が、段ボールに押しこまれていた。']);
+        showCut('lci_diary');
+        await say(['「2年3組 学級日誌」。6月9日のページだけが、途中まで破られている。',
+                   '残った部分に、担任の字。「朝、黒板にいたずら書き。書いた者は名乗り出ること」',
+                   '書かれていた言葉は、ページの余白に、誰かの細い字で小さく写してあった。',
+                   '「いてもいなくても同じ」',
+                   'ページの間に、図書室の貸出カードが一枚、しおりのように挟まっている。借りた人は「水野ミオ」。']);
+        R.know.add('diary'); R.seen.add('diary'); await tick();
       },
       async desk() {
         // 2回目からは、机の写真のあとにお母さんのメッセージが届いた画面（lci_phone2）
@@ -3429,9 +3478,11 @@
       if (!R.know.has('acrostic')) return ['ゴミ箱の下書きと、掲示板の図書だより。マス目の形が同じです。',
                                            '掲示板の図書だよりを見ている画面の下に、持ち物が出ます。「図書だよりの下書き」を押して、重ね合わせてみましょう。',
                                            'マス目がぴったり合う位置まで下書きを動かすと、赤い丸の中に字が透けます。縦書きなので、右の列から順に読みます。'];
-      if (!R.know.has('diary')) return ['奥の扉の番号は4桁です。この部屋で見た記録の中に、4つの数字はなかったでしょうか。',
-                                        '扉の横の貼り紙「いちばん借りられている本の“住所”」。貸出記録で、何度も名前が並んでいた本は？',
-                                        '本の“住所”は、背のラベルの請求記号のこと。『ひとりぶんの椅子』の請求記号「913.6」から、数字だけを順に入れます。'];
+      if (!R.know.has('diary') && R.items.has('stackKey')) return '閉架書庫の鍵を持っています。奥の扉を調べてみましょう。';
+      if (!R.know.has('diary')) return ['奥の扉は、鍵穴の錠です。鍵は、この部屋のどこかにありそうです。',
+                                        '扉をもう一度調べると、横の貼り紙が見つかります。「鍵は、いつもの棚の奥へ」。本の並びが乱れていた棚は、どこでしたか。',
+                                        '書架の913の棚を、請求記号の順に並べ直しましょう。数字の小さい順に、同じ数字なら頭文字の五十音順に。913.6と913.68では、913.6が先です。',
+                                        'すき間も一冊ぶんとして並べます。すき間に入るはずの本は、貸出記録にあった『ひとりぶんの椅子』（913.6 ヒ）です。'];
       return 'ミオに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
     },
     async vanishScene() {
@@ -3596,6 +3647,43 @@
   const LINEUP_COACH = { pg: 'ケイ', sg: 'ハヤト', sf: 'シュン', pf: 'ミナト', c: 'ダイチ', bench: 'ユウマ' };
   // ケイが本当に組みたかった並び：いちばん走る外のフォワードに自分が入り、けがのハヤトをベンチで休ませる
   const LINEUP_ANSWER = { pg: 'ユウマ', sg: 'ミナト', sf: 'ケイ', pf: 'シュン', c: 'ダイチ', bench: 'ハヤト' };
+  // 913の棚の本（請求記号・著者の頭文字・書名・背の色）。gap は『ひとりぶんの椅子』のあるはずのすき間
+  const SHELF_BOOKS = {
+    fu: ['913.4', 'フ', '古い時計の話', '#5b6b7d'], a: ['913.6', 'ア', '雨やどりの午後', '#7a4a3c'], ka: ['913.6', 'カ', '風見鶏の町', '#4f6b52'],
+    si: ['913.6', 'シ', '白い坂道', '#8a7a5c'], na: ['913.6', 'ナ', '夏の終わりの手紙', '#3f5a78'], gap: null,
+    ho: ['913.6', 'ホ', '星を数える人', '#5c4a6e'], mi: ['913.6', 'ミ', 'みずうみの家', '#3d6a6a'], to: ['913.68', 'ト', '遠い汽笛', '#6e5a3a'] };
+  const SHELF_ANSWER = ['fu', 'a', 'ka', 'si', 'na', 'gap', 'ho', 'mi', 'to'];
+  // ミオがすき間を見ないように本を詰めたので、すき間は棚の端にある
+  const SHELF_START = ['si', 'to', 'a', 'mi', 'na', 'fu', 'ka', 'ho', 'gap'];
+  function sortShelf() {
+    const r = replayed(); if (r) return Promise.resolve(r.v);
+    return new Promise(res0 => {
+      const res = v => res0(rec(v));
+      const cur = [...(R.taken.shelf || SHELF_START)]; let sel = null;
+      openOverlay(`<p class="eyebrow">文学の書架</p><h2>913の棚</h2>
+        <p class="note">本を押してから、入れ替えたい本（またはすき間）を押すと入れ替わる。</p>
+        <p class="sh-sign">棚の柱の札：「本は、請求記号の順に　図書委員会」</p>
+        <div class="sh-row" id="shRow"></div>
+        <div class="row"><button type="button" class="btn primary" id="shOk">並べ終える</button><button type="button" class="btn" id="shNo">やめる</button></div>`);
+      const draw = () => {
+        $('#shRow').innerHTML = cur.map((k, i) => {
+          const b = SHELF_BOOKS[k];
+          return b ? `<button type="button" class="sh-book${sel === i ? ' sel' : ''}" data-i="${i}" style="background:${b[3]}" aria-label="${b[2]}　${b[0]} ${b[1]}"><span class="t">${b[2]}</span><span class="lb">${b[0]}<br>${b[1]}</span></button>`
+                   : `<button type="button" class="sh-book gap${sel === i ? ' sel' : ''}" data-i="${i}" aria-label="一冊ぶんのすき間"><span class="t">すき間</span><span class="lb" style="visibility:hidden">-<br>-</span></button>`;
+        }).join('');
+        $('#shRow').querySelectorAll('.sh-book').forEach(b => {
+          b.onclick = () => {
+            const i = +b.dataset.i;
+            if (sel === null) sel = i; else if (sel === i) sel = null; else { [cur[sel], cur[i]] = [cur[i], cur[sel]]; sel = null; }
+            draw();
+          };
+        });
+      };
+      draw();
+      $('#shOk').onclick = () => { closeOverlay(); res({ b: cur, go: true }); };
+      $('#shNo').onclick = () => { closeOverlay(); res({ b: cur, go: false }); };
+    });
+  }
   function lineupBoard() {
     const r = replayed(); if (r) return Promise.resolve(r.v);
     return new Promise(res0 => {
