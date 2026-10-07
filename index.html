@@ -5113,8 +5113,10 @@
     const rows = [];
     if (save && !fresh) rows.push(`<button type="button" class="btn-sub" id="tGo">${ch.room}を${hm(ch.startMin || 0)}からやり直す<span class="sub">今の放課後の続きは消えます（わすれもの棚は残ります）</span></button>`);
     if (shelfN || doneN || (save && !fresh && ch.id !== first.id)) {
-      const lost = [shelfN ? 'わすれもの棚' : '', doneN ? 'この周回の記録' : '', save && !fresh ? '今の続き' : ''].filter(Boolean).join('・');
-      rows.push(`<button type="button" class="btn-sub" id="tReset">${shelfN ? 'わすれもの棚を空にして、' : ''}${first.room}からやり直す<span class="sub">${lost}が消えます</span></button>`);
+      // わすれものを持っているときは、引き継ぐかどうかを押したあとで選ぶ
+      const lost = [doneN ? 'この周回の記録' : '', save && !fresh ? '今の続き' : ''].filter(Boolean).join('・');
+      const sub = [lost ? `${lost}が消えます` : '', shelfN ? 'わすれものを持っていくか選べます' : ''].filter(Boolean).join('。');
+      rows.push(`<button type="button" class="btn-sub" id="tReset">${first.room}からやり直す<span class="sub">${sub}</span></button>`);
     }
     return rows.length ? `<div class="title-redo"><span class="label">やり直す</span>${rows.join('')}</div>` : '';
   }
@@ -5145,11 +5147,20 @@
   }
   // 美術室からやり直す：わすれもの棚と途中の放課後を消して、最初の教室から始める（朝を迎えた記録などの実績は残す）
   async function resetAll() {
-    const v = await overlayWait(`<p class="eyebrow">${CHAPTERS[ORDER[0]].room}からやり直す</p><h2>${CHAPTERS[ORDER[0]].room}から、もう一度始めますか？</h2>
-      <p>わすれもの棚と、途中の放課後、この周回で終えた教室の記録が消えます。${CHAPTERS[ORDER[0]].room}から順番に始まります。</p>
-      <p class="note">救えた実績・見たエンディング・周回数は残ります。</p>`, '', ['やり直す', 'やめる']);
-    if (v !== 0) return showTitle();
-    P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.cur = { results: {} }; P.runNo = (P.runNo || 1) + 1; saveP(); clearRun();
+    const room = CHAPTERS[ORDER[0]].room;
+    const has = Object.keys(P.shelf || {}).some(k => P.shelf[k]);
+    // わすれものを持っていないときは、引き継ぐかどうかの選択は出さない
+    const v = has
+      ? await uiWait(`<p class="eyebrow">${room}からやり直す</p><h2>わすれものを、持っていきますか？</h2>
+      <p>途中の放課後と、この周回で終えた教室の記録は消えます。${room}から順番に始まります。</p>
+      <p>わすれものを持っていくと、その子の手がかりを覚えたまま始められます。置いていくと、わすれもの棚も空になります。</p>
+      <p class="note">救えた実績・見たエンディング・周回数は残ります。</p>`, '', ['持っていく', '置いていく（棚を空にする）', 'やめる'])
+      : await uiWait(`<p class="eyebrow">${room}からやり直す</p><h2>${room}から、もう一度始めますか？</h2>
+      <p>途中の放課後と、この周回で終えた教室の記録が消えます。${room}から順番に始まります。</p>
+      <p class="note">救えた実績・見たエンディング・周回数は残ります。</p>`, '', ['やり直す', 'やめる']).then(i => i === 0 ? 1 : 2);
+    if (v !== 0 && v !== 1) return showTitle();
+    if (v === 1) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; }
+    P.cur = { results: {} }; P.runNo = (P.runNo || 1) + 1; saveP(); clearRun();
     startRun('art');
   }
   // プレイデータをリセット：実績も含めたすべてのプレイデータを消す
