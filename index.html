@@ -681,7 +681,7 @@
                       mio: 'angry crysmile despair down grief sad smile surprise stroke', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
-                       blame: 'angry', stroke: 'despair', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down' };
+                       blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down' };
   function faceFile(f) {
     const v = C.faces[f], key = v.slice(0, v.indexOf('_')), suf = v.slice(key.length + 1);
     if ((!R || !R.standing) && key === C.key) return suf === 'bust' ? `${key}_s` : `${key}_s_${suf}`;
@@ -3389,7 +3389,7 @@
     sit: { src: 'mio_sit', style: 'left:12.2%;top:42.0%;height:46.5%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
-    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke' },
+    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown' },
     lost: '返却期限の過ぎた一冊',
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う。背景 infirmary の壁の時計は bgClock: { cx: 829, cy: 202, rx: 49, ry: 48 }
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
@@ -3729,10 +3729,10 @@
                  ['ミオ', '一年のとき、図書委員の当番で、ずっと一緒だった子がいたの', 'down'],
                  ['ミオ', 'その子が教えてくれたの、この本。……ひとりぶんの椅子しかない部屋に、毎日、誰かがひとつずつ椅子を運んでくる話', 'softSmile'],
                  ['ミオ', '読み終わったら、『ね、泣けるでしょ』って。……ほんとに泣いた', 'softSmile'],
-                 'ミオは、本の表紙をそっと撫でた。']);
+                 ['', 'ミオは、本の表紙をそっと撫でた。', 'strokeDown']]);
 
       // 2段目
-      await say(['表紙を撫でていたミオの指が、ふと止まった。', ['ミオ', '……でも、もう、一緒には読めないの', 'sad'], '「……どうして？」',
+      await say(['表紙を撫でていたミオの指が、ふと止まった。', ['ミオ', '……でも、もう、一緒には読めないの', 'strokeDown'], '「……どうして？」',
                  ['ミオ', '……その子、ツムギっていうの', 'down'],
                  ['ミオ', '二年で、初めて同じクラスになったの。……うれしかった。教室でも一緒にいられるって', 'softSmile'],
                  ['ミオ', 'でも、すぐに、クラスのグループがツムギを……', 'sad'],
@@ -5025,7 +5025,8 @@
       return ending({ lines: ['ツムギと一緒に、保健室を出た。', 'ツムギは来室カードの最後の行に、自分で書きこんだ。「18:30　退室　図書室へ」',
                               '昇降口で、ツムギは特別教室棟のほうを見上げた。図書室の窓に、明かりはついていなかった。',
                               'それでもツムギは、小さく「またね」と言って、渡り廊下のほうへ歩いていった。'],
-                      img: 'gate', alt: '夕焼けの正門', album: false });
+                      img: 'hall_tsumugi', alt: '夕日の差す廊下を、渡り廊下のほうへ歩いていくツムギのうしろ姿',
+                      stop: '廊下の途中で、足が止まる。まだ、この先へは行けない。' });
     },
   };
 
@@ -5173,7 +5174,8 @@
     ['m_photo', 'm_photo', '第二章', 'ひまわりピアノ教室 発表会'],
     ['m_gate', 'm_gate', '第二章', '校門で振り返るソウタ'],
     ['l_bridge', 'l_bridge', '第三章', '渡り廊下のミオ'],
-    ['g_gate', 'g_gate', '第四章', '校門で笑うケイ']
+    ['g_gate', 'g_gate', '第四章', '校門で笑うケイ'],
+    ['hall_tsumugi', 'hall_tsumugi', '第五章', '図書室へ向かうツムギ']
   ];
   P.album = P.album || {};
   // この仕組みより前に心をほどいていた子の絵は、見たものとして記録しておく
