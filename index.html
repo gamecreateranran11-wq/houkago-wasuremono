@@ -3237,7 +3237,6 @@
     const ok = await keyboard(true);
     if (!ok) { bgm('musicbox'); return say([['ソウタ', '……ゆっくりでいいよ', 'smile']]); }
     bgm('sota');
-    albumSee('m_duet');
     await overlayWait(`<img class="cg" src="img/m_duet.webp" alt="夕日の音楽室で、ソウタと並んで連弾している">
       <p>ソウタの旋律に、ハルのパートが重なる。</p><p>たった4小節。それでも、二人の音が確かにひとつになった。</p><p>フレーズの終わりで手を止めると、ソウタはそのまま、ひとりで続きを弾き始めた。最後の小節まで、一度も止まらずに。</p>`, '', ['続ける']);
     closeOverlay();
@@ -3353,7 +3352,6 @@
                'ミオは本のポケットから貸出カードを取り出した。',
                '6月10日、2-3 水野。返却日の欄だけが、ずっと空いたままだった。',
                'ミオは、そこに今日の日付を、一文字ずつ書き込んだ。']);
-    albumSee('l_card');
     await overlayWait(`<p class="eyebrow">貸出カード</p><h2>『ひとりぶんの椅子』</h2><img class="cg" src="img/l_card.webp" alt="貸出カードの最後の行の返却日の欄に、今日の日付「7/15」が手書きで書かれている">
       <p>白石、白石、白石……。並んだ名前のいちばん下に、空いていた欄がひとつ、埋まった。</p>`, '', ['続ける']);
     closeOverlay();
@@ -3911,6 +3909,7 @@
     closeOverlay();
   }
   async function viewLetter() {
+    albumSee('g_letter');
     await overlayWait(`<p class="eyebrow">持ち物</p><h2>ハヤトの手紙</h2><img class="cg" src="img/g_letter.webp" alt="ノートを破った紙に、鉛筆で書かれた手紙">
       <div class="quote"><p>ケイ先輩へ</p>
       <p>今日は「辞めます」なんて言って、すみません。部員のままだと、また先輩が俺たちの代わりに怒鳴られると思ったから、先に言いました。</p>
@@ -4366,7 +4365,7 @@
       await say(['ケイは、震える指で紙を開いた。読み進めるうちに、その目が、大きく見開かれていった。',
                  ['ケイ', '……あいつら、知ってたのかよ', 'surprise'],
                  ['ケイ', '鍵を返したあと、教官室で言われてたこと……全部', 'sad']]);
-      showCut('g_letter');
+      showCut('g_letter'); albumSee('g_letter');
       bgm('musicbox');
       await say([['ケイ', 'ハヤトの『辞めます』って、これ……', 'sad'],
                  ['ケイ', '明日の朝、みんなで担任と教頭のところに、顧問のことを話しに行くって。……五人そろって', 'sad'],
@@ -5153,23 +5152,23 @@
   }
   // 周回を一度でも終えたか（5章を終えてエンディングを迎えた、または章の途中のBADで放課後が終わった）。BAD1は章のやり直しなので数えない
   const runEnded = () => !!(P.runs || Object.keys(P.endings || {}).some(t => t !== 'BAD1'));
-  /* ---------- アルバム（おまけ）：ストーリーの中で見た一枚絵を、あとから見返せる。わすれもの・調べるときのカットインは入れない。
+  /* ---------- アルバム（おまけ）：ストーリーの中で見た一枚絵を、あとから見返せる。わすれもの（姿を変えたものも）・調べるときのカットインは入れない。
      見ていない絵は「？？？」。1枚見るまで、タイトルにボタンを出さない ---------- */
   // [id, 画像, 章, 題]（章の順。ミオとツムギの校門・仲直り・TRUEなどは、絵ができたらここに足す）
   const ALBUM = [
     ['sakura', 'sakura', '第一章', '『ヒナの色、私は好きだよ』'],
     ['gate', 'gate', '第一章', '校門で手を振るヒナ'],
     ['m_photo', 'm_photo', '第二章', 'ひまわりピアノ教室 発表会'],
-    ['m_duet', 'm_duet', '第二章', 'ふたりの連弾'],
     ['m_gate', 'm_gate', '第二章', '校門で振り返るソウタ'],
-    ['l_card', 'l_card', '第三章', '埋まった返却日'],
     ['l_bridge', 'l_bridge', '第三章', '渡り廊下のミオ'],
+    ['g_letter', 'g_letter', '第四章', 'ハヤトの手紙'],
     ['g_gate', 'g_gate', '第四章', '校門で笑うケイ']
   ];
   P.album = P.album || {};
   // この仕組みより前に心をほどいていた子の絵は、見たものとして記録しておく
-  { const was = { hina: ['sakura', 'gate'], sota: ['m_photo', 'm_duet', 'm_gate'], mio: ['l_card', 'l_bridge'], kei: ['g_gate'] };
+  { const was = { hina: ['sakura', 'gate'], sota: ['m_photo', 'm_gate'], mio: ['l_bridge'], kei: ['g_letter', 'g_gate'] };
     Object.keys(was).forEach(k => { if (P.saved[k]) was[k].forEach(id => { P.album[id] = true; }); }); saveP(); }
+  ['m_duet', 'l_card'].forEach(id => { delete P.album[id]; });
   function albumSee(id) { if (!P.album[id]) { P.album[id] = true; saveP(); } }
   const albumAny = () => ALBUM.some(a => P.album[a[0]]);
   function showAlbum() {
