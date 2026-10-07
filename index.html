@@ -275,6 +275,7 @@
   .pair-side h3 { font-size: 14px; margin: 0; }
   .pair-side img, .pair-side svg { max-width: 100%; height: auto; }
   .pair-side .thumb-empty { width: 100%; aspect-ratio: 3 / 2; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #4a4152; background: repeating-linear-gradient(135deg, #17131d 0 6px, #1b1622 6px 12px); }
+  .pair.one { grid-template-columns: 1fr; }
   @media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
   .album .slot { position: relative; padding: 6px; min-height: 0; gap: 4px; justify-content: flex-start; color: inherit; font: inherit; cursor: pointer; }
   .album .slot.got:hover { border-color: var(--gold); }
@@ -5190,10 +5191,13 @@
     if (ch) saveP();
   }
   albumSync();
+  const albumKnowSaved = () => WASURE.some(([, k]) => P.album['w_' + k + '_s']);
   const albumAny = () => ALBUM.some(a => P.album[a[0]]) || WASURE.some(([, k]) => P.album['w_' + k + '_v'] || P.album['w_' + k + '_s']);
   function showAlbum() {
     albumSync();
     const got = ALBUM.filter(a => P.album[a[0]]).length;
+    // わすれものが姿を変えると知るまでは（姿を変えたものを1つも見ていないうちは）、「姿を変える」ことを出さない
+    const wKnow = albumKnowSaved();
     const wGot = WASURE.reduce((n, [, k]) => n + (P.album['w_' + k + '_v'] ? 1 : 0) + (P.album['w_' + k + '_s'] ? 1 : 0), 0);
     const wRows = WASURE.map(([who, k, ch], i) => {
       const v = P.album['w_' + k + '_v'], sv = P.album['w_' + k + '_s'];
@@ -5207,8 +5211,8 @@
       <div class="shelf">${ALBUM.map(([id, img, ch, ttl], i) => P.album[id]
         ? `<button type="button" class="slot got" data-i="${i}"><img class="thumb" src="img/${img}.webp" alt=""><span class="ttl">${ch}<br>${ttl}</span></button>`
         : `<div class="slot locked"><span class="thumb-empty" aria-hidden="true">？</span><span class="ttl">${ch}<br>？？？</span></div>`).join('')}</div>
-      <p class="album-h">わすれもの　<span>${wGot} / ${WASURE.length * 2}</span></p>
-      <p class="note">姿を変える前と後を、並べて見られます。</p>
+      <p class="album-h">わすれもの　<span>${wGot} / ${WASURE.length * (wKnow ? 2 : 1)}</span></p>
+      ${wKnow ? '<p class="note">姿を変える前と後を、並べて見られます。</p>' : ''}
       <div class="shelf">${wRows}</div>
       </div>
       <div class="row"><button type="button" class="btn primary" id="albBack">戻る</button></div>`);
@@ -5225,7 +5229,7 @@
       return `<div class="pair-side${saved ? ' saved' : ''}"><p class="eyebrow">${label}</p><h3>${it.title}</h3>${it.body}</div>`;
     };
     openOverlay(`<p class="eyebrow">アルバム　わすれもの</p><h2>${who}のわすれもの</h2>
-      <div class="pair">${side(v, false, '残されたもの')}${side(sv, true, '姿を変えたもの')}</div>
+      <div class="pair${albumKnowSaved() ? '' : ' one'}">${side(v, false, '残されたもの')}${albumKnowSaved() ? side(sv, true, '姿を変えたもの') : ''}</div>
       <div class="row"><button type="button" class="btn primary" id="albList">一覧へ</button></div>`);
     $('#albList').onclick = () => showAlbum();
   }
