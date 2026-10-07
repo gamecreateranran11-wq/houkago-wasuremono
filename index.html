@@ -5479,6 +5479,7 @@
     const got = slots.filter(([, key]) => key && P.shelf[key]).length;
     const savedN = slots.filter(([, key]) => key && P.shelf[key] && P.saved[key]).length;
     const total = slots.length;
+    // わすれものが姿を変えることは、1つ姿を変えるまで伏せておく
     openOverlay(`<p class="eyebrow">わすれもの棚</p><h2>残されたもの</h2>
       <div class="shelf-count"><span>集めたわすれもの <b>${got}</b> / ${total}</span>${savedN ? `<span class="gold">姿を変えたもの <b>${savedN}</b> / ${total}</span>` : ''}</div>
       <div class="shelf-bar" aria-hidden="true"><i style="width:${got / total * 100}%"></i>${savedN ? `<i class="sv" style="width:${savedN / total * 100}%"></i>` : ''}</div>
@@ -5490,7 +5491,7 @@
           <img class="thumb" src="img/${it.thumb}.webp" alt="">${isNew ? '<span class="tag">NEW</span>' : ''}
           <span class="who">${who}</span><span class="ttl">${it.title}</span></button>`;
       }).join('')}</div>
-      <p class="note">誰かが消えたとき、その子のわすれものがここに並びます。その子を救えたら、わすれものも姿を変えます。</p>
+      <p class="note">誰かが消えたとき、その子のわすれものがここに並びます。${savedN || albumKnowSaved() ? 'その子を救えたら、わすれものも姿を変えます。' : ''}</p>
       <div class="row"><button type="button" class="btn primary" id="sBack">戻る</button></div>`);
     // 一度見たら NEW を外す（救って姿が変わったら、もう一度 NEW になる）
     slots.forEach(([, key]) => { if (key && P.shelf[key]) P.shelfSeen[key] = P.saved[key] ? 's' : 'v'; });
