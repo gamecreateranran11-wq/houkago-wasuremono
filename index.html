@@ -265,6 +265,10 @@
   .title-side .btn .sub { display: block; font-size: 12px; font-weight: 400; opacity: .8; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
   .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .album { max-height: 56vh; overflow-y: auto; }
+  .album .slot { position: relative; padding: 6px; min-height: 0; gap: 4px; justify-content: flex-start; color: inherit; font: inherit; cursor: pointer; }
+  .album .slot.got:hover { border-color: var(--gold); }
+  .album .slot.locked { cursor: default; opacity: .6; }
   .save-slots { display: flex; flex-direction: column; gap: 8px; }
   .ach-list { display: flex; flex-direction: column; gap: 8px; max-height: 56vh; overflow-y: auto; }
   .ach-row { display: flex; gap: 10px; align-items: flex-start; background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; opacity: .6; }
@@ -2053,7 +2057,8 @@
   }
   // ほどけたら開くのは、その部屋の扉。一枚絵はその子の行き先（下校する子は校門、ミオは保健室へ続く渡り廊下）
   // stop：主人公が足を止める場所（主人公は、まだ放課後の外へは出られない）
-  function ending({ lines, img, alt, stop = '門の手前で、足が止まる。まだ、ここは通れない。' }) {
+  function ending({ lines, img, alt, stop = '門の手前で、足が止まる。まだ、ここは通れない。', album = img }) {
+    if (album) albumSee(album);
     R.standing = true;  // 見送りの場面では立っている
     const now = chStart() + R.ticks * MIN_PER_TICK;
     R.over = true; clearRun(); P.saved[C.key] = true; saveP(); render(); idle(); keepBgm('unravel', WARM);
@@ -2445,7 +2450,8 @@
                  ['ヒナ', '一回だけ、市の絵のコンクールで賞をもらったことがあるんだ。でも見せたら、『サクラはその年、金賞だった』って', 'sad'],
                  ['ヒナ', 'その賞状、次の日にはもう、どこにもなかった', 'sad'],
                  ['ヒナ', '……その夜、お姉ちゃんが部屋に来て、新しい色鉛筆をくれたの', 'sad']]);
-      await overlayWait(`<img class="cg" src="img/sakura.webp" alt="夜、部屋の扉を開けた姉が、リボンのかかった色鉛筆の箱を差し出して微笑んでいる">
+      albumSee('sakura');
+      await overlayWait(`<img class="cg" src="img/sakura.webp" alt=""夜、部屋の扉を開けた姉が、リボンのかかった色鉛筆の箱を差し出して微笑んでいる">
         <p>『ヒナの色、私は好きだよ』</p>`, '', ['続ける']);
       closeOverlay();
       await say([
@@ -2649,6 +2655,7 @@
     closeOverlay();
   }
   async function viewPhoto() {
+    albumSee('m_photo');
     await overlayWait(`<p class="eyebrow">持ち物</p><h2>発表会の写真</h2><img class="cg" src="img/m_photo.webp" alt="「ひまわりピアノ教室 発表会」の看板の前で、幼い男の子が二人並んでいる">
       <p>幼稚園くらいの男の子が二人。照れてうつむいている子は、ソウタに似ている。</p>`, '', ['閉じる']);
     closeOverlay();
@@ -2989,6 +2996,7 @@
           showCut('mci_shelf');
           await say(['楽譜棚から、古い楽譜ファイルが一冊だけはみ出している。', '間から、写真と、破れた五線譜の切れ端がのぞいていた。']);
           R.taken.shelf = true; await gotItem('frag1');
+          albumSee('m_photo');
           await overlayWait(`<p class="eyebrow">楽譜ファイルの写真</p><h2>ひまわりピアノ教室 発表会</h2><img class="cg" src="img/m_photo.webp" alt="「ひまわりピアノ教室 発表会」の看板の前で、幼い男の子が二人並んでいる">
             <p>幼稚園くらいの男の子が二人、手をつないで並んでいる。照れてうつむいている子は、ソウタに似ている。</p>`, '', ['持っていく']);
           closeOverlay();
@@ -3229,6 +3237,7 @@
     const ok = await keyboard(true);
     if (!ok) { bgm('musicbox'); return say([['ソウタ', '……ゆっくりでいいよ', 'smile']]); }
     bgm('sota');
+    albumSee('m_duet');
     await overlayWait(`<img class="cg" src="img/m_duet.webp" alt="夕日の音楽室で、ソウタと並んで連弾している">
       <p>ソウタの旋律に、ハルのパートが重なる。</p><p>たった4小節。それでも、二人の音が確かにひとつになった。</p><p>フレーズの終わりで手を止めると、ソウタはそのまま、ひとりで続きを弾き始めた。最後の小節まで、一度も止まらずに。</p>`, '', ['続ける']);
     closeOverlay();
@@ -3344,6 +3353,7 @@
                'ミオは本のポケットから貸出カードを取り出した。',
                '6月10日、2-3 水野。返却日の欄だけが、ずっと空いたままだった。',
                'ミオは、そこに今日の日付を、一文字ずつ書き込んだ。']);
+    albumSee('l_card');
     await overlayWait(`<p class="eyebrow">貸出カード</p><h2>『ひとりぶんの椅子』</h2><img class="cg" src="img/l_card.webp" alt="貸出カードの最後の行の返却日の欄に、今日の日付「7/15」が手書きで書かれている">
       <p>白石、白石、白石……。並んだ名前のいちばん下に、空いていた欄がひとつ、埋まった。</p>`, '', ['続ける']);
     closeOverlay();
@@ -4992,7 +5002,7 @@
         await say([`……保健室の空気が、ふっとやわらいだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`]);
         return ending({ lines: ['ミオとツムギと一緒に、保健室を出た。', '昇降口で靴をはきかえると、二人は並んで、正門へ歩いていった。',
                                 '正門の手前で、ツムギが一度だけ振り返って、手を振った。……その隣で、ミオも、小さく手を振った。'],
-                        img: 'gate', alt: '夕焼けの正門' });
+                        img: 'gate', alt: '夕焼けの正門', album: false });
       }
       // ミオが消えた周回：ツムギはほどけるが、ミオには会えない
       bgm('musicbox');
@@ -5004,7 +5014,7 @@
       return ending({ lines: ['ツムギと一緒に、保健室を出た。', 'ツムギは来室カードの最後の行に、自分で書きこんだ。「18:30　退室　図書室へ」',
                               '昇降口で、ツムギは特別教室棟のほうを見上げた。図書室の窓に、明かりはついていなかった。',
                               'それでもツムギは、小さく「またね」と言って、渡り廊下のほうへ歩いていった。'],
-                      img: 'gate', alt: '夕焼けの正門' });
+                      img: 'gate', alt: '夕焼けの正門', album: false });
     },
   };
 
@@ -5089,6 +5099,7 @@
         ${save ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
+        ${albumAny() ? '<button type="button" class="btn" id="tAlbum">アルバム<span class="sub">おまけ</span></button>' : ''}
         ${achAny() ? '<button type="button" class="btn" id="tAch">アチーブメント<span class="sub">おまけ</span></button>' : ''}
         ${ostOpen() ? '<button type="button" class="btn" id="tOst">サウンドトラック<span class="sub">おまけ</span></button>' : ''}
         ${redoHTML(save)}
@@ -5108,6 +5119,7 @@
     if ($('#tShelf')) $('#tShelf').onclick = showShelf;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
     if ($('#tOst')) $('#tOst').onclick = showSoundtrack;
     if ($('#tAch')) $('#tAch').onclick = showAch;
+    if ($('#tAlbum')) $('#tAlbum').onclick = () => showAlbum();
     $('#tSet').onclick = showSettings;
     if ($('#tLoad')) $('#tLoad').onclick = () => showSlots('load');
     if (splash) {
@@ -5141,6 +5153,47 @@
   }
   // 周回を一度でも終えたか（5章を終えてエンディングを迎えた、または章の途中のBADで放課後が終わった）。BAD1は章のやり直しなので数えない
   const runEnded = () => !!(P.runs || Object.keys(P.endings || {}).some(t => t !== 'BAD1'));
+  /* ---------- アルバム（おまけ）：ストーリーの中で見た一枚絵を、あとから見返せる。わすれもの・調べるときのカットインは入れない。
+     見ていない絵は「？？？」。1枚見るまで、タイトルにボタンを出さない ---------- */
+  // [id, 画像, 章, 題]（章の順。ミオとツムギの校門・仲直り・TRUEなどは、絵ができたらここに足す）
+  const ALBUM = [
+    ['sakura', 'sakura', '第一章', '『ヒナの色、私は好きだよ』'],
+    ['gate', 'gate', '第一章', '校門で手を振るヒナ'],
+    ['m_photo', 'm_photo', '第二章', 'ひまわりピアノ教室 発表会'],
+    ['m_duet', 'm_duet', '第二章', 'ふたりの連弾'],
+    ['m_gate', 'm_gate', '第二章', '校門で振り返るソウタ'],
+    ['l_card', 'l_card', '第三章', '埋まった返却日'],
+    ['l_bridge', 'l_bridge', '第三章', '渡り廊下のミオ'],
+    ['g_gate', 'g_gate', '第四章', '校門で笑うケイ']
+  ];
+  P.album = P.album || {};
+  // この仕組みより前に心をほどいていた子の絵は、見たものとして記録しておく
+  { const was = { hina: ['sakura', 'gate'], sota: ['m_photo', 'm_duet', 'm_gate'], mio: ['l_card', 'l_bridge'], kei: ['g_gate'] };
+    Object.keys(was).forEach(k => { if (P.saved[k]) was[k].forEach(id => { P.album[id] = true; }); }); saveP(); }
+  function albumSee(id) { if (!P.album[id]) { P.album[id] = true; saveP(); } }
+  const albumAny = () => ALBUM.some(a => P.album[a[0]]);
+  function showAlbum() {
+    const got = ALBUM.filter(a => P.album[a[0]]).length;
+    openOverlay(`<p class="eyebrow">おまけ</p><h2>アルバム</h2><p class="note">見た一枚絵　${got} / ${ALBUM.length}　　押すと大きく見られます。</p>
+      <div class="shelf album">${ALBUM.map(([id, img, ch, ttl], i) => P.album[id]
+        ? `<button type="button" class="slot got" data-i="${i}"><img class="thumb" src="img/${img}.webp" alt=""><span class="ttl">${ch}<br>${ttl}</span></button>`
+        : `<div class="slot locked"><span class="thumb-empty" aria-hidden="true">？</span><span class="ttl">${ch}<br>？？？</span></div>`).join('')}</div>
+      <div class="row"><button type="button" class="btn primary" id="albBack">戻る</button></div>`);
+    $('#albBack').onclick = () => showTitle();
+    card.querySelectorAll('[data-i]').forEach(b => b.onclick = () => albumView(+b.dataset.i));
+  }
+  // 1枚ずつ見る。前へ・次へは、見た絵の中だけを行き来する
+  function albumView(i) {
+    const seen = ALBUM.map((a, k) => k).filter(k => P.album[ALBUM[k][0]]), at = seen.indexOf(i);
+    const [, img, ch, ttl] = ALBUM[i];
+    openOverlay(`<p class="eyebrow">アルバム　${ch}</p><img class="cg" src="img/${img}.webp" alt="${ttl}"><p>${ttl}</p>
+      <div class="row">${seen.length > 1 ? '<button type="button" class="btn" id="albPrev">前へ</button><button type="button" class="btn" id="albNext">次へ</button>' : ''}
+      <button type="button" class="btn primary" id="albList">一覧へ</button></div>`);
+    if ($('#albPrev')) $('#albPrev').onclick = () => albumView(seen[(at - 1 + seen.length) % seen.length]);
+    if ($('#albNext')) $('#albNext').onclick = () => albumView(seen[(at + 1) % seen.length]);
+    $('#albList').onclick = () => showAlbum();
+  }
+
   /* ---------- アチーブメント（おまけ）：取ったものは周回をまたいで残る。名前は管理人が付ける（未定のあいだは条件だけを出す） ---------- */
   const ALL_ENDS = ['TRUE', 'GOOD', 'NORMAL', 'BAD1', 'BAD2', 'BAD3', 'BAD4', 'BAD5', 'BAD6', 'BAD7', 'BAD8', 'BAD9'];
   const FIVE = ['hina', 'sota', 'mio', 'kei', 'tsumugi'];
@@ -5249,7 +5302,7 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.album = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
