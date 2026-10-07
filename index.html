@@ -1549,6 +1549,7 @@
   // 鍵の外れる音：合成音では自然に聞こえなかったため、鳴らさない（呼び出し側はそのまま）
   function lockClick() {}
   // 足音（記憶の演出）。kind='run'：子ども二人が駆けていく／'heel'：固いヒールの音がゆっくり通り過ぎる
+  // 'coach'：大人の男の重い足音（ゴム底の運動靴）。扉の外を、ゆっくり近づいて通り過ぎる
   function footsteps(kind) {
     if (!P.sound || replay) return;
     try {
@@ -1560,7 +1561,16 @@
         g.gain.setValueAtTime(vol * seMul(), at); g.gain.exponentialRampToValueAtTime(0.0008, at + dur);
         s.connect(f).connect(g); g.connect(dst); g.connect(send); s.start(at); s.stop(at + dur + 0.01);
       };
-      if (kind === 'heel') {
+      if (kind === 'coach') {
+        // ゴム底なので高い音は出さない。かかとの鈍い低音＋つま先の小さな擦れ。間をあけて、重くゆっくり
+        const n = 9;
+        for (let k = 0; k < n; k++) {
+          const at = t0 + k * 0.82 + (k % 2 ? 0.04 : 0), v = 0.55 * Math.pow(Math.sin(Math.PI * (k + 0.6) / (n + 0.2)), 1.4);
+          step(at, 110, 1.2, v, 0.16);           // かかとが床を踏む、腹に響く低い音
+          step(at + 0.01, 260, 2, v * 0.45, 0.09); // 体重がのる音
+          step(at + 0.13, 1400, 1.5, v * 0.06, 0.07); // つま先の、ゴムの小さな擦れ
+        }
+      } else if (kind === 'heel') {
         for (let k = 0; k < 7; k++) { const at = t0 + k * 0.55, v = 0.35 * Math.sin(Math.PI * (k + 0.5) / 7); step(at, 2600, 2, v, 0.03); step(at, 420, 3, v * 0.6, 0.06); }
       } else {
         for (let k = 0; k < 12; k++) {
@@ -3913,6 +3923,7 @@
     async onTick() {
       if (R.st !== 'here' || R.seen.has('buzz') || R.ticks < (R.loop ? 2 : 4)) return;
       R.seen.add('buzz'); hideCut();
+      if (Math.min(R.loop, 2) === 0) footsteps('coach');
       await say([['体育館の扉の外を、誰かの足音が通り過ぎていった。', 'ケイの肩が、びくりと跳ねた。足音が遠ざかるまで、ケイは息を止めていた。'],
                  ['パイプ椅子のそばのバッグの中で、スマホが震えた。', 'ケイは画面を見ないまま、笑顔だけを作り直した。', ['ケイ', '……顧問から。土曜の確認だと思う。大丈夫', 'normal']],
                  ['ケイが急に胸を押さえて、浅い息を繰り返した。', ['ケイ', '……っ、だい、じょうぶ……いつもの、やつだから', 'breath'], 'しばらくして、ケイの息は少しずつ戻っていった。']][Math.min(R.loop, 2)]);
