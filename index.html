@@ -651,10 +651,10 @@
   // 立ち絵は「座った絵（_s）」と「立った絵（_p）」の2組。部屋では座っていて、立ち上がる場面から立った絵に切り替える（R.standing）
   // 立った絵は表情の数が少ないので、ない表情は近いものを使う
   const STAND_SET = { hina: 'angry despair down grief sad smile surprise pout', sota: 'angry crysmile despair down grief sad smile surprise',
-                      mio: 'angry crysmile despair down grief sad smile surprise', kei: 'angry crysmile despair down grief sad smile surprise',
+                      mio: 'angry crysmile despair down grief sad smile surprise stroke', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
-                       blame: 'angry', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down' };
+                       blame: 'angry', stroke: 'despair', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down' };
   function faceFile(f) {
     const v = C.faces[f], key = v.slice(0, v.indexOf('_')), suf = v.slice(key.length + 1);
     if ((!R || !R.standing) && key === C.key) return suf === 'bust' ? `${key}_s` : `${key}_s_${suf}`;
@@ -3265,7 +3265,7 @@
     sit: { src: 'mio_sit', style: 'left:12.2%;top:42.0%;height:46.5%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
-    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile' },
+    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke' },
     lost: '返却期限の過ぎた一冊',
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う。背景 infirmary の壁の時計は bgClock: { cx: 829, cy: 202, rx: 49, ry: 48 }
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
@@ -3299,7 +3299,7 @@
     loopReply: [['ミオ', '……チャイム？ まだ、鳴ってないと思う', 'surprise'], ['ミオ', '……あの。どなたですか', 'reject']],
     lastWords: [['ミオ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ミオ', '……誰も、椅子を運んでこないところ', 'despair'],
                 ['ミオ', '……私には、もう、運んでもらう資格なんてないから', 'despair'],
-                'ミオは、本の表紙をそっと撫でた。',
+                ['', 'ミオは、本の表紙をそっと撫でた。', 'stroke'],
                 ['ミオ', '教室のどこにも、自分の椅子がなかったとき。……ツムギも、こんな気持ちだったのかな', 'despair']],
     closeLines: ['ミオは本を抱えたまま、もう顔を上げなかった。', '沈黙のまま、時計の針だけが17:30へ近づいていった。'],
     hotspots: [
@@ -4457,7 +4457,7 @@
     bg: 'infirmary', bgClock: { cx: 830, cy: 202, rx: 40, ry: 40 },
     sit: { src: 'blank', style: 'left:0;top:0;width:1px;height:1px' },
     leftover: 'left:88%;top:60%;width:3.6%;height:1.6%;transform:rotate(-4deg)',
-    faces: { normal: 'tsumugi_bust', smile: 'tsumugi_bust', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
+    faces: { normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
              grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile',
              mioNormal: 'mio_bust', mioSad: 'mio_sad', mioDown: 'mio_down', mioSurprise: 'mio_surprise', mioGrief: 'mio_grief', mioCrySmile: 'mio_crysmile' },
     lost: '保健室の来室カード',
@@ -4770,8 +4770,8 @@
       await say(['丸椅子を引き寄せて、ベッドの向かいに座った。', ['ツムギ', 'あ、その椅子。座ってくれる人、久しぶり', 'normal'],
                  '「……来室カード、見たよ。6月から、毎日ここに来てるんだね」', ['ツムギ', '……見られちゃったか', 'down'],
                  ['ツムギ', '教室には、行けなくなっちゃって。……ここなら、先生もいるし、静かだし', 'normal'],
-                 'ツムギは、カーディガンの前をかき合わせた。',
-                 ['ツムギ', 'ここ、冷房効いてるでしょ。……私、すぐ冷えちゃうから', 'normal'],
+                 ['', 'ツムギは、カーディガンの前をかき合わせた。', 'wrap'],
+                 ['ツムギ', 'ここ、冷房効いてるでしょ。……私、すぐ冷えちゃうから', 'wrap'],
                  ['ツムギ', 'でも、もうすぐここにも来なくなるんだ。来週から、入院。小さいころから、慣れっこだけどね', 'normal'],
                  ['ツムギ', '先生にも、言われちゃった。『入院中は、もう保健室には来なくていいのよ』って。……やさしい声だったな', 'down']]);
       await line(['ツムギ', '……ね。私なんか、いてもいなくても同じなんだよ', 'normal'], false);
