@@ -4532,15 +4532,16 @@
     const wasDark = !!R.taken.dark;
     if (wasDark) {
       // 謎解きで部屋の明かりをもう消していたとき：消える明かりがないので、窓の夕焼けの最後の光が消える
+      // 18:30はまだ太陽が稜線に沈みかけている途中なので、南の空の色は「消えた」ではなく「薄れはじめる」（このあと屋上で沈む夕日を見る結末とつながる）
       $('#bgImg').src = 'img/infirmary_1830_dark.webp';
-      await say(['……窓の外の、最後の夕焼けの色が、すっと消えた。', '暗くなった保健室で、握った手のぬくもりだけが、いつまでも残っていた。']);
+      await say(['……窓の外の夕焼けが、ゆっくりと色を失いはじめた。', '暗くなっていく保健室で、握った手のぬくもりだけが、いつまでも残っていた。']);
     } else {
       setDark(true);
       await say(['……保健室の明かりが、ふっと消えた。', '握った手のぬくもりだけが、いつまでも残っていた。']);
     }
     R.st = 'died'; R.over = true; clearRun(); saveP(); render(); idle();
     const next = recordResult('died');
-    overlayWait(`<p class="eyebrow">保健室</p><h2>${wasDark ? '保健室の夕焼けが消えた' : '保健室の明かりが消えた'}</h2>
+    overlayWait(`<p class="eyebrow">保健室</p><h2>保健室の灯が消えた</h2>
       <p class="note">誰のせいでもなかった。……それでも、この手を離したくなかった。</p>
       <p class="note">この放課後では、もう保健室には戻れない。</p>`,
       '', [next ? '次の章に進む' : '放課後の終わりへ', 'タイトルへ']).then(v => v === 0 ? goNext(next) : showTitle(true));
