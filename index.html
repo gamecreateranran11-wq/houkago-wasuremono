@@ -5144,13 +5144,17 @@
   /* ---------- アチーブメント（おまけ）：取ったものは周回をまたいで残る。名前は管理人が付ける（未定のあいだは条件だけを出す） ---------- */
   const ALL_ENDS = ['TRUE', 'GOOD', 'NORMAL', 'BAD1', 'BAD2', 'BAD3', 'BAD4', 'BAD5', 'BAD6', 'BAD7', 'BAD8', 'BAD9'];
   const FIVE = ['hina', 'sota', 'mio', 'kei', 'tsumugi'];
-  // [id, 名前（未定はnull）, 条件, 判定]
+  /* [id, 名前（未定はnull）, 条件, 判定, 取る前に条件を見せるか]
+     条件そのものがネタバレになるもの（わすれもの・NORMAL以上の結末など）は、取るまで「？？？」のまま。
+     ノーミスのTRUEは、GOOD以上を一度見ていて、5人のわすれものを全部持っているときだけ条件を見せる。一度見せたら、リセットするまで出しつづける。
+     条件が見えていなくても、取ることはできる */
+  const perfectShown = () => !!(P.achShown && P.achShown.perfect) || (!!(P.endings.GOOD || P.endings.TRUE) && FIVE.every(k => P.shelf[k]));
   const ACH = [
-    ['firstEnd', null, 'はじめて、エンディングを見る', () => ALL_ENDS.some(t => P.endings[t])],
-    ['shelf5', null, '5人のわすれものを、すべて手に入れる', () => FIVE.every(k => P.shelf[k])],
-    ['dawn', null, 'BAD以外のエンディング（NORMAL・GOOD・TRUE）にたどり着く', () => !!(P.endings.NORMAL || P.endings.GOOD || P.endings.TRUE)],
-    ['allEnd', null, 'すべてのエンディング（12種）を見る', () => ALL_ENDS.every(t => P.endings[t])],
-    ['perfect', null, 'ひとつの周回で、チャイムを一度も聞かず、ヒントも使わず、選択肢も謎解きも間違えずに、TRUEにたどり着く', () => false]
+    ['firstEnd', null, 'はじめて、エンディングを見る', () => ALL_ENDS.some(t => P.endings[t]), () => true],
+    ['shelf5', null, '5人のわすれものを、すべて手に入れる', () => FIVE.every(k => P.shelf[k]), () => false],
+    ['dawn', null, 'BAD以外のエンディング（NORMAL・GOOD・TRUE）にたどり着く', () => !!(P.endings.NORMAL || P.endings.GOOD || P.endings.TRUE), () => false],
+    ['allEnd', null, 'すべてのエンディングを見る', () => ALL_ENDS.every(t => P.endings[t]), () => true],
+    ['perfect', null, 'ひとつの周回で、チャイムを一度も聞かず、ヒントも使わず、選択肢も謎解きも間違えずに、TRUEにたどり着く', () => false, perfectShown]
   ];
   P.ach = P.ach || {};
   // この仕組みより前に条件を満たしていた分は、黙って記録しておく（ノーミスのTRUEは後から判定できないので除く）
@@ -5168,6 +5172,8 @@
       if (id === 'perfect' ? (tag === 'TRUE' && clean) : test()) { P.ach[id] = Date.now(); got.push(id); }
     });
     if (tag === 'TRUE' && clean && !n.skip && !P.achX) { P.achX = true; got.push('X'); }
+    // 条件を見せる状態に一度でもなったら、アチーブメント画面を開く前でも記録しておく（あとでわすれものを置いていっても消さない）
+    if (perfectShown()) P.achShown = { ...(P.achShown || {}), perfect: true };
     saveP();
     return got;
   }
@@ -5183,10 +5189,11 @@
   const ACH_X_MSG = '……わすれものに頼らず、一度も迷わずに、ここまで来た人へ。あなたの放課後は、最初から、誰かの朝のためにあった。';
   function showAch() {
     const got = ACH.filter(a => P.ach[a[0]]).length;
+    if (perfectShown() && !(P.achShown && P.achShown.perfect)) { P.achShown = { ...(P.achShown || {}), perfect: true }; saveP(); }
     const rows = ACH.map(a => {
-      const on = !!P.ach[a[0]], x = a[0] === 'perfect' && on && P.achX;
+      const on = !!P.ach[a[0]], x = a[0] === 'perfect' && on && P.achX, cond = on || a[4]() ? a[2] : '？？？';
       return `<div class="ach-row${on ? ' on' : ''}${x ? ' x' : ''}"><span class="ach-mark" aria-hidden="true">${on ? (x ? '✦' : '●') : '○'}</span>
-        <div class="info"><span class="ttl">${on ? achName(a) : '？？？'}</span>${on && !a[1] ? '' : `<span class="cond">${a[2]}</span>`}
+        <div class="info"><span class="ttl">${on ? achName(a) : '？？？'}</span>${on && !a[1] ? '' : `<span class="cond">${cond}</span>`}
         ${on ? `<span class="when">${slotDate(P.ach[a[0]])}</span>` : ''}${x ? `<span class="x-msg">${ACH_X_MSG}</span>` : ''}</div></div>`;
     }).join('');
     openOverlay(`<p class="eyebrow">おまけ</p><h2>アチーブメント</h2><p class="note">${got}／${ACH.length}</p>
@@ -5242,7 +5249,7 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
