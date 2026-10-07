@@ -789,6 +789,7 @@
   }
 
   // 調べた場所のカットイン（クローズアップの一枚絵）
+  const CUT_SWITCH = false;  // 保健室の入口の脇のスイッチのアップ（ci_inf_switch / _dark）
   function showCut(name) {
     const el = $('#cutin');
     el.innerHTML = name === 'clock' ? clockSVG() : `<img src="img/${name}.webp" alt="">`;
@@ -4510,7 +4511,7 @@
       ['clock', '時計', 'left:50%;top:13%;width:8%;height:12%'],
       ['notice', '掲示板', 'left:46%;top:26.5%;width:17%;height:15%'],
       ['desk', '先生の机', 'left:40%;top:43%;width:16%;height:16%'],
-      ['switch', '照明のスイッチ', 'left:22.5%;top:37%;width:2.8%;height:5.5%'],
+      ['switch', '入口のスイッチ', 'left:0;top:56%;width:6.5%;height:26%'],
       ['shelf', '薬品棚', 'left:68%;top:27%;width:8%;height:31%'],
       ['scale', '身長計', 'left:63.5%;top:19%;width:4.5%;height:40%'],
       ['bed', '奥のベッド', 'left:76%;top:46%;width:7%;height:18%'],
@@ -4577,12 +4578,16 @@
         } else await say(['窓ガラスに、明るい部屋が映りこんでいる。']);
       },
       async switch() {
+        // 入口の脇（画面の外、手前左）にある照明のスイッチ。アップの絵ができたら CUT_SWITCH を true にする
+        if (CUT_SWITCH) showCut(R.taken.dark ? 'ci_inf_switch_dark' : 'ci_inf_switch');
         if (!R.taken.dark) {
           setDark(true);
-          await say(['照明のスイッチを切った。蛍光灯が消えて、保健室が夕焼けの色に沈む。', ['ツムギ', 'わ。……暗い', 'surprise'], ['ツムギ', '……でも、このくらいが、落ち着くかも', 'normal']]);
+          if (CUT_SWITCH) showCut('ci_inf_switch_dark');
+          await say(['入口の脇の、照明のスイッチを切った。蛍光灯が消えて、保健室が夕焼けの色に沈む。', ['ツムギ', 'わ。……暗い', 'surprise'], ['ツムギ', '……でも、このくらいが、落ち着くかも', 'normal']]);
         } else {
           setDark(false);
-          await say(['照明のスイッチを入れた。蛍光灯が、白く光る。']);
+          if (CUT_SWITCH) showCut('ci_inf_switch');
+          await say(['入口の脇の、照明のスイッチを入れた。蛍光灯が、白く光る。']);
         }
       },
       async notice() {
@@ -4729,7 +4734,7 @@
                                         '17:00まで残っていたのは、何曜日でしょう。持ち物の当番表を開いて、その曜日を選び、照らし合わせます。'];
       if (!R.know.has('traces')) return ['掲示板の保健だよりの、コラムを読んでみましょう。',
                                          '「夜の窓ガラスは、鏡になります」。部屋の明かりを消すには、どこを押せばいいでしょう。',
-                                         '流しの左の柱に、照明のスイッチがあります。明かりを消してから、窓を調べてみましょう。'];
+                                         '入口の脇（画面の手前左）に、照明のスイッチがあります。明かりを消してから、窓を調べてみましょう。'];
       return 'ツムギに話しかけてみましょう。言葉を選ぶときは、正しさよりも、気持ちに寄り添うことを。';
     },
     async vanishScene() {
