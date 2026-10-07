@@ -1856,10 +1856,14 @@
     if (end[0] === 'BAD4') await closedSchool();
     if (end[0] === 'BAD5') await emptySeats(ORDER.map(id => CHAPTERS[id]).filter(ch => res[ch.key] === 'vanished'));
     if (end[2].length) { await endScene(end[4]); await say(end[2]); $('#bgImg').style.opacity = ''; }
+    // わすれものを一つも持っていないうちは、「わすれもの」という言葉を出さない（まだ知らない仕組みを先に見せない）
+    const hasLeft = Object.keys(P.shelf || {}).some(k => P.shelf[k]);
+    const endNote = end[0] === 'BAD9' ? 'この放課後は、ここで終わった。……握っていた手のぬくもりだけが、まだ指に残っている。'
+                  : hasLeft ? 'この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。' : 'この放課後は、ここで終わった。';
     overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
         <p class="eyebrow">${end[0] === 'NORMAL' || end[0] === 'GOOD' ? end[0] : 'BAD END'}「${end[1]}」</p></div>
       ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。${end[0] === 'GOOD' ? '（屋上への道は、製品版で開きます）' : ''}</p>` : (end[0] === 'GOOD' ? '<p class="note">（屋上への道は、製品版で開きます）</p>' : '')}
-      <p class="note">この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。</p>
+      <p class="note">${endNote}</p>
       `,
       end[0] === 'NORMAL' || end[0] === 'GOOD' ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
