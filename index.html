@@ -1101,6 +1101,52 @@
   const windChime = (t, len, vol, notes = [84, 86, 88, 91, 93, 96, 98, 100, 103]) => {
     let x = t; while (x < t + len) { chimeTube(notes[Math.floor(Math.random() * notes.length)], x, vol * (0.6 + Math.random() * 0.5)); x += 0.07 + Math.random() * 0.22; }
   };
+  // BAD1『終わらない放課後』の楽器
+  // ユーフォニアム：丸くやわらかい金管。倍音を抑えて、ゆっくり吹きはじめる
+  const euphonium = (n, t, dur, vol) => {
+    voice(nf(n), t, dur, vol, { type: 'triangle', attack: 0.16, release: Math.min(0.6, dur * 0.4), lp: Math.min(1500, nf(n) * 4), vib: 0.003, vibRate: 4.6, vibDelay: 0.7 });
+    voice(nf(n), t, dur, vol * 0.7, { attack: 0.16, release: Math.min(0.6, dur * 0.4) });
+    breath(t, 0.22, vol * 0.25, nf(n) * 2);
+  };
+  // ホルン：遠くでこもる金管。立ち上がりが遅く、和音を長くのばす
+  const horn = (n, t, dur, vol) => {
+    voice(nf(n), t, dur, vol, { type: 'sawtooth', attack: 0.5, release: Math.min(1.2, dur * 0.4), lp: Math.min(900, nf(n) * 3), q: 0.6, det: [-3, 2] });
+    voice(nf(n), t, dur, vol * 0.6, { attack: 0.5, release: Math.min(1.2, dur * 0.4) });
+  };
+  // ファゴット：低く鼻にかかった木の音
+  const bassoon = (n, t, dur, vol) => {
+    voice(nf(n), t, dur, vol * 0.6, { type: 'sawtooth', attack: 0.06, release: Math.min(0.4, dur * 0.35), lp: nf(n) * 5, q: 1.4, vib: 0.002, vibRate: 4.4, vibDelay: 0.6 });
+    voice(nf(n) * 2, t, dur, vol * 0.18, { type: 'square', attack: 0.06, release: Math.min(0.4, dur * 0.35), lp: nf(n) * 6 });
+    breath(t, 0.15, vol * 0.2, nf(n) * 3);
+  };
+  // バスドラム：遠くでくぐもる、低い一打
+  const bassDrum = (t, vol) => {
+    if (!bgmGain) return;
+    const a = audio();
+    [[58, 0.9, 'sine', 1], [96, 0.35, 'sine', 0.35]].forEach(([f, d, type, k]) => {
+      const o = a.createOscillator(), g = a.createGain(); o.type = type;
+      o.frequency.setValueAtTime(f * 1.4, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.08); o.frequency.exponentialRampToValueAtTime(f * 0.85, t + d);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol * k, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0005, t + d);
+      o.connect(g).connect(bgmGain); o.start(t); o.stop(t + d + 0.02);
+    });
+    const ns = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain();
+    ns.buffer = getNoise(); fl.type = 'lowpass'; fl.frequency.value = 300;
+    g.gain.setValueAtTime(vol * 0.25, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.25);
+    ns.connect(fl).connect(g).connect(bgmGain); ns.start(t); ns.stop(t + 0.3);
+  };
+  // 時計の秒針：カチ・コチ（交互に少し高さを変える）
+  const clockTick = (t, vol, hi) => {
+    if (!bgmGain) return;
+    const a = audio(), ns = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain();
+    ns.buffer = getNoise(); fl.type = 'bandpass'; fl.frequency.value = hi ? 3200 : 2500; fl.Q.value = 6;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.035);
+    ns.connect(fl).connect(g).connect(bgmGain); ns.start(t); ns.stop(t + 0.05);
+  };
+  // 校舎のチャイム：管の鐘。一音ずつ、長く余韻を残す
+  const schoolBell = (n, t, vol) => {
+    voice(nf(n), t, 4.6, vol, { attack: 0.004 }); voice(nf(n) * 2, t, 2.4, vol * 0.3, { attack: 0.004 });
+    voice(nf(n) * 2.76, t, 1.1, vol * 0.12, { attack: 0.003 }); voice(nf(n) * 1.004, t, 4.2, vol * 0.4, { attack: 0.004 });
+  };
   const glock = (n, t, vol) => { voice(nf(n), t, 2.6, vol, { attack: 0.002 }); voice(nf(n) * 2.71, t, 0.5, vol * 0.25, { attack: 0.002 }); voice(nf(n) * 5.15, t, 0.15, vol * 0.08, { attack: 0.001 }); };
   const brass = (n, t, dur, vol) => { voice(nf(n), t, dur, vol, { type: 'sawtooth', attack: 0.45, release: 0.8, lp: 850, det: [-5, 5], vib: 0.003, vibRate: 4.5, vibDelay: 0.6 }); };
   // 心臓の音：低い「ドクン」を2つ。スマホでも聞こえるよう、少し上の倍音を足す
@@ -1493,6 +1539,25 @@
       // 小節の長さの揺れ：3小節目は少し縮み、7小節目は少し間延びする
       return b * 3 + (bar === 2 ? -0.12 : bar === 6 ? 0.22 : 0);
     },
+    // BAD1『終わらない放課後』：チャイムが一音ずつゆっくり鳴り、時計の秒針だけが進む。ユーフォニアム・ホルン・ファゴット・バスドラム（イ短調）
+    // チャイムの旋律（ミドレソ・ソレミド）を1小節に1音。2周目からユーフォニアムが、誰にも届かない旋律を重ねる
+    endless(t, i) {
+      const q = 1.0, bar = i % 8, cyc = (i >> 3) % 2;
+      const root = [45, 41, 38, 43, 40, 38, 45, 41][bar];
+      const chord = [[57, 60, 64], [57, 60, 65], [57, 62, 65], [55, 59, 62], [55, 59, 64], [57, 62, 65], [57, 60, 64], [57, 60, 65]][bar];
+      schoolBell([64, 60, 62, 55, 55, 62, 64, 60][bar] + 12, t, 0.03);
+      for (let k = 0; k < 4; k++) clockTick(t + k * q, 0.05, k % 2 === 0);
+      if (bar % 2 === 0) bassDrum(t, 0.2);
+      if (bar === 7) bassDrum(t + q * 2, 0.12);
+      seq([[root, 2], [root + 7, 2]], t, q, (n, x, len) => bassoon(n, x, len * 0.95, 0.03));
+      chord.slice(0, 2).forEach(n => horn(n - 12, t, q * 4 + 0.3, 0.012));
+      if (cyc) {
+        const mel = [[[0, 1], [60, 1], [64, 2]], [[65, 2], [64, 1], [60, 1]], [[62, 3], [0, 1]], [[0, 1], [59, 1], [62, 1], [67, 1]],
+                     [[67, 2], [64, 2]], [[65, 1], [64, 1], [62, 2]], [[60, 3], [59, 1]], [[57, 4]]][bar];
+        seq(mel, t, q, (n, x, len) => euphonium(n - 12, x, len * 1.02, 0.03));
+      }
+      return q * 4;
+    },
     // 追い出される・追い出されたとき：重い低音と、ゆっくり沈んでいくチェロ、扉を叩くような音
     // 『閉ざされた扉』の差分（サウンドトラックには入れない）：追い出される前、チャイムが鳴るまで。扉を叩く音だけを抜く
     shutIn(t, i) { return BGM.shut(t, i, true); },
@@ -1867,7 +1932,7 @@
   }
   // BAD1 終わらない放課後：一度も心に触れないまま時間切れ、または「力不足」。その章のはじめから、謎解きを飛ばして再開できる
   async function bad1() {
-    bgm('shutIn');  // 追い出されたわけではないので、扉を叩く音のない差分
+    bgm('endless');  // BAD1 専用の曲『終わらない放課後』
     hideCut(); setTalk(false);
     await say(['チャイムを数えるのを、いつのまにかやめていた。', '誰の心にも、手が届かないまま。夕焼けは少しも動かない。',
                '自分の名前を、思い出せなくなっていた。……それでも、放課後は終わらなかった。']);
