@@ -5113,13 +5113,16 @@
     const rows = [];
     if (save && !fresh) rows.push(`<button type="button" class="btn-sub" id="tGo">${ch.room}を${hm(ch.startMin || 0)}からやり直す<span class="sub">今の放課後の続きは消えます（わすれもの棚は残ります）</span></button>`);
     if (shelfN || doneN || (save && !fresh && ch.id !== first.id)) {
-      // わすれものを持っているときは、引き継ぐかどうかを押したあとで選ぶ
-      const lost = [doneN ? 'この周回の記録' : '', save && !fresh ? '今の続き' : ''].filter(Boolean).join('・');
-      const sub = [lost ? `${lost}が消えます` : '', shelfN ? 'わすれものを持っていくか選べます' : ''].filter(Boolean).join('。');
+      // わすれものを持っていて、周回を一度でも終えたあとなら、引き継ぐかどうかを押したあとで選ぶ。1周目はこれまでどおり棚も空にする
+      const pick = shelfN && runEnded();
+      const lost = [shelfN && !pick ? 'わすれもの棚' : '', doneN ? 'この周回の記録' : '', save && !fresh ? '今の続き' : ''].filter(Boolean).join('・');
+      const sub = [lost ? `${lost}が消えます` : '', pick ? 'わすれものを持っていくか選べます' : ''].filter(Boolean).join('。');
       rows.push(`<button type="button" class="btn-sub" id="tReset">${first.room}からやり直す<span class="sub">${sub}</span></button>`);
     }
     return rows.length ? `<div class="title-redo"><span class="label">やり直す</span>${rows.join('')}</div>` : '';
   }
+  // 周回を一度でも終えたか（5章を終えてエンディングを迎えた、または章の途中のBADで放課後が終わった）。BAD1は章のやり直しなので数えない
+  const runEnded = () => !!(P.runs || Object.keys(P.endings || {}).some(t => t !== 'BAD1'));
   // 一度でも遊んだことがあるか（初めてのときは「美術室からやり直す」を出さない）
   const played = () => !!(P.played || P.runs || loadRun() || SLOTS.some(n => readSlot(n))
     || Object.keys(P.shelf).length || Object.keys(P.cur.results).length);
@@ -5149,14 +5152,14 @@
   async function resetAll() {
     const room = CHAPTERS[ORDER[0]].room;
     const has = Object.keys(P.shelf || {}).some(k => P.shelf[k]);
-    // わすれものを持っていないときは、引き継ぐかどうかの選択は出さない
-    const v = has
+    // わすれものを持っていないとき・まだ一度も周回を終えていないときは、引き継ぐかどうかの選択は出さない（棚も空にする）
+    const v = has && runEnded()
       ? await uiWait(`<p class="eyebrow">${room}からやり直す</p><h2>わすれものを、持っていきますか？</h2>
       <p>途中の放課後と、この周回で終えた教室の記録は消えます。${room}から順番に始まります。</p>
       <p>わすれものを持っていくと、その子の手がかりを覚えたまま始められます。置いていくと、わすれもの棚も空になります。</p>
       <p class="note">救えた実績・見たエンディング・周回数は残ります。</p>`, '', ['持っていく', '置いていく（棚を空にする）', 'やめる'])
       : await uiWait(`<p class="eyebrow">${room}からやり直す</p><h2>${room}から、もう一度始めますか？</h2>
-      <p>途中の放課後と、この周回で終えた教室の記録が消えます。${room}から順番に始まります。</p>
+      <p>${has ? 'わすれもの棚と、' : ''}途中の放課後と、この周回で終えた教室の記録が消えます。${room}から順番に始まります。</p>
       <p class="note">救えた実績・見たエンディング・周回数は残ります。</p>`, '', ['やり直す', 'やめる']).then(i => i === 0 ? 1 : 2);
     if (v !== 0 && v !== 1) return showTitle();
     if (v === 1) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; }
