@@ -5072,7 +5072,7 @@
         ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save)}</span></button>` : ''}
         ${save ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
-        <button type="button" class="btn" id="tShelf">わすれもの棚</button>
+        ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
         ${ostOpen() ? '<button type="button" class="btn" id="tOst">サウンドトラック<span class="sub">おまけ</span></button>' : ''}
         ${redoHTML(save)}
         <button type="button" class="btn" id="tSet">設定<span class="sub">既読スキップ・文字の速さ・音量</span></button>
@@ -5088,7 +5088,7 @@
     if ($('#tReset')) $('#tReset').onclick = () => resetAll();
     $('#tWipe').onclick = () => wipeAll();
     if (save) $('#tCont').onclick = () => continueRun(save);
-    $('#tShelf').onclick = showShelf;
+    if ($('#tShelf')) $('#tShelf').onclick = showShelf;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
     if ($('#tOst')) $('#tOst').onclick = showSoundtrack;
     $('#tSet').onclick = showSettings;
     if ($('#tLoad')) $('#tLoad').onclick = () => showSlots('load');
