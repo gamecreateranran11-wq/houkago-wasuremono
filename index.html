@@ -265,7 +265,17 @@
   .title-side .btn .sub { display: block; font-size: 12px; font-weight: 400; opacity: .8; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
   .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .album { max-height: 56vh; overflow-y: auto; }
+  .album { max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .album-h { font-size: 13px; letter-spacing: .12em; margin: 6px 0 0; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  .album-h span { color: var(--muted); font-size: 12px; }
+  .album .slot.saved { border-color: var(--gold); }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: 62vh; overflow-y: auto; }
+  .pair-side { display: flex; flex-direction: column; gap: 6px; background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 10px; }
+  .pair-side.saved { border-color: var(--gold); }
+  .pair-side h3 { font-size: 14px; margin: 0; }
+  .pair-side img, .pair-side svg { max-width: 100%; height: auto; }
+  .pair-side .thumb-empty { width: 100%; aspect-ratio: 3 / 2; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #4a4152; background: repeating-linear-gradient(135deg, #17131d 0 6px, #1b1622 6px 12px); }
+  @media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
   .album .slot { position: relative; padding: 6px; min-height: 0; gap: 4px; justify-content: flex-start; color: inherit; font: inherit; cursor: pointer; }
   .album .slot.got:hover { border-color: var(--gold); }
   .album .slot.locked { cursor: default; opacity: .6; }
@@ -1824,6 +1834,7 @@
     if (R.late) { closeOverlay(); await say([`……${C.name}には、もう時間がなかったんだ。`, '間に合わなかった。そのことだけが、はっきりわかった。']); }
     const first = !P.shelf[C.key];
     if (first) { P.shelf[C.key] = true; P.shelfRun[C.key] = P.runNo; }
+    albumSync();
     R.over = true; clearRun(); render(); idle();
     const next = recordResult('vanished');
     overlayWait(`<p class="eyebrow">消失イベント</p><h2>${C.name}が消えた</h2>
@@ -2061,7 +2072,7 @@
     if (album) albumSee(album);
     R.standing = true;  // 見送りの場面では立っている
     const now = chStart() + R.ticks * MIN_PER_TICK;
-    R.over = true; clearRun(); P.saved[C.key] = true; saveP(); render(); idle(); keepBgm('unravel', WARM);
+    R.over = true; clearRun(); P.saved[C.key] = true; saveP(); albumSync(); render(); idle(); keepBgm('unravel', WARM);
     const next = recordResult('saved');
     overlayWait(`<img class="cg" src="img/${img}.webp" alt="${alt}">
       <div class="fade" style="display:flex;flex-direction:column;gap:12px">
@@ -5152,8 +5163,8 @@
   }
   // 周回を一度でも終えたか（5章を終えてエンディングを迎えた、または章の途中のBADで放課後が終わった）。BAD1は章のやり直しなので数えない
   const runEnded = () => !!(P.runs || Object.keys(P.endings || {}).some(t => t !== 'BAD1'));
-  /* ---------- アルバム（おまけ）：ストーリーの中で見た一枚絵を、あとから見返せる。わすれもの（姿を変えたものも）・調べるときのカットインは入れない。
-     見ていない絵は「？？？」。1枚見るまで、タイトルにボタンを出さない ---------- */
+  /* ---------- アルバム（おまけ）：ストーリーの中で見た一枚絵と、わすれもの（姿を変える前と後を並べて）を、あとから見返せる。
+     調べるときのカットインは入れない。見ていないものは「？？？」。1つ見るまで、タイトルにボタンを出さない ---------- */
   // [id, 画像, 章, 題]（章の順。ミオとツムギの校門・仲直り・TRUEなどは、絵ができたらここに足す）
   const ALBUM = [
     ['sakura', 'sakura', '第一章', '『ヒナの色、私は好きだよ』'],
@@ -5168,18 +5179,56 @@
   // この仕組みより前に心をほどいていた子の絵は、見たものとして記録しておく
   { const was = { hina: ['sakura', 'gate'], sota: ['m_photo', 'm_gate'], mio: ['l_bridge'], kei: ['g_letter', 'g_gate'] };
     Object.keys(was).forEach(k => { if (P.saved[k]) was[k].forEach(id => { P.album[id] = true; }); }); saveP(); }
-  ['m_duet', 'l_card'].forEach(id => { delete P.album[id]; });
   function albumSee(id) { if (!P.album[id]) { P.album[id] = true; saveP(); } }
-  const albumAny = () => ALBUM.some(a => P.album[a[0]]);
+  // わすれもの：棚に並んだ姿（w_〇〇_v）と、姿を変えたあと（w_〇〇_s）。棚を空にしても、アルバムには残す
+  const WASURE = [['ヒナ', 'hina', () => ART], ['ソウタ', 'sota', () => MUSIC], ['ミオ', 'mio', () => LIBRARY], ['ケイ', 'kei', () => GYM], ['ツムギ', 'tsumugi', () => INFIRMARY]];
+  function albumSync() {
+    let ch = false;
+    WASURE.forEach(([, k]) => {
+      if (P.shelf[k] && !P.album['w_' + k + '_v']) { P.album['w_' + k + '_v'] = true; ch = true; }
+      if (P.shelf[k] && P.saved[k] && !P.album['w_' + k + '_s']) { P.album['w_' + k + '_s'] = true; ch = true; }
+    });
+    if (ch) saveP();
+  }
+  albumSync();
+  const albumAny = () => ALBUM.some(a => P.album[a[0]]) || WASURE.some(([, k]) => P.album['w_' + k + '_v'] || P.album['w_' + k + '_s']);
   function showAlbum() {
+    albumSync();
     const got = ALBUM.filter(a => P.album[a[0]]).length;
-    openOverlay(`<p class="eyebrow">おまけ</p><h2>アルバム</h2><p class="note">見た一枚絵　${got} / ${ALBUM.length}　　押すと大きく見られます。</p>
-      <div class="shelf album">${ALBUM.map(([id, img, ch, ttl], i) => P.album[id]
+    const wGot = WASURE.reduce((n, [, k]) => n + (P.album['w_' + k + '_v'] ? 1 : 0) + (P.album['w_' + k + '_s'] ? 1 : 0), 0);
+    const wRows = WASURE.map(([who, k, ch], i) => {
+      const v = P.album['w_' + k + '_v'], sv = P.album['w_' + k + '_s'];
+      if (!v && !sv) return `<div class="slot locked"><span class="thumb-empty" aria-hidden="true">？</span><span class="ttl">${who}<br>？？？</span></div>`;
+      const it = ch().shelfItem(!!sv);
+      return `<button type="button" class="slot got${sv ? ' saved' : ''}" data-w="${i}"><img class="thumb" src="img/${it.thumb}.webp" alt=""><span class="ttl">${who}<br>${it.title}</span></button>`;
+    }).join('');
+    openOverlay(`<p class="eyebrow">おまけ</p><h2>アルバム</h2>
+      <div class="album">
+      <p class="album-h">一枚絵　<span>${got} / ${ALBUM.length}</span></p>
+      <div class="shelf">${ALBUM.map(([id, img, ch, ttl], i) => P.album[id]
         ? `<button type="button" class="slot got" data-i="${i}"><img class="thumb" src="img/${img}.webp" alt=""><span class="ttl">${ch}<br>${ttl}</span></button>`
         : `<div class="slot locked"><span class="thumb-empty" aria-hidden="true">？</span><span class="ttl">${ch}<br>？？？</span></div>`).join('')}</div>
+      <p class="album-h">わすれもの　<span>${wGot} / ${WASURE.length * 2}</span></p>
+      <p class="note">姿を変える前と後を、並べて見られます。</p>
+      <div class="shelf">${wRows}</div>
+      </div>
       <div class="row"><button type="button" class="btn primary" id="albBack">戻る</button></div>`);
     $('#albBack').onclick = () => showTitle();
     card.querySelectorAll('[data-i]').forEach(b => b.onclick = () => albumView(+b.dataset.i));
+    card.querySelectorAll('[data-w]').forEach(b => b.onclick = () => albumWasure(+b.dataset.w));
+  }
+  // わすれものの前と後を並べて見る。見ていないほうは「？？？」
+  function albumWasure(i) {
+    const [who, k, ch] = WASURE[i], v = P.album['w_' + k + '_v'], sv = P.album['w_' + k + '_s'];
+    const side = (on, saved, label) => {
+      if (!on) return `<div class="pair-side"><p class="eyebrow">${label}</p><div class="thumb-empty" aria-hidden="true">？</div><p>？？？</p></div>`;
+      const it = ch().shelfItem(saved);
+      return `<div class="pair-side${saved ? ' saved' : ''}"><p class="eyebrow">${label}</p><h3>${it.title}</h3>${it.body}</div>`;
+    };
+    openOverlay(`<p class="eyebrow">アルバム　わすれもの</p><h2>${who}のわすれもの</h2>
+      <div class="pair">${side(v, false, '残されたもの')}${side(sv, true, '姿を変えたもの')}</div>
+      <div class="row"><button type="button" class="btn primary" id="albList">一覧へ</button></div>`);
+    $('#albList').onclick = () => showAlbum();
   }
   // 1枚ずつ見る。前へ・次へは、見た絵の中だけを行き来する
   function albumView(i) {
