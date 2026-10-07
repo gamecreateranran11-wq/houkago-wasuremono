@@ -4565,7 +4565,8 @@
     idleFree: '（ツムギが待っている。チャイムが鳴る前に）',
     // 来室カード（引き出し）・当番表との照らし合わせ・窓の指の跡の3つがそろったら、対話に入れる
     ready: () => R.know.has('card') && R.know.has('match') && R.know.has('traces'),
-    onLoopReset() { if (R.taken.dark) setDark(false); R.taken.dark = false; },
+    // チャイムで巻き戻るときは R.taken が先に空になるので、部屋の暗さ（room-dark）を見て明かりを戻す
+    onLoopReset() { if (R.taken.dark || $('#scene').classList.contains('room-dark')) setDark(false); R.taken.dark = false; },
     // ミオを閉め出した周回は、3回目のチャイムで消えるのではなく、容態が急変する
     lastOverride: () => mioRes() === 'shut' ? tsumugiDies : null,
     async onTick() {
