@@ -266,6 +266,18 @@
 
   .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .save-slots { display: flex; flex-direction: column; gap: 8px; }
+  .ach-list { display: flex; flex-direction: column; gap: 8px; max-height: 56vh; overflow-y: auto; }
+  .ach-row { display: flex; gap: 10px; align-items: flex-start; background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; opacity: .6; }
+  .ach-row.on { opacity: 1; }
+  .ach-row .info { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+  .ach-row .cond, .ach-row .when { font-size: 11px; color: var(--muted); }
+  .ach-row .ach-mark { font-size: 14px; line-height: 1.4; color: var(--muted); }
+  .ach-row.on .ach-mark { color: #e8c37a; }
+  .ach-row.x { border-color: #e8c37a; box-shadow: 0 0 0 1px #e8c37a55 inset, 0 0 14px #e8c37a33; background: linear-gradient(135deg, #1d1710, #120f17); }
+  .ach-row.x .ttl { color: #f3d79a; }
+  .ach-row .x-msg { font-size: 12px; color: #f3d79a; margin-top: 4px; }
+  .ach-note { color: #e8c37a; }
+  .ach-x-note { color: #f3d79a; }
   .save-slot { display: flex; align-items: center; gap: 10px; background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; }
   .save-slot .info { flex: 1 1 auto; display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
   .save-slot .no { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
@@ -1719,6 +1731,7 @@
   }
   // ヒントは段階式：同じところで押すたびに、少しずつ具体的になる（配列の最後が答えに近いヒント）
   const hintScript = async () => {
+    nmMark('hint');
     const h = C.hint(), t = Array.isArray(h) ? h : [h];
     R.hintLv = R.hintLv || {};
     const k = C.id + ':' + t[0], lv = Math.min(R.hintLv[k] || 0, t.length - 1);
@@ -1730,7 +1743,7 @@
     R.ticks = CHIME_AT - 1; await tick();
   };
   function scriptFn(key) {
-    if (key === 'intro') return () => C.intro(remembered(C.key));
+    if (key === 'intro') return () => { if (remembered(C.key)) nmMark('skip'); return C.intro(remembered(C.key)); };
     if (key === 'hint') return hintScript;
     if (key === 'wait') return waitScript;
     if (key.startsWith('hs:')) { const id = key.slice(3); return C.H[id] || COMMON[id] || null; }
@@ -1753,7 +1766,7 @@
       bgm('vanish'); await say(C.lastWords); R.late = true;
     }
     // チャイムが鳴っている間は、左上の時計もチャイムの時刻（章の終わり）を指す
-    R.loop++; R.ticks = CHIME_AT; R.cons = 0; bgm(null); bell(); flash(); render();
+    R.loop++; R.ticks = CHIME_AT; R.cons = 0; bgm(null); bell(); flash(); render(); nmMark('chime');
     const last = R.loop >= 3 && R.st !== 'unraveled';
     // 一度も心に触れていなければ、どの章でもBAD1（ミオを閉め出した周回のツムギも同じ。容態の急変は、心に触れていたときだけ）
     if (last && !R.doom && R.touched && C.lastOverride && C.lastOverride()) {
@@ -1822,7 +1835,8 @@
     return ORDER[i + 1] ? CHAPTERS[ORDER[i + 1]] : null;
   }
   function goNext(next) { if (next) startRun(next.id); else runEnd(); }
-  // 周回を締めくくる。count=true のとき「これまでの周回」に数える
+  // 周回を締めくくる。count=true のとき周回に数える（エンディングを見て放課後が終わった回数。BAD1・手動のやり直しは数えない）。
+  // 周回数はタイトルには出さず、内部の記録にとどめる
   function finishRun(count) {
     if (count) P.runs = (P.runs || 0) + 1;
     P.runNo = (P.runNo || 1) + 1; P.cur = { results: {} }; saveP(); clearRun();
@@ -1852,6 +1866,7 @@
     P.endings[end[0]] = true;
     // 朝を迎えるエンディングは、ほどけたあとの曲が流れていれば続けて聴かせる。BADは、その結末の曲が流れていなければ切り替える
     if (end[0] === 'NORMAL' || end[0] === 'GOOD') keepBgm(end[3], WARM); else bgm(end[3]);
+    const got = achGain(end[0]);
     finishRun(true);
     if (end[0] === 'BAD4') await closedSchool();
     if (end[0] === 'BAD5') await emptySeats(ORDER.map(id => CHAPTERS[id]).filter(ch => res[ch.key] === 'vanished'));
@@ -1863,7 +1878,7 @@
     overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
         <p class="eyebrow">${end[0] === 'NORMAL' || end[0] === 'GOOD' ? end[0] : 'BAD END'}「${end[1]}」</p></div>
       ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。${end[0] === 'GOOD' ? '（屋上への道は、製品版で開きます）' : ''}</p>` : (end[0] === 'GOOD' ? '<p class="note">（屋上への道は、製品版で開きます）</p>' : '')}
-      <p class="note">${endNote}</p>
+      <p class="note">${endNote}</p>${achNote(got)}
       `,
       end[0] === 'NORMAL' || end[0] === 'GOOD' ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
@@ -1946,13 +1961,14 @@
     await say(['チャイムを数えるのを、いつのまにかやめていた。', '誰の心にも、手が届かないまま。夕焼けは少しも動かない。',
                '自分の名前を、思い出せなくなっていた。……それでも、放課後は終わらなかった。']);
     R.over = true; clearRun(); P.endings.BAD1 = true; saveP(); render(); idle();
+    const got = achGain('BAD1');
     const v = await overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
         <p class="eyebrow">BAD END「終わらない放課後」</p></div>
-      <p class="note">${C.room}のはじめから、やり直せます。調べてわかったことは覚えているので、謎解きは飛ばせます。</p>`,
+      <p class="note">${C.room}のはじめから、やり直せます。調べてわかったことは覚えているので、謎解きは飛ばせます。</p>${achNote(got)}`,
       '', [`${C.room}のはじめから`, 'タイトルへ']);
     if (v === 0) startRun(C.id, { skipPuzzle: true }); else showTitle(true);
   }
-  // 章の途中で周回が終わるBAD（身代わり・ふたりきりの放課後）。周回には数えない
+  // 章の途中で周回が終わるBAD（身代わり・ふたりきりの放課後）。放課後がここで終わるので、周回に数える
   async function chapterBad(tag, title, lines, mood) {
     bgm(mood);
     hideCut(); setTalk(false);
@@ -1960,10 +1976,11 @@
     if (tag === 'BAD2') $('#sitFig').classList.add('gone');
     await say(lines);
     R.over = true; clearRun(); P.endings[tag] = true; saveP(); render(); idle();
-    finishRun(false);
+    const got = achGain(tag);
+    finishRun(true);
     const v = await overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
         <p class="eyebrow">BAD END「${title}」</p></div>
-      <p class="note">この放課後は、ここで終わった。</p>`, '', ['放課後をやり直す', 'タイトルへ']);
+      <p class="note">この放課後は、ここで終わった。</p>${achNote(got)}`, '', ['放課後をやり直す', 'タイトルへ']);
     if (v === 0) startRun(ORDER[0]); else showTitle(true);
   }
 
@@ -1977,6 +1994,7 @@
     const kind = list[i][1];
     if (stage === 1 && kind === 'yori') { R.touched = true; bgm(null); pendingCore = C.coreAt || 2; }   // coreAt：選択のあと何文目で核心の曲を始めるか（章ごと）
     if (stage >= 2 && (kind === 'yori' || kind === 'nagu' || kind === 'key')) R.touched = true;
+    if (kind !== 'yori' && kind !== 'key') nmMark('miss');
     return kind;
   }
   // 最後の選択肢で「正論」「慰める」を選んだあと：わすれものがなければ心を閉ざしてループ、あれば3択
@@ -2007,7 +2025,7 @@
   async function shutOut(lines, after) {
     bgm('shutIn');   // チャイムが鳴るまでは、扉を叩く音のない差分
     await say(lines);
-    R.loop++; R.ticks = CHIME_AT; bgm(null); bell(); flash(); render();
+    nmMark('chime'); R.loop++; R.ticks = CHIME_AT; bgm(null); bell(); flash(); render();
     setCG(true);
     await line(`${hm(chEnd())}。チャイムが鳴った。`, true, true);
     // チャイムの絵を出しているあいだに廊下の背景へ差し替え、読み込みが済んでから絵を消す（美術室が一瞬映らないように）
@@ -2336,7 +2354,7 @@
           showCut('ci_drawer'); lockClick();
           await say(['カチリ。引き出しが開いた。', '中には、空になった絆創膏の箱がいくつも。', 'それと、予備の長袖のカーディガンが一枚。', '……今は、七月だ。']);
           R.know.add('drawer'); await tick();
-        } else { await say(['ガチャ。開かない。']); await tick(); }
+        } else { nmMark('puz'); await say(['ガチャ。開かない。']); await tick(); }
       },
       async easel() {
         if (!R.taken.cloth) {
@@ -2609,7 +2627,7 @@
           placed.push(+b.dataset.n);
           if (placed.length < 4) return draw();
           if (placed.join('') === '1234') { draw(); card.querySelector('#fReset').closest('.row').hidden = true; $('#fragMsg').textContent = '……破れ目が、ぴたりと重なった。'; setTimeout(() => { closeOverlay(); res(true); }, 1100); return; }
-          draw(); $('#fragMsg').textContent = '……破れ目が、かみ合わない。';
+          draw(); nmMark('puz'); $('#fragMsg').textContent = '……破れ目が、かみ合わない。';
         });
         $('#fReset').onclick = () => { placed.length = 0; draw(); };
         $('#fCancel').onclick = () => { closeOverlay(); res(false); };
@@ -2710,7 +2728,7 @@
           }
         } else {
           pos = 0; prog();
-          $('#kbMsg').textContent = '……音が違う。最初から。';
+          $('#kbMsg').textContent = '……音が違う。最初から。'; nmMark('puz');
           if (!R.know.has('doremi') && ++R.pianoMiss >= 3) {
             R.know.add('doremi'); saveRun();
             $('#kbScore').innerHTML = fullScoreSVG(true);
@@ -4063,7 +4081,7 @@
         if (!v.go) return;
         const ok = Object.keys(LINEUP_ANSWER).every(k => v.b[k] === LINEUP_ANSWER[k]);
         if (!ok) {
-          R.taken.miss = (R.taken.miss || 0) + 1;
+          R.taken.miss = (R.taken.miss || 0) + 1; nmMark('puz');
           await say(['マグネットを並べ終えて、ボードを眺めた。', '……何かが違う気がする。']);
           await tick(); return;
         }
@@ -4502,7 +4520,7 @@
   async function useRoster() {
     const v = await viewRoster();
     if (v === null) return;
-    if ([...v].sort().join('') !== [...'火金'].sort().join('')) { await say(['来室カードと当番表を見比べた。……どこか、合わない気がする。']); return; }
+    if ([...v].sort().join('') !== [...'火金'].sort().join('')) { nmMark('puz'); await say(['来室カードと当番表を見比べた。……どこか、合わない気がする。']); return; }
     if (R.know.has('match')) { await say(['17:00まで残っていたのは、火曜と金曜。……どちらも、「水野」の当番の日だ。']); return; }
     R.know.add('match'); R.seen.add('match');
     await say(['来室カードの17:00の日を、一つずつ数えていく。', '……17:00まで残っていた日は、どれも火曜と金曜だった。',
@@ -4739,7 +4757,7 @@
         if (c !== 0) return;
         const v = await dirLock();
         if (v === null) return;
-        if (v !== DIR_ANSWER) { await say(['ガチ。……錠は開かない。']); await tick(); return; }
+        if (v !== DIR_ANSWER) { nmMark('puz'); await say(['ガチ。……錠は開かない。']); await tick(); return; }
         lockClick();
         R.know.add('drawer'); R.taken.drawer = true;
         await say(['カチリ。引き出しが開いた。', '中に、来室カードが一枚。「2年3組　白石ツムギ」。……6月10日から、毎日の日付がびっしり並んでいる。',
@@ -5061,18 +5079,17 @@
     $('#scene').style.visibility = 'hidden';
     clearStage();
     $('#loading').hidden = true;
-    const runs = P.runs || 0;
     const save = loadRun();
     openOverlay(`<h1 class="vtitle">放課後の<span>わすれもの</span></h1>
       <p class="tap-hint" id="tapHint"${splash ? '' : ' hidden'}>画面をタップしてください</p>
       <div class="title-side${splash ? ' later' : ''}" id="titleMenu"${splash ? ' hidden' : ''}>
         <p class="eyebrow">試作版　第一章〜第${'一二三四五'[ORDER.length - 1]}章</p>
-        ${runs ? `<p class="note">これまでの周回　${runs}</p>` : ''}
-        ${Object.keys(P.cur.results).length ? `<p class="note">第${P.runNo}周の記録　${runRecord()}</p>` : ''}
+        ${Object.keys(P.cur.results).length ? `<p class="note">この周回の記録　${runRecord()}</p>` : ''}
         ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save)}</span></button>` : ''}
         ${save ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
+        ${achAny() ? '<button type="button" class="btn" id="tAch">アチーブメント<span class="sub">おまけ</span></button>' : ''}
         ${ostOpen() ? '<button type="button" class="btn" id="tOst">サウンドトラック<span class="sub">おまけ</span></button>' : ''}
         ${redoHTML(save)}
         <button type="button" class="btn" id="tSet">設定<span class="sub">既読スキップ・文字の速さ・音量</span></button>
@@ -5090,6 +5107,7 @@
     if (save) $('#tCont').onclick = () => continueRun(save);
     if ($('#tShelf')) $('#tShelf').onclick = showShelf;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
     if ($('#tOst')) $('#tOst').onclick = showSoundtrack;
+    if ($('#tAch')) $('#tAch').onclick = showAch;
     $('#tSet').onclick = showSettings;
     if ($('#tLoad')) $('#tLoad').onclick = () => showSlots('load');
     if (splash) {
@@ -5123,6 +5141,59 @@
   }
   // 周回を一度でも終えたか（5章を終えてエンディングを迎えた、または章の途中のBADで放課後が終わった）。BAD1は章のやり直しなので数えない
   const runEnded = () => !!(P.runs || Object.keys(P.endings || {}).some(t => t !== 'BAD1'));
+  /* ---------- アチーブメント（おまけ）：取ったものは周回をまたいで残る。名前は管理人が付ける（未定のあいだは条件だけを出す） ---------- */
+  const ALL_ENDS = ['TRUE', 'GOOD', 'NORMAL', 'BAD1', 'BAD2', 'BAD3', 'BAD4', 'BAD5', 'BAD6', 'BAD7', 'BAD8', 'BAD9'];
+  const FIVE = ['hina', 'sota', 'mio', 'kei', 'tsumugi'];
+  // [id, 名前（未定はnull）, 条件, 判定]
+  const ACH = [
+    ['firstEnd', null, 'はじめて、エンディングを見る', () => ALL_ENDS.some(t => P.endings[t])],
+    ['shelf5', null, '5人のわすれものを、すべて手に入れる', () => FIVE.every(k => P.shelf[k])],
+    ['dawn', null, 'BAD以外のエンディング（NORMAL・GOOD・TRUE）にたどり着く', () => !!(P.endings.NORMAL || P.endings.GOOD || P.endings.TRUE)],
+    ['allEnd', null, 'すべてのエンディング（12種）を見る', () => ALL_ENDS.every(t => P.endings[t])],
+    ['perfect', null, 'ひとつの周回で、チャイムを一度も聞かず、ヒントも使わず、選択肢も謎解きも間違えずに、TRUEにたどり着く', () => false]
+  ];
+  P.ach = P.ach || {};
+  // この仕組みより前に条件を満たしていた分は、黙って記録しておく（ノーミスのTRUEは後から判定できないので除く）
+  ACH.forEach(([id, , , test]) => { if (id !== 'perfect' && !P.ach[id] && test()) P.ach[id] = Date.now(); }); saveP();
+  const achAny = () => Object.keys(P.ach).length > 0;
+  /* ノーミスの記録：この周回（P.cur）でチャイム・ヒント・選択ミス・謎解きミス・わすれもので謎解きを飛ばしたか。
+     わすれもので飛ばすのはノーミスのままでよい。飛ばさずにノーミスでTRUEまで来たときだけ、隠しの演出（P.achX）を出す */
+  function nmMark(k) { if (!P.cur) return; const n = P.cur.nm = P.cur.nm || {}; if (!n[k]) { n[k] = true; saveP(); } }
+  // エンディングを見たときに呼ぶ（P.cur を消す前）。新しく取ったアチーブメントを返す
+  function achGain(tag) {
+    const n = (P.cur && P.cur.nm) || {}, got = [];
+    const clean = !n.chime && !n.hint && !n.miss && !n.puz;
+    ACH.forEach(([id, , , test]) => {
+      if (P.ach[id]) return;
+      if (id === 'perfect' ? (tag === 'TRUE' && clean) : test()) { P.ach[id] = Date.now(); got.push(id); }
+    });
+    if (tag === 'TRUE' && clean && !n.skip && !P.achX) { P.achX = true; got.push('X'); }
+    saveP();
+    return got;
+  }
+  const achName = a => a[1] || a[2];
+  // エンディング画面の下に、静かに一行ずつ出す
+  function achNote(got) {
+    if (!got || !got.length) return '';
+    return got.map(id => id === 'X'
+      ? `<p class="note ach-x-note">${ACH_X_MSG}</p>`
+      : `<p class="note ach-note">アチーブメント「${achName(ACH.find(a => a[0] === id))}」</p>`).join('');
+  }
+  // 隠し：わすれものに頼らず、ノーミスでTRUEまで来た人へ（文は仮）
+  const ACH_X_MSG = '……わすれものに頼らず、一度も迷わずに、ここまで来た人へ。あなたの放課後は、最初から、誰かの朝のためにあった。';
+  function showAch() {
+    const got = ACH.filter(a => P.ach[a[0]]).length;
+    const rows = ACH.map(a => {
+      const on = !!P.ach[a[0]], x = a[0] === 'perfect' && on && P.achX;
+      return `<div class="ach-row${on ? ' on' : ''}${x ? ' x' : ''}"><span class="ach-mark" aria-hidden="true">${on ? (x ? '✦' : '●') : '○'}</span>
+        <div class="info"><span class="ttl">${on ? achName(a) : '？？？'}</span>${on && !a[1] ? '' : `<span class="cond">${a[2]}</span>`}
+        ${on ? `<span class="when">${slotDate(P.ach[a[0]])}</span>` : ''}${x ? `<span class="x-msg">${ACH_X_MSG}</span>` : ''}</div></div>`;
+    }).join('');
+    openOverlay(`<p class="eyebrow">おまけ</p><h2>アチーブメント</h2><p class="note">${got}／${ACH.length}</p>
+      <div class="ach-list">${rows}</div>
+      <div class="row"><button type="button" class="btn primary" id="achBack">戻る</button></div>`);
+    $('#achBack').onclick = () => showTitle();
+  }
   // 一度でも遊んだことがあるか（初めてのときは「美術室からやり直す」を出さない）
   const played = () => !!(P.played || P.runs || loadRun() || SLOTS.some(n => readSlot(n))
     || Object.keys(P.shelf).length || Object.keys(P.cur.results).length);
@@ -5171,7 +5242,7 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
