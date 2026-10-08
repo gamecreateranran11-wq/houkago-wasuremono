@@ -2358,7 +2358,7 @@
   // 選択肢の並び：種類ごとの位置が段や章で固まると、位置で答えがわかってしまうので、章と段ごとに並びを決めておく。
   // 毎回ランダムにすると、セーブから再開したときに選んだ答えがずれるため、固定の並びにする（慰めるは2ループ目以降だけ出る）
   const ASK_ORDER = {
-    art:       { 1: ['oitsu', 'yori', 'seiron'], 2: ['nagu', 'oitsu', 'yori', 'seiron'], 3: ['nagu', 'seiron', 'key', 'oitsu'] },
+    art:       { 1: ['seiron', 'oitsu', 'yori'], 2: ['yori', 'oitsu', 'nagu', 'seiron'], 3: ['oitsu', 'key', 'nagu', 'seiron'] },
     music:     { 1: ['seiron', 'oitsu', 'yori'], 2: ['yori', 'nagu', 'seiron', 'oitsu'], 3: ['key', 'oitsu', 'nagu', 'seiron'] },
     library:   { 1: ['yori', 'oitsu', 'seiron'], 2: ['oitsu', 'seiron', 'nagu', 'yori'], 3: ['oitsu', 'nagu', 'seiron', 'key'] },
     gym:       { 1: ['oitsu', 'seiron', 'yori'], 2: ['seiron', 'nagu', 'yori', 'oitsu'], 3: ['seiron', 'oitsu', 'key', 'nagu'] },
