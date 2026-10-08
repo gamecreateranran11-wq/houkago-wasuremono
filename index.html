@@ -274,6 +274,7 @@
   .title-side { gap: 10px; }
   .title-side .btn { padding: 8px 16px; }
   .title-side .note { font-size: 11.5px; line-height: 1.6; }
+  .title-side .note.ver { font-size: 11px; letter-spacing: .08em; opacity: .7; }
   .title-side .title-redo { padding: 6px 10px 8px; }
   /* PC（横に広く、縦にも余裕のある画面）では、文字を読みやすい大きさに戻す */
   @media (min-width: 768px) and (min-height: 700px) {
@@ -2185,6 +2186,9 @@
     if (count) P.runs = (P.runs || 0) + 1;
     P.runNo = (P.runNo || 1) + 1; P.cur = { results: {} }; saveP(); clearRun();
   }
+  // 本実装版に切り替えるときは RELEASE を true にする：タイトルの「試作版　第一章〜」をやめて「ver 〇〇」を小さく出し、
+  // GOOD の結末の「（屋上への道は、製品版で開きます）」を消す（屋上・TRUE の場面ができてから）
+  const RELEASE = false, VERSION = '1.0';
   const TRIAL = ORDER_LEN => ORDER_LEN < 5;
   // 5章（試作版では最後の章）が終わったとき：結果からエンディングを決める
   async function runEnd() {
@@ -2240,7 +2244,7 @@
                   : hasLeft ? 'この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。' : 'この放課後は、ここで終わった。';
     overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
         <p class="eyebrow">${dawnEnd ? end[0].replace('2', '') : 'BAD END'}「${end[1]}」</p></div>
-      ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。${end[0] === 'GOOD' ? '（屋上への道は、製品版で開きます）' : ''}</p>` : (end[0] === 'GOOD' ? '<p class="note">（屋上への道は、製品版で開きます）</p>' : '')}
+      ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。${end[0] === 'GOOD' && !RELEASE ? '（屋上への道は、製品版で開きます）' : ''}</p>` : (end[0] === 'GOOD' && !RELEASE ? '<p class="note">（屋上への道は、製品版で開きます）</p>' : '')}
       <p class="note">${endNote}</p>${achNote(got)}
       `,
       dawnEnd ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
@@ -5581,7 +5585,7 @@
     openOverlay(`<h1 class="vtitle">放課後の<span>わすれもの</span></h1>
       <p class="tap-hint" id="tapHint"${splash ? '' : ' hidden'}>画面をタップしてください</p>
       <div class="title-side${splash ? ' later' : ''}" id="titleMenu"${splash ? ' hidden' : ''}>
-        <p class="eyebrow">試作版　第一章〜第${'一二三四五'[ORDER.length - 1]}章</p>
+        ${RELEASE ? '' : `<p class="eyebrow">試作版　第一章〜第${'一二三四五'[ORDER.length - 1]}章</p>`}
         ${Object.keys(P.cur.results).length ? `<p class="note">この周回の記録　${runRecord()}</p>` : ''}
         ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save)}</span></button>` : ''}
         ${save ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
@@ -5593,6 +5597,7 @@
         <button type="button" class="btn-reset" id="tWipe">プレイデータをリセット</button>
         <p class="note">この作品には、自傷・死・いじめ・家庭での心理的虐待を示唆する表現が含まれます。</p>
         <p class="note">この作品はフィクションです。実在の人物・団体・学校・サービスとは関係ありません。</p>
+        ${RELEASE ? `<p class="note ver">ver ${VERSION}</p>` : ''}
       </div>`, 'title-screen', 'ov-card title-card');
     // 進み具合（終えた教室の数）に合わせて、タイトルの絵の時刻を変える（16:00→18:30）
     const TITLE_IMG = ['title', 'title_1630', 'title_1700', 'title_1730', 'title_1800', 'title_1830'];
