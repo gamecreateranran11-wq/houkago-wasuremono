@@ -5304,7 +5304,7 @@
   /* ---------- title / shelf ---------- */
   async function startRun(ch, opt = {}) {
     closeOverlay();
-    busy = true; P.played = true; saveP(); bgm(null);
+    busy = true; P.played = true; if (ch === 'infirmary') P.metTsumugi = true; saveP(); bgm(null);
     clearRun(); await setChapter(ch); newRun(ch); if (opt.skipPuzzle) R.skipPuzzle = true; render(); bgm('explore');
     busy = false;
     act(scriptFn('intro'), 'intro');
@@ -5480,9 +5480,10 @@
     ['allEnd', null, 'すべてのエンディングを見る', () => ALL_ENDS.every(t => P.endings[t]), () => true],
     ['perfect', null, 'ひとつの周回で、チャイムを一度も聞かず、ヒントも使わず、選択肢も謎解きも間違えずに、TRUEにたどり着く', () => false, perfectShown],
     // 第五章でツムギが爆発する決別を見たとき（その場で記録し、章の終わりの画面で知らせる）。名前は仮
-    ['burst', '友情クラッシャー', 'ツムギの本心に触れる', () => false, () => true]
+    ['burst', '友情クラッシャー', 'ツムギの本心に触れる', () => false, () => !!P.metTsumugi]  // 条件は、5章に初めて進んで（ツムギに出会って）から見せる
   ];
   // エンディング以外で取ったアチーブメント：章の終わりの画面でまとめて知らせる
+  if (!P.metTsumugi && (P.cur.results.tsumugi || P.shelf.tsumugi || P.saved.tsumugi || P.endings.NORMAL || P.endings.GOOD || P.endings.BAD4 || P.endings.BAD5 || P.endings.BAD6 || P.endings.BAD9)) { P.metTsumugi = true; saveP(); }
   function achGrant(id) { if (P.ach[id]) return; P.ach[id] = Date.now(); P.achPending = (P.achPending || []).concat(id); saveP(); }
   function achNoteTake() { const g = P.achPending || []; if (!g.length) return ''; P.achPending = []; saveP(); return achNote(g); }
   P.ach = P.ach || {};
@@ -5578,7 +5579,7 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.achPending = []; P.album = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.achPending = []; P.metTsumugi = false; P.album = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
