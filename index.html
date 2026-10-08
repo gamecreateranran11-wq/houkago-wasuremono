@@ -1076,19 +1076,21 @@
   };
   // 扉を叩く音：分厚い木の扉を、こぶしで「ドン」。低く重い胴鳴りと、扉板のこもった響き（スマホでも聞こえる高さを少し混ぜる）
   function knock(t, vol) {
-    if (!bgmGain) return;
     const a = audio();
+    // 曲が流れていれば曲の出力に、止まっていれば効果音だけの出力に（同じ音量）
+    let dst = bgmGain;
+    if (!dst) { dst = a.createGain(); dst.gain.value = bgmLevel(); dst.connect(out()); dst.connect(reverb()); setTimeout(() => { try { dst.disconnect(); } catch (e) {} }, 4000); }
     [[62, 0.45, 'sine', 1], [96, 0.38, 'sine', 0.8], [140, 0.25, 'triangle', 0.45]].forEach(([f, d, type, k]) => {
       const o = a.createOscillator(), g = a.createGain(); o.type = type;
       o.frequency.setValueAtTime(f * 1.25, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.04); o.frequency.exponentialRampToValueAtTime(f * 0.8, t + d);
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol * k, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0005, t + d);
-      o.connect(g).connect(bgmGain); o.start(t); o.stop(t + d + 0.02);
+      o.connect(g).connect(dst); o.start(t); o.stop(t + d + 0.02);
     });
     [[230, 1.1, 1.6, 0.18], [520, 1.6, 0.7, 0.07]].forEach(([fc, qv, k, d]) => {
       const s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain();
       s.buffer = getNoise(); fl.type = 'bandpass'; fl.frequency.value = fc; fl.Q.value = qv;
       g.gain.setValueAtTime(vol * k, t); g.gain.exponentialRampToValueAtTime(0.0005, t + d);
-      s.connect(fl).connect(g).connect(bgmGain); s.start(t); s.stop(t + d + 0.02);
+      s.connect(fl).connect(g).connect(dst); s.start(t); s.stop(t + d + 0.02);
     });
   }
   const flute = (n, t, dur, vol) => {
@@ -1746,7 +1748,7 @@
   // 扉を小さく二回叩く音（効果音）
   const knockTwice = () => () => {
     if (!P.sound || replay) return;
-    try { const a = audio(), t = a.currentTime + 0.05; if (!bgmGain) return; knock(t, 0.16); knock(t + 0.42, 0.13); } catch (e) {}
+    try { const a = audio(), t = a.currentTime + 0.05; knock(t, 0.16); knock(t + 0.42, 0.13); } catch (e) {}
   };
   function bgmRestart() { const n = bgmName; if (!n) return; bgmName = null; bgm(n, 0.6); }
   document.addEventListener('visibilitychange', () => {
@@ -5143,14 +5145,14 @@
                  ['ツムギ', '向こうからは、見えないのにね', 'crySmile'],
                  ['ツムギ', '……最後の日くらい、ちゃんと言いたかったんだ。目を見て、『またね』って', 'grief']]);
       if (mioRes() === 'saved') {
-        bgm('tension');
+        bgm(null);  // ノックの前に音楽を消す。緊張の曲は「……失礼します」から
         await say([knockTwice(), 'そのとき、扉が、小さく二回、叩かれた。', ['ツムギ', '……え', 'surprise'], '扉が、ゆっくり開いた。', guestShow('mioDown')]);
         // 窓の指の跡を見るために明かりを消していたら、ここで主人公がつける（ツムギが「目を見て」言えるように）
         if (R.taken.dark || $('#scene').classList.contains('room-dark')) {
           setDark(false); R.taken.dark = false;
           await say(['扉の脇のスイッチを入れた。蛍光灯が、まばたきするように灯った。']);
         }
-        await say([['ミオ', '……失礼します', 'mioDown'], ['ツムギ', '……ミオ', 'surprise'],
+        await say([() => bgm('tension'), ['ミオ', '……失礼します', 'mioDown'], ['ツムギ', '……ミオ', 'surprise'],
                    ['ミオ', '図書委員の、水野です。……予約の本を、届けに来ました', 'mioSad'],
                    'ミオは、胸に抱えていた本を、両手で差し出した。『ひとりぶんの椅子』。', ['ミオ', '……当番、だから', 'mioSad'],
                    'ツムギは本を受け取って、そっと表紙を撫でた。ページのあいだから、しおりがのぞいている。']);
