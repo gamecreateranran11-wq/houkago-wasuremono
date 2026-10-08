@@ -765,6 +765,7 @@
   }
   // 地の文で子どもが立ち上がったら、そこから立った絵にする（「立ち上がりかけて」「立ち上がろうと」は座ったまま）
   const STAND_RE = /立ち上がっ|立ち上がると/, STAND_NOT = /立ち上がりかけ|立ち上がろう/;  // 表情の絵を読み込んで持っておく（切り替えの瞬間に前の絵が残らないように）
+  let talkHold = false;
   function setTalk(on, f) {
     const faces = C ? C.faces : {};
     const pt = $('#portrait'), wasShown = pt.classList.contains('show');
@@ -782,6 +783,8 @@
         }
       }
     }
+    // 三人で話している場面（ミオとツムギ）では、地の文や心の声のあいだも、その子の絵を出したままにする
+    if (!on && talkHold && wasShown) return;
     // 消えるときは表情を変えない（フェードアウト中に「ふつう」に戻らないように）
     pt.classList.toggle('show', on);
     $('#scene').classList.toggle('talk', on);
@@ -935,6 +938,7 @@
   }
   const moodNow = () => !R || R.over ? null : (R.st === 'unraveled' ? (C.unravelMood || 'unravel') : 'explore');
   function idle() {
+    talkHold = false;
     // 放課後が終わったあと（エンディング・消失・閉め出しなど）は、流れている曲を止めずにそのまま続ける
     if (!R || !R.over) bgm(moodNow());
     $('#scene').classList.remove('story');
@@ -2434,6 +2438,7 @@
   // ほどけたら開くのは、その部屋の扉。一枚絵はその子の行き先（下校する子は校門、ミオは保健室へ続く渡り廊下）
   // stop：主人公が足を止める場所（主人公は、まだ放課後の外へは出られない）
   function ending({ lines, img, alt, stop = '門の手前で、足が止まる。まだ、ここは通れない。', album = img, music = null }) {
+    talkHold = false;
     if (album) albumSee(album);
     R.standing = true;  // 見送りの場面では立っている
     const now = chStart() + R.ticks * MIN_PER_TICK;
@@ -5402,6 +5407,7 @@
      仲直りは、危うさ0でまっすぐな仲直り（一から友だちをやり直す・椅子を運ぶ）、1でぎこちない仲直り。
      決別した周回は、ツムギはほどけるがGOODには届かない（NORMAL止まり、P.cur.mtSplit） */
   async function mioTsumugi() {
+    talkHold = true;  // 会話のあいだ、ツムギの絵を地の文でも出したままにする（場面が終わるとき・片づけるときに戻す）
     let risk = 0; const slips = [];
     const wrong = k => { risk++; slips.push(k); nmMark('miss'); };
     // 主人公は二人にとって他人。口をはさむ前に心の声で一度ためらい、正解はなるべく「言葉を足さない」（問い返す・待つ・名前を呼ぶ）。
@@ -5546,7 +5552,7 @@
     $('#getItem').hidden = true;
     $('#sitFig').classList.remove('gone');
     $('#portrait').classList.remove('show');
-    guest = null; guestRender();  // その場にいる子（ミオなど）の立ち絵も消す。途中から再開するときは、場面の読み直しでまた出る
+    guest = null; guestRender(); talkHold = false;  // その場にいる子（ミオなど）の立ち絵も消す。途中から再開するときは、場面の読み直しでまた出る
     spk.hidden = true; txt.textContent = ''; txt.classList.add('narr'); chs.innerHTML = ''; more.hidden = true;
   }
   function setChapter(id, show = true) {
