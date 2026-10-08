@@ -747,7 +747,7 @@
                       mio: 'angry crysmile despair down grief sad smile surprise stroke', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
-                       blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down' };
+                       blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise' };
   // 座り絵が無い表情は、近い座り絵で代える（ミオの表紙を撫でる→撫でてうつむく。ヒナのむくれ顔は立って描いたあとの一言だけで、
   // 座ってむくれる場面はないが、先読みで無い絵を探しに行かないように、うつむきにしておく）
   const SIT_NEAR = { hina: { pout: 'down' }, mio: { stroke: 'strokedown' } };
@@ -4966,7 +4966,8 @@
     faces: { normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
              grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile',
              angryCry: 'tsumugi_grief',  // 怒りと悔しさをにじませた涙（tsumugi_s_angrycry ができたら差し替える）
-             mioNormal: 'mio_bust', mioSad: 'mio_sad', mioDown: 'mio_down', mioSurprise: 'mio_surprise', mioGrief: 'mio_grief', mioCrySmile: 'mio_crysmile', mioDespair: 'mio_despair', mioSoftSmile: 'mio_softsmile' },
+             mioNormal: 'mio_bust', mioSad: 'mio_sad', mioDown: 'mio_down', mioSurprise: 'mio_surprise', mioGrief: 'mio_grief', mioCrySmile: 'mio_crysmile', mioDespair: 'mio_despair', mioSoftSmile: 'mio_softsmile',
+             mioLeave: 'mio_nbleave', mioLeaveWonder: 'mio_nbleavewonder' },   // 扉のほうを向いた姿（本を手放したあと）。絵は依頼中
     lost: '保健室の来室カード',
     clock: { img: 'ci_clock_infirmary', cx: 782, cy: 430, s: 1.01 },
     clock2: ['時計の下に、行事予定の紙が貼ってある。', '「7/16（水）　終業式」', 'その下に、先生の字で小さく。「7/22（火）　白石さん　入院」'],
@@ -5425,7 +5426,7 @@
                  'ツムギは、自分で言ったことに驚いたように、口を押さえた。', ['ミオ', '……うん', 'mioGrief']]);
     }
     // 2段目：ミオが扉へ向かう
-    await say(['ミオは、ベッドから一歩さがった。', ['ミオ', '……私、もう会わないほうがいいね', 'mioDespair'], 'ミオは、扉のほうへ向き直った。',
+    await say(['ミオは、ベッドから一歩さがった。', ['ミオ', '……私、もう会わないほうがいいね', 'mioDespair'], 'ミオは、扉のほうへ向き直った。', guestShow('mioLeave'),
                '（引き止める言葉なら、いくらでも浮かぶ。……でも、それは自分の言葉で、ミオの言葉じゃない）']);
     c = [2, 0, 1][await choose(['何も言わずに、ミオが振り返るのを待つ', 'また逃げるの？', '話さないと、きっと後悔するよ'])];   // 0：追い詰める 1：正論 2：正解
     if (c === 0) {
@@ -5437,11 +5438,12 @@
       wrong('wait');
       await say(['「話さないと、きっと後悔するよ」', 'ミオは、扉の前で足を止めた。……でも、何も言わなかった。ツムギも、黙ったままだった。']);
       if (risk >= 2) return mtSplit('quiet', 'wait');
-      await say(['しばらくして、ミオが、扉に手をかけたまま、振り返った。']);
+      await say(['しばらくして、ミオが、扉に手をかけたまま、振り返った。', guestShow('mioDespair')]);
     } else {
       await say(['何も言わなかった。', '扉の取っ手にかかったミオの手が、止まった。……しばらく、誰も、何も言わなかった。',
                  'ミオは、扉のほうを向いたまま、小さく言った。',
-                 ['ミオ', '……会わないほうがいいって、自分で言ったのに', 'mioDown'], ['ミオ', '……足が、動かない', 'mioDown']]);
+                 ['ミオ', '……会わないほうがいいって、自分で言ったのに', 'mioLeave'], ['ミオ', '……足が、動かない', 'mioLeaveWonder'],
+                 'ミオが、ゆっくり、こちらへ振り返った。', guestShow('mioDespair')]);
     }
     await say([['ミオ', '……明日から、次は私なんだって', 'mioDespair'], ['ツムギ', '……え', 'surprise'],
                ['ミオ', 'さっき、図書室で、私の机の写真が送られてきたの。……終業式から、私の番だって', 'mioDespair'],
@@ -5506,7 +5508,7 @@
                  ['ツムギ', '謝って、楽になりたいだけでしょ', 'angry'], ['ツムギ', '……ミオは、それでいいかもしれないけど', 'angry'],
                  ['ツムギ', '私は、謝る相手もいなかったのに', 'angryCry'], 'ミオの顔から、すっと色が消えた。',
                  ['ツムギ', '……ちがう。ミオに、こんなこと言いたかったんじゃ……', 'surprise'],
-                 ['ミオ', '……ううん。そうだよね', 'mioDespair'], 'ミオは、小さく頭を下げて、扉のほうへ歩いていった。', guestHide(), '扉が、静かに閉まった。']);
+                 ['ミオ', '……ううん。そうだよね', 'mioDespair'], guestShow('mioLeave'), 'ミオは、小さく頭を下げて、扉のほうへ歩いていった。', guestHide(), '扉が、静かに閉まった。']);
       await say([['ツムギ', '……私、怒ってたんだ', 'grief'], ['ツムギ', 'ずっと。……誰にも、怒っちゃいけないと思ってたのに', 'grief'],
                  'ツムギは、本を抱えたまま、声を出さずに泣いていた。']);
     } else {
@@ -5514,7 +5516,7 @@
       // run：「また逃げるの？」でそのまま／wait：扉の前で黙ったまま／both：振り返って話を聞いたあと
       const lead = { run: ['ミオは、扉に手をかけた。'], wait: ['長い沈黙のあと、ミオは、扉に手をかけた。'],
                      both: ['ミオは、小さく首を振った。', '……それから、もう一度、扉に手をかけた。'] }[from] || [];
-      await say([...lead, ['ミオ', '……当番、だから', 'mioDespair'], guestHide(), 'それだけ言って、ミオは出ていった。',
+      await say([...lead, guestShow('mioLeave'), ['ミオ', '……当番、だから', 'mioLeave'], guestHide(), 'それだけ言って、ミオは出ていった。',
                  '扉が、静かに閉まった。', ['ツムギ', '……またね、って、言えなかった', 'grief'], 'ツムギは、閉まった扉を、ずっと見つめていた。']);
     }
     await say(['長いあいだ、ツムギは何も言わなかった。窓の外の夕日が、少しずつ低くなっていく。',
