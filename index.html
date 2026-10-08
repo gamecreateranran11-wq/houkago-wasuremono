@@ -5461,7 +5461,7 @@
   const ME = { name: '自分',
     shelfItem(saved) {
       return saved
-        ? { thumb: 'protag_notebook', title: '朝の屋上の生徒手帳', body: `<img class="cg" src="img/protag_notebook.webp" alt="朝の屋上に落ちている生徒手帳"><p>朝日の差す屋上に、同じ生徒手帳が開いていた。五人の名前の下に、自分の名前が書き足してあった。</p>` }
+        ? { thumb: 'protag_notebook', title: '朝の屋上の生徒手帳', body: `<img class="cg" src="img/protag_notebook.webp" alt="朝の屋上に落ちている生徒手帳"><p>朝日の差す屋上に、同じ生徒手帳が開いていた。見開きいっぱいに、五人の似顔絵と、それぞれの字の一言。……右下に、顔の描かれていない丸い枠が、ひとつだけ残っていた。</p>` }
         : { thumb: 'protag_notebook_dusk', title: '生徒手帳', body: `<img class="cg" src="img/protag_notebook_dusk.webp" alt="夕焼けの屋上に落ちている生徒手帳"><p>夕焼けの屋上の足もとに落ちていた、自分の生徒手帳。書きこまれたページは、一枚だけ。……五人の名前が、並んでいた。</p>` };
     } };
   if (P.endings.GOOD && !P.shelf.me) { P.shelf.me = true; saveP(); }
