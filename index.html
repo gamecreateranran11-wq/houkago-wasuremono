@@ -1691,6 +1691,8 @@
       }
       return q * 4;
     },
+    // 静かな決別の後半から（ツムギが自分で決めるところ）。後半を1回流したら、曲の頭から通しで
+    farewellLate(t, i) { return BGM.farewell(t, i < 16 ? i + 16 : i - 16); },
     // 爆発する決別：ツムギが忘れていた感情（怒り・悲しみ）が、静かにあふれ出し、大きくふくらんでいく。
     // 4小節ごとに楽器が増え、16小節で最も大きくなったあとは、そのまま重く続く。チューバとバスドラムで全体に重さ（ホ短調）
     burst(t, i) {
@@ -4744,6 +4746,7 @@
     leftover: 'left:88%;top:60%;width:3.6%;height:1.6%;transform:rotate(-4deg)',
     faces: { normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
              grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile',
+             angryCry: 'tsumugi_grief',  // 怒りと悔しさをにじませた涙（tsumugi_s_angrycry ができたら差し替える）
              mioNormal: 'mio_bust', mioSad: 'mio_sad', mioDown: 'mio_down', mioSurprise: 'mio_surprise', mioGrief: 'mio_grief', mioCrySmile: 'mio_crysmile', mioDespair: 'mio_despair', mioSoftSmile: 'mio_softsmile' },
     lost: '保健室の来室カード',
     clock: { img: 'ci_clock_infirmary', cx: 782, cy: 430, s: 1.01 },
@@ -5195,7 +5198,7 @@
                  ['ミオ', 'ツムギ、また笑ってる。……やっぱり、無理させてる', 'mioGrief']]);
     } else {
       await say(['「……ほんとに、怒ってない？」', 'ツムギの笑顔が、止まった。', ['ツムギ', '……わかんない', 'down'],
-                 ['ツムギ', 'でも、あの字を見たとき。……ミオの字だって、すぐわかって', 'grief'], ['ツムギ', '……痛かった', 'grief'],
+                 ['ツムギ', 'でも、あの字を見たとき。……ミオの字だって、すぐわかって', 'down'], ['ツムギ', '……痛かった', 'sad'],
                  'ツムギは、自分で言ったことに驚いたように、口を押さえた。', ['ミオ', '……うん', 'mioGrief']]);
     }
     // 2段目：ミオが扉へ向かう
@@ -5204,12 +5207,12 @@
     if (c === 0) {
       nmMark('miss');
       await say(['「また逃げるの？」', 'ミオの肩が、小さく揺れた。……振り返らなかった。']);
-      return mtSplit('quiet');
+      return mtSplit('quiet', 'run');
     }
     if (c === 1) {
       wrong('wait');
       await say(['「待って、まだ終わってない」', 'ミオは、扉の前で足を止めた。……でも、何も言わなかった。ツムギも、黙ったままだった。']);
-      if (risk >= 2) return mtSplit('quiet');
+      if (risk >= 2) return mtSplit('quiet', 'wait');
       await say(['しばらくして、ミオが、扉に手をかけたまま、振り返った。']);
     } else {
       await say(['「……ミオは、どうしたい？」', 'ミオは、扉の前で立ち止まった。', ['ミオ', '……わかんない', 'mioDown']]);
@@ -5228,7 +5231,7 @@
     if (c === 1) {
       wrong('both');
       await say(['「……二人とも、一人で抱えてたんだね」', 'ツムギも、ミオも、うなずいた。……でも、どちらも、自分の言葉は出てこなかった。']);
-      if (risk >= 2) return mtSplit('quiet');
+      if (risk >= 2) return mtSplit('quiet', 'both');
     } else {
       await say(['「ツムギは、どうしたい？」']);
     }
@@ -5267,30 +5270,35 @@
                     img: 'gate_mt_awk', alt: '夕焼けの正門で、ツムギが振り返って手を振り、半歩うしろでミオがうつむいて小さく手を上げている' });
   }
   // 決別：quiet（静かな決別）／burst（ツムギが爆発する決別）。ツムギはほどけるが、ミオとは仲直りできない
-  async function mtSplit(kind) {
+  async function mtSplit(kind, from = '') {
     P.cur.mtSplit = kind; saveP();
     if (kind === 'burst') {
       achGrant('burst');
-      bgm('burst');
-      await say(['ツムギの手の中で、本の表紙が、小さく鳴った。', ['ツムギ', '……そっか。今度は、ミオの番なんだ', 'despair'],
+      bgm(null);
+      await say(['ツムギの手の中で、本の表紙が、小さく鳴った。', () => bgm('burst'), ['ツムギ', '……そっか。今度は、ミオの番なんだ', 'despair'],
                  ['ツムギ', '謝って、楽になりたいだけでしょ', 'angry'], ['ツムギ', '……ミオは、それでいいかもしれないけど', 'angry'],
-                 ['ツムギ', '私は、謝る相手もいなかったのに', 'grief'], 'ミオの顔から、すっと色が消えた。',
+                 ['ツムギ', '私は、謝る相手もいなかったのに', 'angryCry'], 'ミオの顔から、すっと色が消えた。',
                  ['ツムギ', '……ちがう。ミオに、こんなこと言いたかったんじゃ……', 'surprise'],
                  ['ミオ', '……ううん。そうだよね', 'mioDespair'], 'ミオは、小さく頭を下げて、扉のほうへ歩いていった。', guestHide(), '扉が、静かに閉まった。']);
       await say([['ツムギ', '……私、怒ってたんだ', 'grief'], ['ツムギ', 'ずっと。……誰にも、怒っちゃいけないと思ってたのに', 'grief'],
                  'ツムギは、本を抱えたまま、声を出さずに泣いていた。']);
     } else {
       bgm('farewell');
-      await say(['ミオは、扉の前で、一度だけ立ち止まった。', ['ミオ', '……当番、だから', 'mioDespair'], guestHide(), 'それだけ言って、ミオは出ていった。',
+      // run：「また逃げるの？」でそのまま／wait：扉の前で黙ったまま／both：振り返って話を聞いたあと
+      const lead = { run: ['ミオは、扉に手をかけた。'], wait: ['長い沈黙のあと、ミオは、扉に手をかけた。'],
+                     both: ['ミオは、小さく首を振った。', '……それから、もう一度、扉に手をかけた。'] }[from] || [];
+      await say([...lead, ['ミオ', '……当番、だから', 'mioDespair'], guestHide(), 'それだけ言って、ミオは出ていった。',
                  '扉が、静かに閉まった。', ['ツムギ', '……またね、って、言えなかった', 'grief'], 'ツムギは、閉まった扉を、ずっと見つめていた。']);
     }
-    await say([['ツムギ', '……でも、今日は、自分で決めたい', 'down'], ['ツムギ', '……図書室、行ってみる。あの子の椅子に、座ってみたいの', 'crySmile']]);
+    await say(['長いあいだ、ツムギは何も言わなかった。窓の外の夕日が、少しずつ低くなっていく。',
+               'やがて、ツムギは本を開いて、しおりの手紙を、もう一度だけ読んだ。', () => bgm('farewellLate'),
+               ['ツムギ', '……でも、今日は、自分で決めたい', 'down'], ['ツムギ', '……図書室、行ってみる。あの子の椅子に、座ってみたいの', 'crySmile']]);
     R.st = 'unraveled'; render();
-    await say([`……保健室の空気が、少しだけ、やわらいだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`]);
+    await say([`ツムギは、涙のあとを手の甲でぬぐって、立ち上がった。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`]);
     return ending({ lines: ['ツムギと一緒に、保健室を出た。', 'ツムギは来室カードの最後の行に、自分で書きこんだ。「18:30　退室　図書室へ」',
                             '廊下に、ミオの姿はもうなかった。', 'ツムギは、本を胸に抱えて、渡り廊下のほうへ一人で歩いていった。'],
                     img: 'hall_tsumugi', alt: '夕日の差す廊下を、渡り廊下のほうへ歩いていくツムギのうしろ姿',
-                    stop: '廊下の途中で、足が止まる。まだ、この先へは行けない。', music: kind === 'burst' ? 'burst' : 'farewell' });
+                    stop: '廊下の途中で、足が止まる。まだ、この先へは行けない。', music: 'farewellLate' });
   }
   const CUT_RECONCILE = false;  // 仲直りのカットイン（ci_reconcile）の絵ができたら true にする
   const CHAPTERS = { art: ART, music: MUSIC, library: LIBRARY, gym: GYM, infirmary: INFIRMARY };
