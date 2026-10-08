@@ -691,7 +691,8 @@
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
                        blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down' };
-  // 座り絵が無い表情は、近い座り絵で代える（ヒナのむくれ顔→うつむき、ミオの表紙を撫でる→撫でてうつむく）
+  // 座り絵が無い表情は、近い座り絵で代える（ミオの表紙を撫でる→撫でてうつむく。ヒナのむくれ顔は立って描いたあとの一言だけで、
+  // 座ってむくれる場面はないが、先読みで無い絵を探しに行かないように、うつむきにしておく）
   const SIT_NEAR = { hina: { pout: 'down' }, mio: { stroke: 'strokedown' } };
   function faceFile(f) {
     const v = C.faces[f], key = v.slice(0, v.indexOf('_')), suf = v.slice(key.length + 1);
