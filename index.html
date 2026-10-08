@@ -2355,9 +2355,21 @@
   /* 選択肢：[文, 種類] の並び。種類＝yori（寄り添う）/ seiron（正論）/ nagu（慰める）/ oitsu（追い詰める）/ key（わすれもので出る最後の言葉）
      慰めるは2ループ目以降かつ2つ目以降の選択肢にだけ出す */
   let askCount = 0;  // 選択肢を出した回数（対話が始まったかどうかの判定に使う）
+  // 選択肢の並び：種類ごとの位置が段や章で固まると、位置で答えがわかってしまうので、章と段ごとに並びを決めておく。
+  // 毎回ランダムにすると、セーブから再開したときに選んだ答えがずれるため、固定の並びにする（慰めるは2ループ目以降だけ出る）
+  const ASK_ORDER = {
+    art:       { 1: ['oitsu', 'yori', 'seiron'], 2: ['nagu', 'oitsu', 'yori', 'seiron'], 3: ['nagu', 'seiron', 'key', 'oitsu'] },
+    music:     { 1: ['seiron', 'oitsu', 'yori'], 2: ['yori', 'nagu', 'seiron', 'oitsu'], 3: ['key', 'oitsu', 'nagu', 'seiron'] },
+    library:   { 1: ['yori', 'oitsu', 'seiron'], 2: ['oitsu', 'seiron', 'nagu', 'yori'], 3: ['oitsu', 'nagu', 'seiron', 'key'] },
+    gym:       { 1: ['oitsu', 'seiron', 'yori'], 2: ['seiron', 'nagu', 'yori', 'oitsu'], 3: ['seiron', 'oitsu', 'key', 'nagu'] },
+    infirmary: { 1: ['seiron', 'yori', 'oitsu'], 2: ['nagu', 'yori', 'oitsu', 'seiron'], 3: ['nagu', 'key', 'seiron', 'oitsu'] }
+  };
   async function ask(opts, stage) {
     askCount++;
-    const list = opts.filter(([, k]) => k !== 'nagu' || (R.loop >= 1 && stage >= 2));
+    const ord = (ASK_ORDER[C.id] || {})[stage];
+    const pos = k => { const n = ord ? ord.indexOf(k) : -1; return n < 0 ? 99 : n; };
+    const list = opts.filter(([, k]) => k !== 'nagu' || (R.loop >= 1 && stage >= 2))
+      .map((o, n) => [o, n]).sort((x, y) => pos(x[0][1]) - pos(y[0][1]) || x[1] - y[1]).map(([o]) => o);
     const i = await choose(list.map(([t]) => t));
     const kind = list[i][1];
     if (stage === 1 && kind === 'yori') { R.touched = true; bgm(null); pendingCore = C.coreAt || 2; }   // coreAt：選択のあと何文目で核心の曲を始めるか（章ごと）
@@ -5395,7 +5407,7 @@
     // 外れは4つの型の言い方（慰める・正論・追い詰める）。分岐（risk・slips・決別の種類）は前と同じ
     // 1段目：ツムギの「怒ってないよ、ほんとに」
     await say(['（……二人のことに、自分が口をはさんでいいのかは、わからない）', '（でも、ツムギのあの笑い方は、さっき一人で話していたときと、同じだった）']);
-    let c = await choose(['……よかった、と、ほっとして言う', 'ミオも、この本をずっと持ってたんだよ', '……ほんとに、怒ってない？']);
+    let c = [1, 2, 0][await choose(['ミオも、この本をずっと持ってたんだよ', '……ほんとに、怒ってない？', '……よかった、と、ほっとして言う'])];   // 0：慰める 1：代弁 2：正解
     if (c === 0) {
       wrong('smile');
       await say(['「……よかった」', ['ツムギ', '……うん', 'smile'],
@@ -5415,7 +5427,7 @@
     // 2段目：ミオが扉へ向かう
     await say(['ミオは、ベッドから一歩さがった。', ['ミオ', '……私、もう会わないほうがいいね', 'mioDespair'], 'ミオは、扉のほうへ向き直った。',
                '（引き止める言葉なら、いくらでも浮かぶ。……でも、それは自分の言葉で、ミオの言葉じゃない）']);
-    c = await choose(['また逃げるの？', '話さないと、きっと後悔するよ', '何も言わずに、ミオが振り返るのを待つ']);
+    c = [2, 0, 1][await choose(['何も言わずに、ミオが振り返るのを待つ', 'また逃げるの？', '話さないと、きっと後悔するよ'])];   // 0：追い詰める 1：正論 2：正解
     if (c === 0) {
       nmMark('miss');
       await say(['「また逃げるの？」', 'ミオの肩が、小さく揺れた。……振り返らなかった。']);
@@ -5436,7 +5448,7 @@
                'ツムギは、何か言いかけて、黙りこんだ。本を持つ手に、力が入っていた。']);
     // 3段目：ツムギが黙りこむ
     await say(['（ツムギが、何か言おうとしている。……言葉にならないまま、本を握りしめている）']);
-    c = await choose(['今度はミオがつらいんだから、許してあげようよ', '無理に、今決めなくてもいいんじゃないかな', '……ツムギ、と、名前だけ呼ぶ']);
+    c = [1, 0, 2][await choose(['無理に、今決めなくてもいいんじゃないかな', '今度はミオがつらいんだから、許してあげようよ', '……ツムギ、と、名前だけ呼ぶ'])];   // 0：正論 1：慰める 2：正解
     if (c === 0) {
       nmMark('miss');
       await say(['「今度はミオがつらいんだから、許してあげようよ」']);
