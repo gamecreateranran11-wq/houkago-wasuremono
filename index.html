@@ -1886,7 +1886,13 @@
     finishRun(true);
     if (end[0] === 'BAD4') await closedSchool();
     if (end[0] === 'BAD5') await emptySeats(ORDER.map(id => CHAPTERS[id]).filter(ch => res[ch.key] === 'vanished'));
-    if (end[2].length) { await endScene(end[4]); await say(end[2]); $('#bgImg').style.opacity = ''; }
+    if (end[2].length) {
+      await endScene(end[4]);
+      // GOOD：最後の一文（足もとの生徒手帳）で、夕焼けの屋上に落ちた生徒手帳のカットインを出す（絵は仮採用）
+      if (end[0] === 'GOOD') { await say(end[2].slice(0, -1)); showCut('protag_notebook_dusk'); await say(end[2].slice(-1)); hideCut(); }
+      else await say(end[2]);
+      $('#bgImg').style.opacity = '';
+    }
     // わすれものを一つも持っていないうちは、「わすれもの」という言葉を出さない（まだ知らない仕組みを先に見せない）
     const hasLeft = Object.keys(P.shelf || {}).some(k => P.shelf[k]);
     const endNote = end[0] === 'BAD9' ? 'この放課後は、ここで終わった。……握っていた手のぬくもりだけが、まだ指に残っている。'
