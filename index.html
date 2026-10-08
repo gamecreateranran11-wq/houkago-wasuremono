@@ -1755,22 +1755,20 @@
   // スマホで別のアプリに切り替えたとき：音を止めて休ませ、戻ったら今の曲を頭から静かにかけ直す。
   // 戻ってすぐに音を出せない端末（iPhone など）は、画面を一度さわったときにかけ直す
   // 扉を小さく二回叩く音（効果音）
-  // ミオのノック：木の扉を、指の関節で遠慮がちに「コッ、コッ」。軽く、ごく短い、乾いた音（閉ざされた扉の重いノックとは別の音）
+  // ミオのノック：木の扉を、指の関節で遠慮がちに「コッ、コッ」。軽く短い、乾いた木の音（閉ざされた扉の重いノックとは別の音）
+  // ごく短い打撃（2ミリ秒のノイズ）を、木の板の鳴る高さ（共鳴）に通して「コッ」を作る。打楽器のような広がったノイズは出さない
   function tapKnock(t, vol, dst) {
     const a = audio();
-    // 板の鳴り：ほとんど余韻を残さない、短い「コ」
-    [[520, 0.032, 0.55], [950, 0.02, 0.25]].forEach(([f, d, k]) => {
-      const o = a.createOscillator(), g = a.createGain(); o.type = 'triangle';
-      o.frequency.setValueAtTime(f * 1.12, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.008);
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol * k, t + 0.0015); g.gain.exponentialRampToValueAtTime(0.0005, t + d);
-      o.connect(g).connect(dst); o.start(t); o.stop(t + d + 0.01);
-    });
-    // 関節が板に当たる乾いた「ッ」：中高域のノイズを、ごく短く
-    [[1700, 0.9, 0.9, 0.016], [3600, 1.2, 0.35, 0.007]].forEach(([fc, qv, k, d]) => {
-      const s = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain();
-      s.buffer = getNoise(); fl.type = 'bandpass'; fl.frequency.value = fc; fl.Q.value = qv;
-      g.gain.setValueAtTime(vol * k, t); g.gain.exponentialRampToValueAtTime(0.0005, t + d);
-      s.connect(fl).connect(g).connect(dst); s.start(t); s.stop(t + d + 0.01);
+    const hit = a.createBufferSource(), hg = a.createGain();
+    hit.buffer = getNoise();
+    hg.gain.setValueAtTime(0, t); hg.gain.linearRampToValueAtTime(1, t + 0.0004); hg.gain.exponentialRampToValueAtTime(0.0005, t + 0.0025);
+    hit.connect(hg); hit.start(t, Math.random() * 0.5); hit.stop(t + 0.01);
+    // 木の板の鳴り（中高域の共鳴をいくつか）と、扉の胴の小さな鳴り（低め）
+    [[720, 14, 1.0], [1180, 12, 0.7], [1760, 10, 0.4], [2650, 8, 0.18], [230, 6, 0.35]].forEach(([f, q, k]) => {
+      const bp = a.createBiquadFilter(), g = a.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = f * (0.98 + Math.random() * 0.04); bp.Q.value = q;
+      g.gain.value = vol * k * 9;
+      hg.connect(bp); bp.connect(g); g.connect(dst);
     });
   }
   const knockTwice = () => () => {
@@ -1779,7 +1777,14 @@
       const a = audio(), t = a.currentTime + 0.05;
       // 曲とは別の、効果音の出口で鳴らす（曲が止まっていても鳴る。音量は効果音の設定に従う）
       const dst = a.createGain(); dst.gain.value = 0.7 * P.seVol; dst.connect(out());
-      setTimeout(() => { try { dst.disconnect(); } catch (e) {} }, 3000);   // 乾いた音にするため、部屋の響きはつけない
+      // 廊下の短い反響：扉の向こうの、狭い空間の広がり（長い残響はつけない）
+      [[0.013, 0.18], [0.027, 0.1], [0.041, 0.05]].forEach(([d, k]) => {
+        const dl = a.createDelay(0.1), lp = a.createBiquadFilter(), g = a.createGain();
+        dl.delayTime.value = d; lp.type = 'lowpass'; lp.frequency.value = 2400; g.gain.value = k;
+        dst.connect(dl); dl.connect(lp); lp.connect(g); g.connect(out());
+        setTimeout(() => { try { dl.disconnect(); lp.disconnect(); g.disconnect(); } catch (e) {} }, 3000);
+      });
+      setTimeout(() => { try { dst.disconnect(); } catch (e) {} }, 3000);
       tapKnock(t, 0.2, dst); tapKnock(t + 0.32, 0.16, dst);
     } catch (e) {}
   };
