@@ -1075,11 +1075,13 @@
     if (cry) air(t, Math.min(dur, 0.6), v * 0.25, nf(n) * 3);
   };
   // 扉を叩く音：分厚い木の扉を、こぶしで「ドン」。低く重い胴鳴りと、扉板のこもった響き（スマホでも聞こえる高さを少し混ぜる）
-  function knock(t, vol) {
+  // se=false：曲の一部（閉ざされた扉の曲）として、曲の出力で鳴らす
+  // se=true：効果音として、曲とは別の出力で鳴らす（曲が止まっていても鳴る。音量は効果音の設定に従い、初期設定では前と同じ大きさ）
+  function knock(t, vol, se = false) {
     const a = audio();
-    // 曲が流れていれば曲の出力に、止まっていれば効果音だけの出力に（同じ音量）
     let dst = bgmGain;
-    if (!dst) { dst = a.createGain(); dst.gain.value = bgmLevel(); dst.connect(out()); dst.connect(reverb()); setTimeout(() => { try { dst.disconnect(); } catch (e) {} }, 4000); }
+    if (se) { dst = a.createGain(); dst.gain.value = 0.7 * P.seVol; dst.connect(out()); dst.connect(reverb()); setTimeout(() => { try { dst.disconnect(); } catch (e) {} }, 4000); }
+    if (!dst) return;
     [[62, 0.45, 'sine', 1], [96, 0.38, 'sine', 0.8], [140, 0.25, 'triangle', 0.45]].forEach(([f, d, type, k]) => {
       const o = a.createOscillator(), g = a.createGain(); o.type = type;
       o.frequency.setValueAtTime(f * 1.25, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.04); o.frequency.exponentialRampToValueAtTime(f * 0.8, t + d);
@@ -1748,7 +1750,7 @@
   // 扉を小さく二回叩く音（効果音）
   const knockTwice = () => () => {
     if (!P.sound || replay) return;
-    try { const a = audio(), t = a.currentTime + 0.05; knock(t, 0.16); knock(t + 0.42, 0.13); } catch (e) {}
+    try { const a = audio(), t = a.currentTime + 0.05; knock(t, 0.16, true); knock(t + 0.42, 0.13, true); } catch (e) {}
   };
   function bgmRestart() { const n = bgmName; if (!n) return; bgmName = null; bgm(n, 0.6); }
   document.addEventListener('visibilitychange', () => {
