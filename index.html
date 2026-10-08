@@ -2177,7 +2177,7 @@
         <p>振り返ると、ほかの教室には、まだ明かりがついていた。</p>
         <p class="eyebrow">${C.label}　${C.name}の心がほどけた</p>
       </div>
-      <p class="note">${hm(now)}。チャイムは、まだ鳴っていない。${next ? `鳴る前に、明かりのついた${next.room}へ向かう。` : ''}</p>`,
+      <p class="note">${hm(now)}。チャイムは、まだ鳴っていない。${next ? `鳴る前に、明かりのついた${next.room}へ向かう。` : ''}</p>${achNoteTake()}`,
       'dawn', [next ? `次の章に進む（${hm((next.startMin || 0))}）` : '放課後の終わりへ', 'タイトルへ']).then(v => v === 0 ? goNext(next) : showTitle(true));
   }
 
@@ -5222,6 +5222,7 @@
   async function mtSplit(kind) {
     P.cur.mtSplit = kind; saveP();
     if (kind === 'burst') {
+      achGrant('burst');
       bgm('burst');
       await say(['ツムギの手の中で、本の表紙が、小さく鳴った。', ['ツムギ', '……そっか。今度は、ミオの番なんだ', 'despair'],
                  ['ツムギ', '謝って、楽になりたいだけでしょ', 'angry'], ['ツムギ', '……ミオは、それでいいかもしれないけど', 'angry'],
@@ -5477,8 +5478,13 @@
     ['shelf5', null, '5人のわすれものを、すべて手に入れる', () => FIVE.every(k => P.shelf[k]), () => false],
     ['dawn', null, 'BAD以外のエンディング（NORMAL・GOOD・TRUE）にたどり着く', () => !!(P.endings.NORMAL || P.endings.GOOD || P.endings.TRUE), () => false],
     ['allEnd', null, 'すべてのエンディングを見る', () => ALL_ENDS.every(t => P.endings[t]), () => true],
-    ['perfect', null, 'ひとつの周回で、チャイムを一度も聞かず、ヒントも使わず、選択肢も謎解きも間違えずに、TRUEにたどり着く', () => false, perfectShown]
+    ['perfect', null, 'ひとつの周回で、チャイムを一度も聞かず、ヒントも使わず、選択肢も謎解きも間違えずに、TRUEにたどり着く', () => false, perfectShown],
+    // 第五章でツムギが爆発する決別を見たとき（その場で記録し、章の終わりの画面で知らせる）。名前は仮
+    ['burst', '友情クラッシャー', 'ツムギの本心に触れる', () => false, () => true]
   ];
+  // エンディング以外で取ったアチーブメント：章の終わりの画面でまとめて知らせる
+  function achGrant(id) { if (P.ach[id]) return; P.ach[id] = Date.now(); P.achPending = (P.achPending || []).concat(id); saveP(); }
+  function achNoteTake() { const g = P.achPending || []; if (!g.length) return ''; P.achPending = []; saveP(); return achNote(g); }
   P.ach = P.ach || {};
   // この仕組みより前に条件を満たしていた分は、黙って記録しておく（ノーミスのTRUEは後から判定できないので除く）
   ACH.forEach(([id, , , test]) => { if (id !== 'perfect' && !P.ach[id] && test()) P.ach[id] = Date.now(); }); saveP();
@@ -5572,7 +5578,7 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.album = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.achPending = []; P.album = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
