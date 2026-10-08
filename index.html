@@ -267,6 +267,14 @@
   /* プレイデータのリセット：見落とさないよう、ほかの控えめなボタンより一回り大きく、赤い枠で目立たせる */
   .btn-reset { align-self: flex-start; background: transparent; border: 1px solid var(--akane); border-radius: 4px; padding: 8px 14px; font-size: 14px; color: var(--akane); cursor: pointer; }
   .btn-reset:hover { background: var(--akane); color: #fff; }
+  .extras { display: flex; flex-direction: column; gap: 10px; }
+  .extras .btn { width: 100%; text-align: left; }
+  .extras .btn .sub { display: block; font-size: 12px; font-weight: 400; opacity: .8; margin-top: 2px; }
+  /* タイトル：ボタンが増えても1画面に収まるよう、すき間と注意書きを詰める */
+  .title-side { gap: 10px; }
+  .title-side .btn { padding: 8px 16px; }
+  .title-side .note { font-size: 11.5px; line-height: 1.6; }
+  .title-side .title-redo { padding: 6px 10px 8px; }
   .title-side .btn .sub { display: block; font-size: 12px; font-weight: 400; opacity: .8; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
   .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -5551,13 +5559,10 @@
         ${save ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
-        ${albumAny() ? '<button type="button" class="btn" id="tAlbum">アルバム<span class="sub">おまけ</span></button>' : ''}
-        ${achAny() ? '<button type="button" class="btn" id="tAch">アチーブメント<span class="sub">おまけ</span></button>' : ''}
-        ${ostOpen() ? '<button type="button" class="btn" id="tOst">サウンドトラック<span class="sub">おまけ</span></button>' : ''}
+        ${extrasAny() ? '<button type="button" class="btn" id="tExtra">おまけ</button>' : ''}
         ${redoHTML(save)}
         <button type="button" class="btn" id="tSet">設定<span class="sub">既読スキップ・文字の速さ・音量</span></button>
         <button type="button" class="btn-reset" id="tWipe">プレイデータをリセット</button>
-        <p class="note">このゲームはオートセーブです。新しく調べたり話し終えたりするたびに、自動で記録されます。</p>
         <p class="note">この作品には、自傷・死・いじめ・家庭での心理的虐待を示唆する表現が含まれます。</p>
         <p class="note">この作品はフィクションです。実在の人物・団体・学校・サービスとは関係ありません。</p>
       </div>`, 'title-screen', 'ov-card title-card');
@@ -5570,9 +5575,7 @@
     $('#tWipe').onclick = () => wipeAll();
     if (save) $('#tCont').onclick = () => continueRun(save);
     if ($('#tShelf')) $('#tShelf').onclick = showShelf;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
-    if ($('#tOst')) $('#tOst').onclick = showSoundtrack;
-    if ($('#tAch')) $('#tAch').onclick = showAch;
-    if ($('#tAlbum')) $('#tAlbum').onclick = () => showAlbum();
+    if ($('#tExtra')) $('#tExtra').onclick = showExtras;
     $('#tSet').onclick = showSettings;
     if ($('#tLoad')) $('#tLoad').onclick = () => showSlots('load');
     if (splash) {
@@ -5586,6 +5589,21 @@
       };
       ov.addEventListener('click', reveal); document.addEventListener('keydown', reveal);
     }
+  }
+  // おまけ（アルバム・アチーブメント・サウンドトラック）は、タイトルでは1つのボタンにまとめる。それぞれ、出せるようになったものだけ並べる
+  const extrasList = () => [
+    albumAny() ? ['xAlbum', 'アルバム', '見た一枚絵と、わすれもの', () => showAlbum()] : null,
+    achAny() ? ['xAch', 'アチーブメント', '取った記録', showAch] : null,
+    ostOpen() ? ['xOst', 'サウンドトラック', '流れた曲を聴く', showSoundtrack] : null
+  ].filter(Boolean);
+  const extrasAny = () => extrasList().length > 0;
+  function showExtras() {
+    const list = extrasList();
+    openOverlay(`<p class="eyebrow">タイトル</p><h2>おまけ</h2>
+      <div class="extras">${list.map(([id, ttl, sub]) => `<button type="button" class="btn" id="${id}">${ttl}<span class="sub">${sub}</span></button>`).join('')}</div>
+      <div class="row"><button type="button" class="btn primary" id="xBack">戻る</button></div>`);
+    list.forEach(([id, , , fn]) => { $('#' + id).onclick = fn; });
+    $('#xBack').onclick = () => showTitle();
   }
   // タイトルの「やり直す」枠：ふだん押す大きなボタン（つづきから／〇〇へ向かう）と分けて、小さく控えめに出す
   // 押しても「つづきから」と同じ結果になるもの（消えるものがないもの）は出さない
@@ -5711,7 +5729,7 @@
       if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { albumSwiped = true; turn(albumPage + (dx < 0 ? 1 : -1)); setTimeout(() => { albumSwiped = false; }, 0); }
     });
     view.addEventListener('pointercancel', () => { x0 = null; });
-    $('#albBack').onclick = () => showTitle();
+    $('#albBack').onclick = () => showExtras();
     card.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { if (!albumSwiped) albumView(+b.dataset.i); });
     card.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { if (!albumSwiped) albumWasureOne(+b.dataset.w, b.dataset.sv === '1'); });
   }
@@ -5817,7 +5835,7 @@
     openOverlay(`<p class="eyebrow">おまけ</p><h2>アチーブメント</h2><p class="note">${got}／${ACH.length}</p>
       <div class="ach-list">${rows}</div>
       <div class="row"><button type="button" class="btn primary" id="achBack">戻る</button></div>`);
-    $('#achBack').onclick = () => showTitle();
+    $('#achBack').onclick = () => showExtras();
   }
   // 一度でも遊んだことがあるか（初めてのときは「美術室からやり直す」を出さない）
   const played = () => !!(P.played || P.runs || loadRun() || SLOTS.some(n => readSlot(n))
@@ -5939,6 +5957,7 @@
           <label class="vol">BGM<input id="sVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
           <label class="vol">効果音<input id="sVolSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label></div>
       </div>
+      <p class="note">このゲームはオートセーブです。新しく調べたり話し終えたりするたびに、自動で記録されます。</p>
       <div class="row"><button type="button" class="btn primary" id="setBack">戻る</button></div>`);
     card.querySelectorAll('#setSkip [data-skip]').forEach(b => b.onclick = () => {
       P.skip = b.dataset.skip === '1'; saveP(); if (R) render();
@@ -5992,7 +6011,7 @@
       playing = playing === k ? null : k; bgm(playing, 0.3); draw();
     });
     draw();
-    $('#oBack').onclick = () => showTitle();
+    $('#oBack').onclick = () => showExtras();
   }
   function showShelf() {
     const slots = [['ヒナ', 'hina', ART], ['ソウタ', 'sota', MUSIC], ['ミオ', 'mio', LIBRARY], ['ケイ', 'kei', GYM], ['ツムギ', 'tsumugi', INFIRMARY], [P.shelf.me ? '自分' : '？？？', 'me', ME]];
