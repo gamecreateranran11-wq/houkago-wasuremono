@@ -89,6 +89,11 @@
   .leftover { position: absolute; background: #efe8da; box-shadow: 0 1px 2px rgba(0,0,0,.4); }
   .portrait { right: 1%; bottom: 0; height: 97%; width: auto; opacity: 0; transform: translateX(12px); transition: opacity .4s ease, transform .4s ease; pointer-events: none; }
   .portrait.show { opacity: 1; transform: none; }
+  /* 章の子とは別に、その場にいる子（第五章のミオ）。左寄りに立つ。far は少し離れた所（二回り小さく、奥に） */
+  .guest { position: absolute; left: 4%; bottom: 0; height: 94%; width: auto; opacity: 0; transition: opacity .45s ease, height .45s ease, bottom .45s ease, left .45s ease; pointer-events: none; z-index: 3; }
+  .guest.show { opacity: 1; }
+  .guest.far { height: 64%; bottom: 14%; left: 14%; filter: brightness(.9); }
+  .scene.talk .guest.show { filter: none; }
   .hs { position: absolute; background: transparent; border: 1px dashed transparent; border-radius: 4px; padding: 0; cursor: pointer; }
   .hs::after { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -4px 0 0 -4px; border-radius: 50%; background: #fff4de; box-shadow: 0 0 8px 2px rgba(255, 220, 170, .7); opacity: .55; animation: glint 2.8s ease-in-out infinite; }
   .hs span { position: absolute; left: 4px; bottom: 4px; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: rgba(15, 12, 20, .78); color: var(--ink); opacity: 0; transition: opacity .2s; white-space: nowrap; }
@@ -203,7 +208,7 @@
   .eye-chart svg { display: block; width: 100%; height: auto; }
   .card-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fbf8f0; color: #2a2a2a; }
   .card-table th, .card-table td { border: 1px solid #b9b2a2; padding: 2px 4px; text-align: center; }
-  #scene.room-dark #portrait, #scene.room-dark #sitFig { filter: url(#fRoomDark); }
+  #scene.room-dark #portrait, #scene.room-dark #sitFig, #scene.room-dark #guestFig { filter: url(#fRoomDark); }
   .card-scroll { max-height: 46vh; overflow-y: auto; border-radius: 4px; scrollbar-width: none; }
   .card-scroll::-webkit-scrollbar { display: none; }
   .sc-wrap { position: relative; padding-right: 12px; }
@@ -272,6 +277,8 @@
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: 62vh; overflow-y: auto; }
   .pair-side { display: flex; flex-direction: column; gap: 6px; background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 10px; }
   .pair-side.saved { border-color: var(--gold); }
+  button.pair-side { color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  button.pair-side:hover { border-color: var(--gold); }
   .pair-side h3 { font-size: 14px; margin: 0; }
   .pair-side img, .pair-side svg { max-width: 100%; height: auto; }
   .pair-side .thumb-empty { width: 100%; aspect-ratio: 3 / 2; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #4a4152; background: repeating-linear-gradient(135deg, #17131d 0 6px, #1b1622 6px 12px); }
@@ -448,6 +455,7 @@
       <div id="hsLayer"></div>
       <div id="cutin" class="cutin" aria-live="polite"></div>
       <div id="getItem" class="get-item" role="status" hidden></div>
+      <img id="guestFig" class="guest" alt="">
       <img id="portrait" class="portrait" alt="">
       <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fRoomDark" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".64 0 0 0 0  0 .54 0 0 0  0 0 .56 0 0  0 0 0 1 0"/></filter></svg>
       <img class="chime-cg" src="img/chime_sky.webp" alt="17:00の夕焼け空。チャイムが響いている">
@@ -644,7 +652,8 @@
       const [who, t, face] = Array.isArray(l) ? l : ['', l];
       $('#scene').classList.add('story');  // 文章を読んでいる間は探索用の目印を隠す
       spk.textContent = who; spk.hidden = !who;
-      setTalk(!!C && (who === C.name || (!who && !!face)), face);
+      if (guest && who === guest.who && face && C && C.faces[face]) { guest.f = face; guestRender(); }
+      setTalk(!!C && (who === C.name || (!who && !!face && !(guest && face.startsWith('mio')))), face);
       txt.classList.toggle('narr', !who);
       chs.innerHTML = ''; more.hidden = true;
       const full = who ? `「${t}」` : t;
@@ -713,13 +722,25 @@
     pt.classList.toggle('show', on);
     $('#scene').classList.toggle('talk', on);
   }
+  // その場にいる子（ゲスト）の立ち絵：guestShow('mioDown') で出し、その子が話すと表情が変わる。guestHide() で消す
+  let guest = null;
+  function guestRender() {
+    const g = $('#guestFig');
+    if (!guest || !C || !C.faces[guest.f]) { g.classList.remove('show'); return; }
+    const url = `img/${faceFile(guest.f)}.webp`;
+    if (g.getAttribute('src') !== url) g.src = url;
+    g.classList.toggle('far', !!guest.far); g.classList.add('show');
+  }
+  const guestShow = (f, far = false, who = 'ミオ') => () => { guest = { f, far, who }; guestRender(); };
+  const guestHide = () => () => { guest = null; guestRender(); };
   // 既読の文でも、前の文と次の文がどちらも未読なら飛ばさない（1文だけ飛ぶと、不具合に見えるため）
   async function say(lines) {
     for (let j = 0; j < lines.length; j++) {
+      if (typeof lines[j] === 'function') { await lines[j](); continue; }
       const l = lines[j], [who, t] = Array.isArray(l) ? l : ['', l];
       let nextNew = true;
       if (j + 1 < lines.length) {
-        const nl = lines[j + 1], [nw, nt] = Array.isArray(nl) ? nl : ['', nl];
+        const nl = typeof lines[j + 1] === 'function' ? (lines[j + 2] || '') : lines[j + 1], [nw, nt] = Array.isArray(nl) ? nl : ['', nl];
         nextNew = !READ.has((C ? C.id : '') + '|' + nw + '|' + nt + '|' + who + '|' + t);
       }
       await line(l, true, !lastSkipped && nextNew);
@@ -1715,9 +1736,31 @@
     bgmGain.gain.setTargetAtTime(bgmLevel(), a.currentTime, fadeIn);
     bgmNext = a.currentTime + 0.15; bgmStep = 0;
     const fn = BGM[name], gain = bgmGain;
-    const pump = () => { try { while (bgmGain === gain && bgmNext < a.currentTime + 1.5) { bgmNext += fn(bgmNext, bgmStep++); } } catch (e) {} };
+    const pump = () => { try { if (bgmNext < a.currentTime) bgmNext = a.currentTime + 0.1; while (bgmGain === gain && bgmNext < a.currentTime + 1.5) { bgmNext += fn(bgmNext, bgmStep++); } } catch (e) {} };
     pump(); bgmTimer = setInterval(pump, 400);
   }
+  // スマホで別のアプリに切り替えたとき：音を止めて休ませ、戻ったら今の曲を頭から静かにかけ直す。
+  // 戻ってすぐに音を出せない端末（iPhone など）は、画面を一度さわったときにかけ直す
+  // 扉を小さく二回叩く音（効果音）
+  const knockTwice = () => () => {
+    if (!P.sound || replay) return;
+    try { const a = audio(), t = a.currentTime + 0.05; if (!bgmGain) return; knock(t, 0.16); knock(t + 0.42, 0.13); } catch (e) {}
+  };
+  function bgmRestart() { const n = bgmName; if (!n) return; bgmName = null; bgm(n, 0.6); }
+  document.addEventListener('visibilitychange', () => {
+    if (!actx) return;
+    if (document.hidden) {
+      clearInterval(bgmTimer);
+      try { if (bgmGain) bgmGain.gain.setValueAtTime(0, actx.currentTime); } catch (e) {}
+      try { actx.suspend(); } catch (e) {}
+    } else {
+      try { actx.resume().then(() => { if (actx.state === 'running') bgmRestart(); }).catch(() => {}); } catch (e) {}
+    }
+  });
+  document.addEventListener('pointerdown', () => {
+    if (!actx || document.hidden || actx.state === 'running') return;
+    try { actx.resume().then(() => { if (actx.state === 'running') bgmRestart(); }).catch(() => {}); } catch (e) {}
+  }, true);
   // ほどけたときの曲。校門・渡り廊下の見送りやエンディングでは、これが流れていれば最初からかけ直さずに続けて聴かせる
   // （オルゴールは「ほどける直前」の別の曲なので、流れていたら切り替える）
   const WARM = ['unravel'];
@@ -1962,6 +2005,9 @@
       '握っていた手のぬくもりが、まだ指に残っている。', 'ミオに渡したかった「またね」を、あの子は最後まで、抱えたままだった。',
       '空の赤が、少しずつ沈んでいく。', '日が沈みきるまで、ただ、ひとりで見ていた。'], 'vanish', 'rooftop'];
     else if (keys.length && sh === keys.length) end = ['BAD4', '閉ざされた校舎', [], 'shut'];
+    else if (!sh && !died && P.cur.mtSplit) end = ['NORMAL2', 'それぞれの朝', ['校門の向こうへ、五人が歩いていった。',
+      '……ミオとツムギは、別々の道で、校門を出ていった。ツムギは図書室のほうを、ミオは正門のほうを、一度ずつ振り返った。',
+      '夕焼けの屋上に、一人で立つ。……足もとには、何も落ちていなかった。'], 'farewell', 'rooftop'];
     else if (sh >= 1 || died || P.cur.mtSplit) end = ['NORMAL', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。',
       ...(sh ? ['振り返ると、閉ざされた扉の教室には、まだ明かりがついていた。'] : []),
       ...(died ? ['一階の保健室の窓だけが、暗いままだった。'] : []),
@@ -1970,6 +2016,7 @@
     else end = ['GOOD', '送り出した屋上', ['全員の背中を、校門の向こうへ見送った。', '夕焼けの屋上に、一人で立つ。', '足もとに、生徒手帳が一冊、落ちていた。'], 'unravel', 'rooftop'];
     P.endings[end[0]] = true;
     // 朝を迎えるエンディングは、ほどけたあとの曲が流れていれば続けて聴かせる。BADは、その結末の曲が流れていなければ切り替える
+    const dawnEnd = ['NORMAL', 'NORMAL2', 'GOOD'].includes(end[0]);
     if (end[0] === 'NORMAL' || end[0] === 'GOOD') keepBgm(end[3], WARM); else bgm(end[3]);
     const got = achGain(end[0]);
     finishRun(true);
@@ -1987,11 +2034,11 @@
     const endNote = end[0] === 'BAD9' ? 'この放課後は、ここで終わった。……握っていた手のぬくもりだけが、まだ指に残っている。'
                   : hasLeft ? 'この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。' : 'この放課後は、ここで終わった。';
     overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
-        <p class="eyebrow">${end[0] === 'NORMAL' || end[0] === 'GOOD' ? end[0] : 'BAD END'}「${end[1]}」</p></div>
+        <p class="eyebrow">${dawnEnd ? end[0].replace('2', '') : 'BAD END'}「${end[1]}」</p></div>
       ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。${end[0] === 'GOOD' ? '（屋上への道は、製品版で開きます）' : ''}</p>` : (end[0] === 'GOOD' ? '<p class="note">（屋上への道は、製品版で開きます）</p>' : '')}
       <p class="note">${endNote}</p>${achNote(got)}
       `,
-      end[0] === 'NORMAL' || end[0] === 'GOOD' ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
+      dawnEnd ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
   // エンディングの場面に切り替える。人物や調べる場所を消し、背景をフェードアウト→フェードインで差し替える
   async function endScene(img) {
@@ -2069,6 +2116,7 @@
   async function bad1() {
     bgm('endless');  // BAD1 専用の曲『終わらない放課後』
     hideCut(); setTalk(false);
+    if (C.id === 'infirmary' && !R.touched && mioRes() === 'saved') await say(['扉の窓の向こうに、本を抱えた影が、何度か見えた気がした。……どのチャイムのあとも、ノックの音は、しなかった。']);
     await say(['チャイムを数えるのを、いつのまにかやめていた。', '誰の心にも、手が届かないまま。夕焼けは少しも動かない。',
                '自分の名前を、思い出せなくなっていた。……それでも、放課後は終わらなかった。']);
     R.over = true; clearRun(); P.endings.BAD1 = true; saveP(); render(); idle();
@@ -4762,9 +4810,9 @@
           const bg = $('#bgImg'), hs = $('#hsLayer');
           bg.src = 'img/hall_infirmary.webp'; hs.style.visibility = 'hidden';
           await say(['……気がつくと、薄暗い廊下に立っていた。', '本校舎の一階。廊下の明かりは消えていて、少し先の扉の窓だけが、白く光っている。札には「保健室」。',
-                     '扉の前に、ミオが立っていた。『ひとりぶんの椅子』を、胸に抱えたまま。',
+                     '扉の前に、ミオが立っていた。『ひとりぶんの椅子』を、胸に抱えたまま。', guestShow('mioNormal'),
                      ['ミオ', '……あ', 'mioSurprise'], ['ミオ', 'ここまで、来たんだけど。……ノックが、できなくて', 'mioDown'],
-                     ['ミオ', '……先に、入って。私、もう少しだけ、ここにいる', 'mioSad'],
+                     ['ミオ', '……先に、入って。私、もう少しだけ、ここにいる', 'mioSad'], guestHide(),
                      '扉を開けて、保健室に入った。']);
           setTalk(false); bg.src = `img/${C.bg}.webp`; hs.style.visibility = '';
           await say(['振り返ると、扉はもう、内側からも外側からも開かなかった。']);
@@ -4984,13 +5032,13 @@
         <p class="note">最後の日、ツムギは、保健室ではなく図書室へ行くつもりだったのかもしれない。</p>`, '', ['閉じる']);
       if (mioRes() === 'saved') {
         closeOverlay();
-        await say(['扉が、小さく二回、叩かれた。', '……返事をする人は、もういない。',
-                   '扉がゆっくり開いて、ミオが顔をのぞかせた。胸に、『ひとりぶんの椅子』を抱えている。',
+        await say([knockTwice(), '扉が、小さく二回、叩かれた。', '……返事をする人は、もういない。',
+                   '扉がゆっくり開いて、ミオが顔をのぞかせた。胸に、『ひとりぶんの椅子』を抱えている。', guestShow('mioSurprise'),
                    ['ミオ', '……ツムギ？', 'mioSurprise'],
                    '空っぽのベッドと、シーツの上の来室カード。ミオは、最後の空欄の、消しゴムの跡を見つめていた。',
                    ['ミオ', '……図書室に、来るつもりだったの？', 'mioGrief'],
                    ['ミオ', '私、ここまで来てたのに。……ノック、できなくて', 'mioGrief'],
-                   'ミオは本を抱きしめたまま、ベッドのそばに座りこんだ。しおりの手紙は、しおりに挟まったままだった。']);
+                   guestHide(), 'ミオは本を抱きしめたまま、ベッドのそばに座りこんだ。しおりの手紙は、しおりに挟まったままだった。']);
       }
     },
     shelfItem(saved) {
@@ -5022,7 +5070,7 @@
       if (a === 'oitsu') return shutOut([['ツムギ', '……え', 'surprise'], ['', 'ツムギの笑顔が、すっと消えた。', 'reject'],
                                          ['ツムギ', '……どうして、それを知ってるの', 'reject'], ['ツムギ', 'ごめん。今日は、もう帰って', 'reject']],
                                         ['扉を叩いた。返事はない。', '……扉の向こうから、苦しそうに咳きこむ声が聞こえた。えずくような音が、何度か続く。', 'やがて、咳はおさまった。……扉は、それでも開かなかった。',
-                                         ...(mioRes() === 'saved' ? ['廊下の先で、ミオが本を抱えたまま、立ちつくしていた。'] : [])]);
+                                         ...(mioRes() === 'saved' ? [guestShow('mioDown', true), '廊下の先で、ミオが本を抱えたまま、立ちつくしていた。'] : [])]);
       await say([['ツムギ', '……居場所、かあ', 'surprise'], ['ツムギ', 'うん。教室にいられなくなってから、ずっとここ', 'normal'],
                  ['ツムギ', 'この窓、好きなんだ。となりが昇降口だから、正門へ帰っていく人が、斜めに見えるの。……みんなの帰り道が見える', 'normal']]);
 
@@ -5038,7 +5086,7 @@
                  ['ツムギ', '字を見て、すぐわかった。その子の字だって', 'sad'],
                  ['ツムギ', '……怒ってないよ。あの子が、書かされたんだって、わかってたから', 'sad'],
                  ['ツムギ', 'でもね。それから、自分で言うようになったの。いてもいなくても同じ、って', 'down'],
-                 ['ツムギ', 'そう思ってれば、誰のことも、恨まずにいられるから', 'sad'],
+                 ['ツムギ', 'そう思ってたら、なんだか、楽になったんだ', 'sad'],
                  ['ツムギ', '……今度は、再発なんだって', 'sad']]);
       await line(['ツムギ', '……教室にも、ここにも、もう私の椅子はないんだ', 'sad'], false);
       a = await ask([['それは、いじめた子たちが悪い。先生に話すべきだよ', 'seiron'], ['……怒らないでいるのも、苦しかったんだね', 'yori'],
@@ -5092,7 +5140,7 @@
                  ['ツムギ', '……最後の日くらい、ちゃんと言いたかったんだ。目を見て、『またね』って', 'grief']]);
       if (mioRes() === 'saved') {
         bgm('tension');
-        await say(['そのとき、扉が、小さく二回、叩かれた。', ['ツムギ', '……え', 'surprise'], '扉が、ゆっくり開いた。']);
+        await say([knockTwice(), 'そのとき、扉が、小さく二回、叩かれた。', ['ツムギ', '……え', 'surprise'], '扉が、ゆっくり開いた。', guestShow('mioDown')]);
         // 窓の指の跡を見るために明かりを消していたら、ここで主人公がつける（ツムギが「目を見て」言えるように）
         if (R.taken.dark || $('#scene').classList.contains('room-dark')) {
           setDark(false); R.taken.dark = false;
@@ -5198,7 +5246,7 @@
                  'ツムギは、目をまるくして、それから、くしゃっと笑った。', ['ツムギ', '……うん。なりたい', 'crySmile'],
                  '座っていた丸椅子から、立ち上がった。', 'ミオがその丸椅子を持ち上げて、ツムギのすぐ隣に置いた。',
                  ['ミオ', '……今度は、私が運ぶ番', 'mioCrySmile'],
-                 'ミオが座ると、ツムギは『ひとりぶんの椅子』を開いて、二人のひざに渡した。']);
+                 guestHide(), 'ミオが座ると、ツムギは『ひとりぶんの椅子』を開いて、二人のひざに渡した。']);
       if (CUT_RECONCILE) { albumSee('ci_reconcile'); showCut('ci_reconcile'); }
       await say(['二人は、肩が触れそうな近さで、同じページを見ていた。', 'ミオが、ツムギの手を握った。二人とも、声を出して泣いていた。',
                  ['ツムギ', '……またね、って。言いたかったの', 'crySmile'], ['ミオ', '……うん。……またね', 'mioCrySmile']]);
@@ -5210,7 +5258,7 @@
                  ['ツムギ', '……またね', 'crySmile'], ['ミオ', '……またね', 'mioSad']]);
     }
     R.st = 'unraveled'; render();
-    await say([`……保健室の空気が、ふっとやわらいだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`]);
+    await say([`……保健室の空気が、ふっとやわらいだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, guestHide()]);
     if (straight) return ending({ lines: ['ミオとツムギと一緒に、保健室を出た。', '昇降口で靴をはきかえると、二人は並んで、正門へ歩いていった。',
                                          '正門の手前で、ツムギが一度だけ振り返って、手を振った。……その隣で、ミオも、小さく手を振った。'],
                                   img: 'gate', alt: '夕焼けの正門', album: false });
@@ -5228,12 +5276,12 @@
                  ['ツムギ', '謝って、楽になりたいだけでしょ', 'angry'], ['ツムギ', '……ミオは、それでいいかもしれないけど', 'angry'],
                  ['ツムギ', '私は、謝る相手もいなかったのに', 'grief'], 'ミオの顔から、すっと色が消えた。',
                  ['ツムギ', '……ちがう。ミオに、こんなこと言いたかったんじゃ……', 'surprise'],
-                 ['ミオ', '……ううん。そうだよね', 'mioDespair'], 'ミオは、小さく頭を下げて、扉のほうへ歩いていった。', '扉が、静かに閉まった。']);
+                 ['ミオ', '……ううん。そうだよね', 'mioDespair'], 'ミオは、小さく頭を下げて、扉のほうへ歩いていった。', guestHide(), '扉が、静かに閉まった。']);
       await say([['ツムギ', '……私、怒ってたんだ', 'grief'], ['ツムギ', 'ずっと。……誰にも、怒っちゃいけないと思ってたのに', 'grief'],
                  'ツムギは、本を抱えたまま、声を出さずに泣いていた。']);
     } else {
       bgm('farewell');
-      await say(['ミオは、扉の前で、一度だけ立ち止まった。', ['ミオ', '……当番、だから', 'mioDespair'], 'それだけ言って、ミオは出ていった。',
+      await say(['ミオは、扉の前で、一度だけ立ち止まった。', ['ミオ', '……当番、だから', 'mioDespair'], guestHide(), 'それだけ言って、ミオは出ていった。',
                  '扉が、静かに閉まった。', ['ツムギ', '……またね、って、言えなかった', 'grief'], 'ツムギは、閉まった扉を、ずっと見つめていた。']);
     }
     await say([['ツムギ', '……でも、今日は、自分で決めたい', 'down'], ['ツムギ', '……図書室、行ってみる。あの子の椅子に、座ってみたいの', 'crySmile']]);
@@ -5304,7 +5352,7 @@
   /* ---------- title / shelf ---------- */
   async function startRun(ch, opt = {}) {
     closeOverlay();
-    busy = true; P.played = true; if (ch === 'infirmary') P.metTsumugi = true; saveP(); bgm(null);
+    busy = true; P.played = true; if (ch === 'infirmary') P.metTsumugi = true; saveP(); bgm(null); guest = null; guestRender();
     clearRun(); await setChapter(ch); newRun(ch); if (opt.skipPuzzle) R.skipPuzzle = true; render(); bgm('explore');
     busy = false;
     act(scriptFn('intro'), 'intro');
@@ -5438,7 +5486,7 @@
       <div class="row"><button type="button" class="btn primary" id="albBack">戻る</button></div>`);
     $('#albBack').onclick = () => showTitle();
     card.querySelectorAll('[data-i]').forEach(b => b.onclick = () => albumView(+b.dataset.i));
-    card.querySelectorAll('[data-w]').forEach(b => b.onclick = () => albumWasure(+b.dataset.w));
+    card.querySelectorAll('[data-w]').forEach(b => b.onclick = () => wKnow ? albumWasure(+b.dataset.w) : albumWasureOne(+b.dataset.w, false));
   }
   // わすれものの前と後を並べて見る。見ていないほうは「？？？」
   function albumWasure(i) {
@@ -5446,11 +5494,31 @@
     const side = (on, saved, label) => {
       if (!on) return `<div class="pair-side"><p class="eyebrow">${label}</p><div class="thumb-empty" aria-hidden="true">？</div><p>？？？</p></div>`;
       const it = ch().shelfItem(saved);
-      return `<div class="pair-side${saved ? ' saved' : ''}"><p class="eyebrow">${label}</p><h3>${it.title}</h3>${it.body}</div>`;
+      return `<button type="button" class="pair-side${saved ? ' saved' : ''}" data-one="${saved ? 1 : 0}"><p class="eyebrow">${label}</p><h3>${it.title}</h3>${it.body}<span class="note">押すと大きく見られます</span></button>`;
     };
     openOverlay(`<p class="eyebrow">アルバム　わすれもの</p><h2>${who}のわすれもの</h2>
       <div class="pair${albumKnowSaved() ? '' : ' one'}">${side(v, false, '残されたもの')}${albumKnowSaved() ? side(sv, true, '姿を変えたもの') : ''}</div>
       <div class="row"><button type="button" class="btn primary" id="albList">一覧へ</button></div>`);
+    $('#albList').onclick = () => showAlbum();
+    card.querySelectorAll('[data-one]').forEach(b => b.onclick = () => albumWasureOne(i, b.dataset.one === '1'));
+  }
+  // わすれものを1枚ずつ見る（姿を変える前／後それぞれのページ）。前へ・次へは、見たわすれものの全ページを行き来する
+  function albumWasureOne(i, saved) {
+    const know = albumKnowSaved();
+    const pages = [];
+    WASURE.forEach(([, k], j) => {
+      if (P.album['w_' + k + '_v']) pages.push([j, false]);
+      if (know && P.album['w_' + k + '_s']) pages.push([j, true]);
+    });
+    const at = pages.findIndex(([j, sv]) => j === i && sv === saved);
+    const [who, , ch] = WASURE[i], it = ch().shelfItem(saved);
+    openOverlay(`<p class="eyebrow">アルバム　${who}のわすれもの${know ? (saved ? '（姿を変えたもの）' : '（残されたもの）') : ''}</p><h2>${it.title}</h2>${it.body}
+      <div class="row">${pages.length > 1 ? '<button type="button" class="btn" id="albPrev">前へ</button><button type="button" class="btn" id="albNext">次へ</button>' : ''}
+      ${know ? '<button type="button" class="btn" id="albPair">並べて見る</button>' : ''}<button type="button" class="btn primary" id="albList">一覧へ</button></div>`);
+    const go = d => { const [j, sv] = pages[(at + d + pages.length) % pages.length]; albumWasureOne(j, sv); };
+    if ($('#albPrev')) $('#albPrev').onclick = () => go(-1);
+    if ($('#albNext')) $('#albNext').onclick = () => go(1);
+    if ($('#albPair')) $('#albPair').onclick = () => albumWasure(i);
     $('#albList').onclick = () => showAlbum();
   }
   // 1枚ずつ見る。前へ・次へは、見た絵の中だけを行き来する
@@ -5466,7 +5534,7 @@
   }
 
   /* ---------- アチーブメント（おまけ）：取ったものは周回をまたいで残る。名前は管理人が付ける（未定のあいだは条件だけを出す） ---------- */
-  const ALL_ENDS = ['TRUE', 'GOOD', 'NORMAL', 'BAD1', 'BAD2', 'BAD3', 'BAD4', 'BAD5', 'BAD6', 'BAD7', 'BAD8', 'BAD9'];
+  const ALL_ENDS = ['TRUE', 'GOOD', 'NORMAL', 'NORMAL2', 'BAD1', 'BAD2', 'BAD3', 'BAD4', 'BAD5', 'BAD6', 'BAD7', 'BAD8', 'BAD9'];
   const FIVE = ['hina', 'sota', 'mio', 'kei', 'tsumugi'];
   /* [id, 名前（未定はnull）, 条件, 判定, 取る前に条件を見せるか]
      条件そのものがネタバレになるもの（わすれもの・NORMAL以上の結末など）は、取るまで「？？？」のまま。
@@ -5476,7 +5544,7 @@
   const ACH = [
     ['firstEnd', null, 'はじめて、エンディングを見る', () => ALL_ENDS.some(t => P.endings[t]), () => true],
     ['shelf5', null, '5人のわすれものを、すべて手に入れる', () => FIVE.every(k => P.shelf[k]), () => false],
-    ['dawn', null, 'BAD以外のエンディング（NORMAL・GOOD・TRUE）にたどり着く', () => !!(P.endings.NORMAL || P.endings.GOOD || P.endings.TRUE), () => false],
+    ['dawn', null, 'BAD以外のエンディング（NORMAL・GOOD・TRUE）にたどり着く', () => !!(P.endings.NORMAL || P.endings.NORMAL2 || P.endings.GOOD || P.endings.TRUE), () => false],
     ['allEnd', null, 'すべてのエンディングを見る', () => ALL_ENDS.every(t => P.endings[t]), () => true],
     ['perfect', null, 'ひとつの周回で、チャイムを一度も聞かず、ヒントも使わず、選択肢も謎解きも間違えずに、TRUEにたどり着く', () => false, perfectShown],
     // 第五章でツムギが爆発する決別を見たとき（その場で記録し、章の終わりの画面で知らせる）。名前は仮
@@ -5674,7 +5742,7 @@
     ['codep', 'ふたりきりの子守唄', '', 'オルゴールとピアノの3拍子。穏やかなのに、どこか落ち着かない'],
     ['sotaDuet', '放課後', '連弾', 'ボーナストラック（本編には出てこない曲）。ソウタとハルが4本の手で弾く連弾版'],
   ];
-  const ostOpen = () => !!(P.endings && (P.endings.NORMAL || P.endings.GOOD || P.endings.TRUE));
+  const ostOpen = () => !!(P.endings && (P.endings.NORMAL || P.endings.NORMAL2 || P.endings.GOOD || P.endings.TRUE));
   const ostList = () => OST.filter(([k]) => k !== 'sotaDuet' || !!(P.endings && P.endings.TRUE));
   const ostHeard = k => k === 'sotaDuet' || !!P.heard[k];
   function showSoundtrack() {
