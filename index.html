@@ -1757,19 +1757,33 @@
   // 扉を小さく二回叩く音（効果音）
   // ミオのノック：木の扉を、指の関節で遠慮がちに「コッ、コッ」。軽く短い、乾いた木の音（閉ざされた扉の重いノックとは別の音）
   // ごく短い打撃（2ミリ秒のノイズ）を、木の板の鳴る高さ（共鳴）に通して「コッ」を作る。打楽器のような広がったノイズは出さない
+  let tapPulse = null;
+  const GAIN_TAP = 4;   // 共鳴の強さ（書き出して、前のノックと同じくらいの大きさになるよう合わせた）
   function tapKnock(t, vol, dst) {
     const a = audio();
+    // 関節が当たる衝撃：毎回同じ形の、丸く短い山（0.7ミリ秒）。ノイズを使わないので「ザッ」という打楽器の音にならない
+    if (!tapPulse || tapPulse.sampleRate !== a.sampleRate) {
+      const n = Math.max(8, Math.floor(a.sampleRate * 0.0007)); tapPulse = a.createBuffer(1, n, a.sampleRate);
+      const d = tapPulse.getChannelData(0); for (let i = 0; i < n; i++) d[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (n - 1));
+    }
     const hit = a.createBufferSource(), hg = a.createGain();
-    hit.buffer = getNoise();
-    hg.gain.setValueAtTime(0, t); hg.gain.linearRampToValueAtTime(1, t + 0.0004); hg.gain.exponentialRampToValueAtTime(0.0005, t + 0.0025);
-    hit.connect(hg); hit.start(t, Math.random() * 0.5); hit.stop(t + 0.01);
-    // 木の板の鳴り（中高域の共鳴をいくつか）と、扉の胴の小さな鳴り（低め）
-    [[720, 14, 1.0], [1180, 12, 0.7], [1760, 10, 0.4], [2650, 8, 0.18], [230, 6, 0.35]].forEach(([f, q, k]) => {
+    hit.buffer = tapPulse; hg.gain.value = 1;
+    hit.connect(hg); hit.start(t);
+    // 木の板の鳴り（中域〜中高域の共鳴をいくつか）と、扉の胴の「コン」という中空の鳴り（低め、少しだけ長く残る）
+    [[340, 22, 0.55], [520, 13, 0.8], [760, 11, 1.0], [1180, 10, 0.85], [1750, 9, 0.45], [2600, 7, 0.15], [180, 9, 0.3]].forEach(([f, q, k]) => {
       const bp = a.createBiquadFilter(), g = a.createGain();
-      bp.type = 'bandpass'; bp.frequency.value = f * (0.98 + Math.random() * 0.04); bp.Q.value = q;
-      g.gain.value = vol * k * 9;
+      bp.type = 'bandpass'; bp.frequency.value = f * (0.985 + Math.random() * 0.03); bp.Q.value = q;
+      g.gain.value = vol * k * GAIN_TAP;
       hg.connect(bp); bp.connect(g); g.connect(dst);
     });
+  }
+  // ノック用の短い残響（小さな部屋。一度作ったら使い回す）
+  let knockRoomBuf = null;
+  function knockRoom(a) {
+    if (knockRoomBuf && knockRoomBuf.sampleRate === a.sampleRate) return knockRoomBuf;
+    const len = Math.floor(a.sampleRate * 0.5), buf = a.createBuffer(2, len, a.sampleRate);
+    for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 4) * 0.5; }
+    return (knockRoomBuf = buf);
   }
   const knockTwice = () => () => {
     if (!P.sound || replay) return;
@@ -1784,8 +1798,12 @@
         dst.connect(dl); dl.connect(lp); lp.connect(g); g.connect(out());
         setTimeout(() => { try { dl.disconnect(); lp.disconnect(); g.disconnect(); } catch (e) {} }, 3000);
       });
-      setTimeout(() => { try { dst.disconnect(); } catch (e) {} }, 3000);
-      tapKnock(t, 0.2, dst); tapKnock(t + 0.32, 0.16, dst);
+      // ノックとわかる最低限の響き：扉の向こうの小さな部屋の、短い残響（約0.5秒）
+      const cv = a.createConvolver(), rl = a.createBiquadFilter(), rg = a.createGain();
+      cv.buffer = knockRoom(a); rl.type = 'lowpass'; rl.frequency.value = 2600; rg.gain.value = 0.5;
+      dst.connect(cv); cv.connect(rl); rl.connect(rg); rg.connect(out());
+      setTimeout(() => { try { dst.disconnect(); cv.disconnect(); rl.disconnect(); rg.disconnect(); } catch (e) {} }, 3000);
+      tapKnock(t, 0.27, dst); tapKnock(t + 0.32, 0.21, dst);
     } catch (e) {}
   };
   function bgmRestart() { const n = bgmName; if (!n) return; bgmName = null; bgm(n, 0.6); }
