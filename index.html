@@ -641,10 +641,14 @@
         txt.classList.toggle('narr', !who); txt.textContent = full;
         addLog({ who, t: full }); markRead(readKey(who, t));
         lastSkipped = true; advance = null;
+        // 核心の曲を待っているあいだの文も数える（早送りした文で曲が始まる番になったら、その曲を覚えておく）
+        if (pendingCore && --pendingCore === 0) bgm('core', 2.2);
         return Promise.resolve();
       }
-      const rb = replay.bgm; replay = null; syncSave();
+      // 早送りが終わったら、その時点で流れているはずの曲をかけ直す。核心の曲を待っている途中なら、その待ちは消さない
+      const rb = replay.bgm, pc = pendingCore; replay = null; syncSave();
       bgm(rb !== undefined ? rb : moodNow());
+      if (pc) pendingCore = pc;
       noSkip = true;  // セーブしたときの文章は、既読でも止めて見せる
     }
     if (pendingCore && --pendingCore === 0) bgm('core', 2.2);
