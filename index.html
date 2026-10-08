@@ -1760,20 +1760,47 @@
     try { const a = audio(), t = a.currentTime + 0.05; knock(t, 0.16, true); knock(t + 0.42, 0.13, true); } catch (e) {}
   };
   function bgmRestart() { const n = bgmName; if (!n) return; bgmName = null; bgm(n, 0.6); }
-  document.addEventListener('visibilitychange', () => {
+  // 戻ったあとに音の出口を開け直し、止めていた曲をかけ直す。
+  // ・iPhone などは、戻った直後は開け直せず、画面に触れて指を離したときに初めて開け直せるので、触れる操作のたびにも試す
+  // ・開いているのに時間が進まない（音が出ない）ことがあるので、そのときは音の出口を作り直す
+  let bgmPaused = false;
+  function pauseSound() {
     if (!actx) return;
-    if (document.hidden) {
-      clearInterval(bgmTimer);
-      try { if (bgmGain) bgmGain.gain.setValueAtTime(0, actx.currentTime); } catch (e) {}
-      try { actx.suspend(); } catch (e) {}
-    } else {
-      try { actx.resume().then(() => { if (actx.state === 'running') bgmRestart(); }).catch(() => {}); } catch (e) {}
-    }
-  });
-  document.addEventListener('pointerdown', () => {
-    if (!actx || document.hidden || actx.state === 'running') return;
-    try { actx.resume().then(() => { if (actx.state === 'running') bgmRestart(); }).catch(() => {}); } catch (e) {}
-  }, true);
+    bgmPaused = true; clearInterval(bgmTimer);
+    try { if (bgmGain) bgmGain.gain.setValueAtTime(0, actx.currentTime); } catch (e) {}
+    try { actx.suspend(); } catch (e) {}
+  }
+  function rebuildAudio() {
+    const n = bgmName;
+    try { actx.close(); } catch (e) {}
+    actx = null; master = null; revIn = null; noiseBuf = null; bgmGain = null; bgmName = null; audioReady = false;
+    bgmPaused = false;
+    if (n) bgm(n, 0.6);
+  }
+  let waking = false;
+  function wakeSound() {
+    if (!actx || document.hidden || !P.sound || waking) return;
+    const check = () => {
+      if (!actx || actx.state !== 'running') { waking = false; return; }
+      const t0 = actx.currentTime;
+      setTimeout(() => {
+        waking = false;
+        if (!actx || document.hidden) return;
+        if (actx.state === 'running' && actx.currentTime <= t0) { rebuildAudio(); return; }
+        if (bgmPaused) { bgmPaused = false; bgmRestart(); }
+      }, 400);
+    };
+    waking = true;
+    if (actx.state === 'running') check();
+    else { try { actx.resume().then(check).catch(() => { waking = false; }); } catch (e) { waking = false; } }
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pauseSound(); else wakeSound(); });
+  window.addEventListener('pagehide', pauseSound);
+  window.addEventListener('pageshow', wakeSound);
+  window.addEventListener('focus', wakeSound);
+  ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => {
+    if (actx && !document.hidden && (actx.state !== 'running' || bgmPaused)) wakeSound();
+  }, { capture: true, passive: true }));
   // ほどけたときの曲。校門・渡り廊下の見送りやエンディングでは、これが流れていれば最初からかけ直さずに続けて聴かせる
   // （オルゴールは「ほどける直前」の別の曲なので、流れていたら切り替える）
   const WARM = ['unravel'];
