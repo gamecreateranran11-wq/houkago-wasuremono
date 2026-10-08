@@ -2121,7 +2121,7 @@
     else if (keys.length && sh === keys.length) end = ['BAD4', '閉ざされた校舎', [], 'shut'];
     else if (!sh && !died && P.cur.mtSplit) end = ['NORMAL2', 'それぞれの朝', ['校門の向こうへ、五人が歩いていった。',
       '……ミオとツムギは、別々の道で、校門を出ていった。ツムギは図書室のほうを、ミオは正門のほうを、一度ずつ振り返った。',
-      '夕焼けの屋上に、一人で立つ。……足もとには、何も落ちていなかった。'], 'farewell', 'rooftop'];
+      '夕焼けの屋上に、一人で立つ。'], 'farewell', 'rooftop'];
     else if (sh >= 1 || died || P.cur.mtSplit) end = ['NORMAL', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。',
       ...(sh ? ['振り返ると、閉ざされた扉の教室には、まだ明かりがついていた。'] : []),
       ...(died ? ['一階の保健室の窓だけが、暗いままだった。'] : []),
@@ -2132,7 +2132,9 @@
     if (end[0] === 'GOOD' && !P.shelf.me) { P.shelf.me = true; albumSync(); }  // 主人公のわすれもの（生徒手帳）
     // 朝を迎えるエンディングは、ほどけたあとの曲が流れていれば続けて聴かせる。BADは、その結末の曲が流れていなければ切り替える
     const dawnEnd = ['NORMAL', 'NORMAL2', 'GOOD'].includes(end[0]);
-    if (end[0] === 'NORMAL' || end[0] === 'GOOD') keepBgm(end[3], WARM); else bgm(end[3]);
+    if (end[0] === 'NORMAL' || end[0] === 'GOOD') keepBgm(end[3], WARM);
+    else if (end[0] === 'NORMAL2') keepBgm(end[3], ['farewell', 'farewellLate']);  // 決別のあとから流れている同じ曲（静かな決別）を、切らずに続ける
+    else bgm(end[3]);
     const got = achGain(end[0]);
     finishRun(true);
     if (end[0] === 'BAD4') await closedSchool();
@@ -5409,7 +5411,7 @@
     R.st = 'unraveled'; render();
     await say([`ツムギは、涙のあとを手の甲でぬぐって、立ち上がった。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`]);
     return ending({ lines: ['ツムギと一緒に、保健室を出た。', 'ツムギは来室カードの最後の行に、自分で書きこんだ。「18:30　退室　図書室へ」',
-                            '廊下に、ミオの姿はもうなかった。', 'ツムギは、本を胸に抱えて、渡り廊下のほうへ一人で歩いていった。'],
+                            '廊下に、ミオの姿はもうなかった。', 'ツムギは、来室カードを手に、渡り廊下のほうへ一人で歩いていった。'],
                     img: 'hall_tsumugi', alt: '夕日の差す廊下を、渡り廊下のほうへ歩いていくツムギのうしろ姿',
                     stop: '廊下の途中で、足が止まる。まだ、この先へは行けない。', music: 'farewellLate' });
   }
