@@ -2220,7 +2220,7 @@
       ...(sh ? ['振り返ると、閉ざされた扉の教室には、まだ明かりがついていた。'] : []),
       ...(died ? ['一階の保健室の窓だけが、暗いままだった。'] : []),
       ...(P.cur.mtSplit ? ['ミオとツムギは、別々の道で、校門を出ていった。'] : []),
-      '門の手前で、足が止まる。まだ、ここは通れない。'], 'unravelDim', 'chime_sky'];
+      '門の手前で、足が止まる。まだ、ここは通れない。'], 'unravelDim', 'chime_sky_1830'];
     else end = ['GOOD', '送り出した屋上', ['全員の背中を、校門の向こうへ見送った。', '夕焼けの屋上に、一人で立つ。', '足もとに、生徒手帳が一冊、落ちていた。'], 'unravel', 'rooftop'];
     P.endings[end[0]] = true;
     if (end[0] === 'GOOD' && !P.shelf.me) { P.shelf.me = true; albumSync(); }  // 主人公のわすれもの（生徒手帳）
@@ -2294,7 +2294,7 @@
       await line(`${ch.room}。${ch.name}の座っていた場所に、${ch.lost}だけが残っている。`);
     }
     await line('机の上に、わすれものだけが並んでいた。');
-    await show('chime_sky', null);
+    await show('chime_sky_1830', null);   // 5章のあと（18:30）の空
     await say(['夕焼けの空の下で、ひとり立ち尽くしていた。', '……チャイムは、もう鳴らない。', '夕焼けだけが、音もなく校舎を染めている。', '返事をする人は、もう誰もいなかった。']);
     bg.style.opacity = '';
   }
@@ -5557,6 +5557,9 @@
   }
   function setChapter(id, show = true) {
     C = CHAPTERS[id] || ART;
+    // チャイムの空：その章でチャイムが鳴る時刻（章の終わり）の空にする（16:30・17:00・17:30・18:00・18:30）
+    { const end = chEnd(), file = { 30: 'chime_sky_1630', 60: 'chime_sky', 90: 'chime_sky_1730', 120: 'chime_sky_1800', 150: 'chime_sky_1830' }[end] || 'chime_sky';
+      const cg = $('.chime-cg'); if (cg) { cg.src = `img/${file}.webp`; cg.alt = `${hm(end)}の夕焼け空。チャイムが響いている`; } }
     const scene = $('#scene');
     scene.setAttribute('aria-label', `夕暮れの${C.room}`);
     scene.style.visibility = 'hidden';
