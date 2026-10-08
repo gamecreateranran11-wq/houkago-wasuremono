@@ -697,6 +697,10 @@
   function faceFile(f) {
     const v = C.faces[f], key = v.slice(0, v.indexOf('_')), suf = v.slice(key.length + 1);
     if ((!R || !R.standing) && key === C.key) { const t = (SIT_NEAR[key] || {})[suf] || suf; return t === 'bust' ? `${key}_s` : `${key}_s_${t}`; }
+    return standFile(key, suf);
+  }
+  // 立った絵のファイル名（ない表情は近いものに代える）。表示と先読みで同じものを使う
+  function standFile(key, suf) {
     const set = (STAND_SET[key] || '').split(' ');
     let s = suf;
     if (s !== 'bust' && !set.includes(s)) s = STAND_NEAR[s] && set.includes(STAND_NEAR[s]) ? STAND_NEAR[s] : 'bust';
@@ -5347,7 +5351,7 @@
     face = ''; setTalk(false);
     Object.values(C.faces).flatMap(f => {
       const key = f.slice(0, f.indexOf('_')), suf = f.slice(key.length + 1);
-      if (key !== C.key) return [suf === 'bust' ? `${key}_p` : `${key}_p_${suf}`];
+      if (key !== C.key) return [standFile(key, suf)];
       const t = (SIT_NEAR[key] || {})[suf] || suf;
       return t === 'bust' ? [`${key}_s`, `${key}_p`] : [`${key}_s_${t}`];
     }).forEach(f => {
