@@ -5972,8 +5972,15 @@
       P.bgmVol = e.target.value / 100; saveP(); $('#volBgm').value = e.target.value;
       if (bgmGain) { try { bgmGain.gain.setTargetAtTime(bgmLevel(), audio().currentTime, 0.1); } catch (er) {} }
     });
-    sEl.addEventListener('input', e => { P.seVol = e.target.value / 100; saveP(); $('#volSe').value = e.target.value; });
-    sEl.addEventListener('change', () => pianoNote(523.25, 0.2));
+    let seMoved = 0;
+    sEl.addEventListener('input', e => { P.seVol = e.target.value / 100; saveP(); $('#volSe').value = e.target.value; seMoved = Date.now(); });
+    // 動かし終えたら、確かめの音（高いド）を一度だけ鳴らす。
+    // スマホでは、選んだままアプリを切り替えると「動かし終えた」の合図だけが出ることがあるので、実際に動かした直後のときだけ鳴らし、鳴らしたら選択を外す
+    sEl.addEventListener('change', () => {
+      if (document.hidden || Date.now() - seMoved > 1500) return;
+      seMoved = 0; pianoNote(523.25, 0.2);
+      try { sEl.blur(); } catch (e) {}
+    });
   }
   wireVol($('#volBgm'), $('#volSe'));
   $('#btnSkip').onclick = e => { e.stopPropagation(); P.skip = !P.skip; saveP(); render(); };
