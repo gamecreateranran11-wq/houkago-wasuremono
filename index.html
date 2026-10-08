@@ -693,7 +693,9 @@
                        blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down' };
   function faceFile(f) {
     const v = C.faces[f], key = v.slice(0, v.indexOf('_')), suf = v.slice(key.length + 1);
-    if ((!R || !R.standing) && key === C.key) return suf === 'bust' ? `${key}_s` : `${key}_s_${suf}`;
+    // 座り絵が無い表情は、近い座り絵で代える（ヒナのむくれ顔→うつむき、ミオの表紙を撫でる→撫でてうつむく）
+    const SIT_NEAR = { hina: { pout: 'down' }, mio: { stroke: 'strokedown' } };
+    if ((!R || !R.standing) && key === C.key) { const t = (SIT_NEAR[key] || {})[suf] || suf; return t === 'bust' ? `${key}_s` : `${key}_s_${t}`; }
     const set = (STAND_SET[key] || '').split(' ');
     let s = suf;
     if (s !== 'bust' && !set.includes(s)) s = STAND_NEAR[s] && set.includes(STAND_NEAR[s]) ? STAND_NEAR[s] : 'bust';
