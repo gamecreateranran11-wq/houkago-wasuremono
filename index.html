@@ -1011,6 +1011,7 @@
   }
   /* ---------- BGM：その場で音を組み立てて鳴らす ---------- */
   let bgmName = null, bgmGain = null, bgmTimer = null, bgmNext = 0, bgmStep = 0;
+  let bgmPaused = false;  // 別のアプリに切り替えて、曲を止めているあいだ true
   const bgmLevel = () => 0.8 * P.bgmVol;
   const nf = n => 440 * Math.pow(2, (n - 69) / 12);  // MIDI番号→周波数
   // 1音：立ち上がり attack、持続、release で消える。lp＝こもらせる周波数、vib＝ビブラート
@@ -1742,7 +1743,12 @@
     pendingCore = 0;
     if (replay) { replay.bgm = name; return; }
     if (!P.sound) name = null;
-    if (name === bgmName) return;
+    if (name === bgmName) {
+      // 同じ曲でも、音の出口が休んでいたら起こす。曲が止まったままなら（戻ったあと・ロードのあと）、かけ直す
+      if (name && actx && actx.state !== 'running') { try { actx.resume(); } catch (e) {} }
+      if (!name || (bgmGain && !bgmPaused)) return;
+    }
+    bgmPaused = false;
     bgmName = name;
     if (name && !P.heard[name]) { P.heard[name] = true; saveP(); }
     let a; try { a = audio(); } catch (e) { return; }
@@ -1814,7 +1820,6 @@
   // 戻ったあとに音の出口を開け直し、止めていた曲をかけ直す。
   // ・iPhone などは、戻った直後は開け直せず、画面に触れて指を離したときに初めて開け直せるので、触れる操作のたびにも試す
   // ・開いているのに時間が進まない（音が出ない）ことがあるので、そのときは音の出口を作り直す
-  let bgmPaused = false;
   function pauseSound() {
     if (!actx) return;
     bgmPaused = true; clearInterval(bgmTimer);
@@ -1841,7 +1846,7 @@
         if (bgmPaused) { bgmPaused = false; bgmRestart(); }
       }, 400);
     };
-    waking = true;
+    waking = true; setTimeout(() => { waking = false; }, 1500);   // 開け直しの返事が来ないときも、次の操作でまた試せるように
     if (actx.state === 'running') check();
     else { try { actx.resume().then(check).catch(() => { waking = false; }); } catch (e) { waking = false; } }
   }
@@ -5797,7 +5802,7 @@
   }
   function loadSlot(d) {
     if (R) R.over = true;
-    gen++; advance = null;
+    gen++; advance = null; scr = null; replay = null;
     P.shelf = { ...d.prog.shelf }; P.shelfRun = { ...(d.prog.shelfRun || {}) };
     if (d.prog.runNo) P.runNo = d.prog.runNo;
     P.cur = d.prog.cur ? JSON.parse(JSON.stringify(d.prog.cur)) : { results: {} }; saveP();
