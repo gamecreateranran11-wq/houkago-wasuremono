@@ -2017,6 +2017,7 @@
       '門の手前で、足が止まる。まだ、ここは通れない。'], 'unravel', 'chime_sky'];
     else end = ['GOOD', '送り出した屋上', ['全員の背中を、校門の向こうへ見送った。', '夕焼けの屋上に、一人で立つ。', '足もとに、生徒手帳が一冊、落ちていた。'], 'unravel', 'rooftop'];
     P.endings[end[0]] = true;
+    if (end[0] === 'GOOD' && !P.shelf.me) { P.shelf.me = true; albumSync(); }  // 主人公のわすれもの（生徒手帳）
     // 朝を迎えるエンディングは、ほどけたあとの曲が流れていれば続けて聴かせる。BADは、その結末の曲が流れていなければ切り替える
     const dawnEnd = ['NORMAL', 'NORMAL2', 'GOOD'].includes(end[0]);
     if (end[0] === 'NORMAL' || end[0] === 'GOOD') keepBgm(end[3], WARM); else bgm(end[3]);
@@ -5243,10 +5244,9 @@
     if (slips.includes('wait')) await say([['ミオ', '……さっきは、また逃げようとして、ごめん', 'mioDown']]);
     if (slips.includes('both')) await say([['ツムギ', '……ちゃんと、自分の言葉で言わなきゃね', 'down']]);
     if (straight) {
-      await say([['ミオ', '……ううん。私こそ', 'mioGrief']]);
-      bgm('unravel');
-      await say([['ミオ', '……ツムギ。もう一回、最初から。……友だちに、なってくれる？', 'mioDown'],
-                 'ツムギは、目をまるくして、それから、くしゃっと笑った。', ['ツムギ', '……うん。なりたい', 'crySmile'],
+      await say([['ミオ', '……ううん。私こそ', 'mioGrief'],
+                 ['ミオ', '……ツムギ。もう一回、最初から。……友だちに、なってくれる？', 'mioDown'],
+                 'ツムギは、目をまるくして、それから、くしゃっと笑った。', () => bgm('unravel'), ['ツムギ', '……うん。なりたい', 'crySmile'],
                  '座っていた丸椅子から、立ち上がった。', 'ミオがその丸椅子を持ち上げて、ツムギのすぐ隣に置いた。',
                  ['ミオ', '……今度は、私が運ぶ番', 'mioCrySmile'],
                  guestHide(), 'ミオが座ると、ツムギは『ひとりぶんの椅子』を開いて、二人のひざに渡した。']);
@@ -5457,7 +5457,15 @@
   delete P.album.g_letter;  // ハヤトの手紙は、わすれもの（ケイの姿を変えたもの）の段にだけ出す
   function albumSee(id) { if (!P.album[id]) { P.album[id] = true; saveP(); } }
   // わすれもの：棚に並んだ姿（w_〇〇_v）と、姿を変えたあと（w_〇〇_s）。棚を空にしても、アルバムには残す
-  const WASURE = [['ヒナ', 'hina', () => ART], ['ソウタ', 'sota', () => MUSIC], ['ミオ', 'mio', () => LIBRARY], ['ケイ', 'kei', () => GYM], ['ツムギ', 'tsumugi', () => INFIRMARY]];
+  // 主人公のわすれもの（生徒手帳）。GOOD で夕焼けの屋上に落ちている。TRUE で姿を変える（朝の屋上の手帳）。TRUE は未実装なので P.saved.me はまだ立たない
+  const ME = { name: '自分',
+    shelfItem(saved) {
+      return saved
+        ? { thumb: 'protag_notebook', title: '朝の屋上の生徒手帳', body: `<img class="cg" src="img/protag_notebook.webp" alt="朝の屋上に落ちている生徒手帳"><p>朝日の差す屋上に、同じ生徒手帳が開いていた。五人の名前の下に、自分の名前が書き足してあった。</p>` }
+        : { thumb: 'protag_notebook_dusk', title: '生徒手帳', body: `<img class="cg" src="img/protag_notebook_dusk.webp" alt="夕焼けの屋上に落ちている生徒手帳"><p>夕焼けの屋上の足もとに落ちていた、自分の生徒手帳。書きこまれたページは、一枚だけ。……五人の名前が、並んでいた。</p>` };
+    } };
+  if (P.endings.GOOD && !P.shelf.me) { P.shelf.me = true; saveP(); }
+  const WASURE = [['ヒナ', 'hina', () => ART], ['ソウタ', 'sota', () => MUSIC], ['ミオ', 'mio', () => LIBRARY], ['ケイ', 'kei', () => GYM], ['ツムギ', 'tsumugi', () => INFIRMARY], ['自分', 'me', () => ME]];
   function albumSync() {
     let ch = false;
     WASURE.forEach(([, k]) => {
@@ -5775,7 +5783,7 @@
     $('#oBack').onclick = () => showTitle();
   }
   function showShelf() {
-    const slots = [['ヒナ', 'hina', ART], ['ソウタ', 'sota', MUSIC], ['ミオ', 'mio', LIBRARY], ['ケイ', 'kei', GYM], ['ツムギ', 'tsumugi', INFIRMARY], ['？？？']];
+    const slots = [['ヒナ', 'hina', ART], ['ソウタ', 'sota', MUSIC], ['ミオ', 'mio', LIBRARY], ['ケイ', 'kei', GYM], ['ツムギ', 'tsumugi', INFIRMARY], [P.shelf.me ? '自分' : '？？？', 'me', ME]];
     P.shelfSeen = P.shelfSeen || {};
     const got = slots.filter(([, key]) => key && P.shelf[key]).length;
     const savedN = slots.filter(([, key]) => key && P.shelf[key] && P.saved[key]).length;
@@ -5798,7 +5806,7 @@
     slots.forEach(([, key]) => { if (key && P.shelf[key]) P.shelfSeen[key] = P.saved[key] ? 's' : 'v'; });
     saveP();
     $('#sBack').onclick = showTitle;
-    [['hina', ART], ['sota', MUSIC], ['mio', LIBRARY], ['kei', GYM], ['tsumugi', INFIRMARY]].forEach(([k, ch]) => {
+    [['hina', ART], ['sota', MUSIC], ['mio', LIBRARY], ['kei', GYM], ['tsumugi', INFIRMARY], ['me', ME]].forEach(([k, ch]) => {
       const b = card.querySelector(`[data-k="${k}"]`);
       if (b) b.onclick = async () => {
         const it = ch.shelfItem(!!P.saved[k]);
