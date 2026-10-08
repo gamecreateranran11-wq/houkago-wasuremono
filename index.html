@@ -5322,6 +5322,7 @@
     $('#getItem').hidden = true;
     $('#sitFig').classList.remove('gone');
     $('#portrait').classList.remove('show');
+    guest = null; guestRender();  // その場にいる子（ミオなど）の立ち絵も消す。途中から再開するときは、場面の読み直しでまた出る
     spk.hidden = true; txt.textContent = ''; txt.classList.add('narr'); chs.innerHTML = ''; more.hidden = true;
   }
   function setChapter(id, show = true) {
@@ -5721,6 +5722,7 @@
     busy = true;
     await setChapter(d.ch);
     R = d; busy = false;
+    if (C.id === 'infirmary' && R.taken && R.taken.dark) setDark(true);  // 明かりを消したまま中断していたら、消したまま再開する
     render();
     const fn = resume && scriptFn(resume.key);
     if (fn) {
