@@ -218,6 +218,16 @@
   .roster-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fbf8f0; color: #2a2a2a; margin-bottom: 8px; }
   .roster-table th, .roster-table td { border: 1px solid #b9b2a2; padding: 4px 6px; }
   .roster-table s { color: #8a8478; }
+  .rs-wrap { max-height: 52vh; overflow: auto; margin-bottom: 6px; }
+  .roster-cal { width: 100%; border-collapse: collapse; table-layout: fixed; background: #fbf8f0; color: #2a2a2a; font-size: 11px; }
+  .roster-cal th { border: 1px solid #b9b2a2; padding: 2px; font-weight: 600; }
+  .roster-cal td { border: 1px solid #b9b2a2; padding: 0; vertical-align: top; }
+  .roster-cal b { display: block; font-size: 11px; color: #555; }
+  .roster-cal span { display: block; line-height: 1.3; word-break: break-all; }
+  .roster-cal .rs-cell { display: block; width: 100%; min-height: 58px; padding: 3px 2px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; touch-action: manipulation; }
+  .roster-cal .rs-cell.on { background: #f3c7b8; box-shadow: inset 0 0 0 2px #c9473c; }
+  .roster-cal .rs-off { color: #8a8478; padding: 3px 2px; background: #ece7db; }
+  .roster-cal .rs-none { background: #e4dfd2; }
   .wd-row { display: flex; justify-content: center; gap: 6px; margin: 6px 0 10px; }
   .wd-row button { width: 44px; height: 44px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); background: #3a3446; color: #f3ead8; font-size: 16px; touch-action: manipulation; }
   .wd-row button.on { background: #c9473c; border-color: #c9473c; }
@@ -4796,7 +4806,8 @@
   /* ---------- 章の切り替え ---------- */
 
   /* ---------- 第五章 保健室（ツムギ） ---------- */
-  // 来室カード：6/10から毎日。退室は下校の15:30がほとんどで、ミオの当番の日（火・金）だけ17:00。今日7/15の行は空欄
+  // 来室カード：6/10から毎日。保健室登校は下校時刻まで（ふだん15:30、試験・三者面談の午前授業の日は12:40）。
+  // ミオが当番に入った、ふだんの日だけ17:00（図書室が閉まる時刻）。6/10（初日）と7/1は頭痛で早く帰った。今日7/15の行は空欄
   const CARD_ROWS = [
     ['6/10', '8:50', '12:40', '頭痛'],
     ['6/11', '8:40', '15:30', 'だるい'],
@@ -4805,26 +4816,35 @@
     ['6/16', '8:40', '15:30', 'だるい'],
     ['6/17', '8:40', '17:00', 'だるい'],
     ['6/18', '9:05', '15:30', 'だるい'],
-    ['6/19', '8:40', '15:30', 'だるい'],
+    ['6/19', '8:40', '17:00', 'だるい'],
     ['6/20', '8:40', '17:00', '頭痛'],
     ['6/23', '8:40', '15:30', ''],
-    ['6/24', '9:05', '17:00', ''],
-    ['6/25', '8:40', '15:30', '頭痛'],
-    ['6/26', '8:40', '15:30', ''],
-    ['6/27', '9:05', '17:00', ''],
+    ['6/24', '9:05', '12:40', ''],
+    ['6/25', '8:40', '12:40', '頭痛'],
+    ['6/26', '8:40', '12:40', ''],
+    ['6/27', '9:05', '12:40', ''],
     ['6/30', '9:05', '15:30', '頭痛'],
-    ['7/1', '8:40', '17:00', ''],
+    ['7/1', '8:40', '12:40', '頭痛'],
     ['7/2', '8:40', '15:30', ''],
     ['7/3', '9:05', '15:30', ''],
     ['7/4', '8:40', '17:00', ''],
     ['7/7', '8:40', '15:30', ''],
     ['7/8', '8:40', '17:00', ''],
-    ['7/9', '9:05', '15:30', ''],
-    ['7/10', '8:40', '15:30', '頭痛'],
-    ['7/11', '8:40', '17:00', ''],
-    ['7/14', '8:40', '15:30', ''],
+    ['7/9', '9:05', '12:40', ''],
+    ['7/10', '8:40', '12:40', '頭痛'],
+    ['7/11', '8:40', '12:40', ''],
+    ['7/14', '8:40', '12:40', ''],
     ['7/15', '', '', '']];
-  const TRACE_DAYS = ['6/13', '6/17', '6/20', '6/24', '6/27', '7/1', '7/4', '7/8', '7/11'];
+  const TRACE_DAYS = ['6/13', '6/17', '6/19', '6/20', '7/4', '7/8'];
+  // 図書委員会の当番表（2年・6〜7月）。日付ごと。ツムギの分（火・金）は、ほかの委員とミオが埋めている。カッコ書きの交代は、答えと関係ないものも混ぜる
+  const ROSTER = [
+    [null, ['6/10', '水野・中村（白石の代わり）'], ['6/11', '吉田・小林'], ['6/12', '加藤・佐藤（伊藤と交代）'], ['6/13', '水野（白石の代わり）・山本']],
+    [['6/16', '佐藤・中村'], ['6/17', '水野・小林（白石の代わり）'], ['6/18', '吉田・山本（小林と交代）'], ['6/19', '加藤・水野（伊藤の代わり）'], ['6/20', '水野（白石の代わり）・山本']],
+    [['6/23', '中村・伊藤（佐藤と交代）'], ['6/24', '試験期間・休室'], ['6/25', '試験期間・休室'], ['6/26', '試験期間・休室'], ['6/27', '試験期間・休室']],
+    [['6/30', '佐藤・中村'], ['7/1', '水野・加藤（白石の代わり）'], ['7/2', '吉田・小林'], ['7/3', '加藤・伊藤'], ['7/4', '水野（白石の代わり）・山本']],
+    [['7/7', '佐藤・中村'], ['7/8', '水野・吉田（白石の代わり）'], ['7/9', '吉田・小林'], ['7/10', '加藤・伊藤'], ['7/11', '中村（水野の代わり）・山本']],
+    [['7/14', '佐藤・中村'], ['7/15', '水野・伊藤（白石の代わり）'], null, null, null]];
+  const ROSTER_ANSWER = TRACE_DAYS.slice().sort().join(',');
   // 視力検査表：段ごとの輪の切れ目の向き。0.7の段の下にだけ、鉛筆の線（先生の覚え書き）
   const CHART = [['0.1', ['R']], ['0.2', ['U', 'L']], ['0.3', ['D', 'R', 'U']], ['0.4', ['L', 'D', 'R', 'U']], ['0.5', ['U', 'R', 'D', 'L']],
                  ['0.7', ['L', 'U', 'U', 'R']], ['1.0', ['D', 'L', 'R', 'D', 'U']]];
@@ -4895,32 +4915,35 @@
     await shown;
     closeOverlay();
   }
-  // 当番表：曜日ごと。ツムギが17:00まで残っていた曜日を選んで、照らし合わせる
+  // 当番表：日付ごとのカレンダー。ツムギが17:00まで残っていた日のマスを選んで、照らし合わせる
   function viewRoster() {
     const r = replayed(); if (r) return Promise.resolve(r.v);
     return new Promise(res0 => {
       const res = v => res0(rec(v));
       const on = new Set();
-      openOverlay(`<p class="eyebrow">持ち物</p><h2>図書委員会　当番表（2年・6〜7月）</h2>
-        <table class="roster-table"><tr><th>月</th><td>佐藤・中村</td></tr><tr><th>火</th><td>水野・<s>白石</s>（休み）</td></tr>
-          <tr><th>水</th><td>吉田・小林</td></tr><tr><th>木</th><td>加藤・伊藤</td></tr><tr><th>金</th><td>水野（白石の代わり）・山本</td></tr></table>
-        <p class="note">来室カードと照らし合わせる：ツムギが17:00まで残っていた曜日を選ぶ</p>
-        <div class="wd-row">${'月火水木金'.split('').map(w => `<button type="button" data-w="${w}">${w}</button>`).join('')}</div>
+      const cell = c => !c ? '<td class="rs-none"></td>'
+        : c[1].startsWith('試験') ? `<td class="rs-off"><b>${c[0]}</b><span>${c[1]}</span></td>`
+        : `<td><button type="button" class="rs-cell" data-d="${c[0]}"><b>${c[0]}</b><span>${c[1].replace('・', '<br>')}</span></button></td>`;
+      openOverlay(`<p class="eyebrow">持ち物</p><h2>図書委員会の当番表</h2>
+        <p class="note">2年・6〜7月。貸出カウンターの当番。図書室は17:00まで。</p>
+        <div class="rs-wrap"><table class="roster-cal"><tr><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th></tr>
+          ${ROSTER.map(w => `<tr>${w.map(cell).join('')}</tr>`).join('')}</table></div>
+        <p class="note">来室カードと照らし合わせる：ツムギが17:00まで残っていた日を選ぶ</p>
         <div class="row"><button type="button" class="btn primary" id="rsOk">照らし合わせる</button><button type="button" class="btn" id="rsNo">閉じる</button></div>`);
-      card.querySelectorAll('.wd-row button').forEach(b => { b.onclick = () => { const w = b.dataset.w; if (on.has(w)) on.delete(w); else on.add(w); b.classList.toggle('on', on.has(w)); }; });
-      $('#rsOk').onclick = () => { closeOverlay(); res([...on].sort().join('')); };
+      card.querySelectorAll('.rs-cell').forEach(b => { b.onclick = () => { const d = b.dataset.d; if (on.has(d)) on.delete(d); else on.add(d); b.classList.toggle('on', on.has(d)); }; });
+      $('#rsOk').onclick = () => { closeOverlay(); res([...on].sort().join(',')); };
       $('#rsNo').onclick = () => { closeOverlay(); res(null); };
     });
   }
   async function useRoster() {
     const v = await viewRoster();
     if (v === null) return;
-    if ([...v].sort().join('') !== [...'火金'].sort().join('')) { nmMark('puz'); await say(['来室カードと当番表を見比べた。……どこか、合わない気がする。']); return; }
-    if (R.know.has('match')) { await say(['17:00まで残っていたのは、火曜と金曜。……どちらも、「水野」の当番の日だ。']); return; }
+    if (v !== ROSTER_ANSWER) { nmMark('puz'); await say(['来室カードと当番表を見比べた。……どこか、合わない気がする。']); return; }
+    if (R.know.has('match')) { await say(['17:00まで残っていた日は、どれも「水野」が当番に入った日だ。……曜日が変わった6/19も。']); return; }
     R.know.add('match'); R.seen.add('match');
-    await say(['来室カードの17:00の日を、一つずつ数えていく。', '……17:00まで残っていた日は、どれも火曜と金曜だった。',
-               '当番表の、火曜と金曜。どちらにも「水野」の名前がある。金曜は「白石の代わり」。',
-               '図書室が閉まるのは、17:00。……ツムギは、ミオの当番の日だけ、帰りを遅らせていたんだ。']);
+    await say(['来室カードの17:00の日を、当番表で一つずつ探していく。', '6/13、6/17、6/19、6/20、7/4、7/8。……どの日のマスにも、「水野」の名前がある。',
+               '6/19は木曜。ミオが、ほかの委員の代わりに入った日だ。……その日も、ツムギは17:00まで残っていた。',
+               '図書室が閉まるのは、17:00。……ツムギは、曜日で決めていたんじゃない。ミオが当番の日だけ、帰りを遅らせていたんだ。']);
   }
   async function viewTraces() {
     showCut('ci_inf_window_dark');
@@ -4987,7 +5010,7 @@
              mioOffer: 'mio_offer', mioOfferSad: 'mio_offer_sad', mioNbDown: 'mio_nb', mioNbSad: 'mio_nb_apology', mioNbGrief: 'mio_nb_grief', mioNbDespair: 'mio_nb_grief', mioNbCrySmile: 'mio_nb_crysmile' },
     lost: '保健室の来室カード',
     clock: { img: 'ci_clock_infirmary', cx: 782, cy: 430, s: 1.01 },
-    clock2: ['時計の下に、行事予定の紙が貼ってある。', '「7/16（水）　終業式」', 'その下に、先生の字で小さく。「7/22（火）　白石さん　入院」'],
+    clock2: ['時計の下に、行事予定の紙が貼ってある。', '「6/24（火）〜6/27（金）　期末試験」「7/9（水）〜7/15（火）　三者面談（午前授業）」', '「7/16（水）　終業式」', 'その下に、先生の字で小さく。「7/22（火）　白石さん　入院」'],
     idleFree: '（ツムギが待っている。チャイムが鳴る前に）',
     // 来室カード（引き出し）・当番表との照らし合わせ・窓の指の跡の3つがそろったら、対話に入れる
     ready: () => R.know.has('card') && R.know.has('match') && R.know.has('traces'),
@@ -5255,9 +5278,10 @@
       if (!R.taken.key && !R.know.has('roster')) return ['引き出しの先生のメモ「いつもの赤十字の箱、二段目」。赤い十字の箱は、どこにありましたか。', '薬品棚のガラス戸の中を、もう一度見てみましょう。'];
       if (!R.know.has('roster')) return '救急箱の鍵の札の番号と、ベッドの番号を見くらべてみましょう。';
       if (!R.know.has('match')) return ['持ち物の来室カードと当番表を、見比べてみましょう。',
-                                        '来室カードの退室の時刻は、たいてい15:30。ところどころ、17:00の日があります。',
-                                        '当番表は曜日ごとです。来室カードの日付が何曜日かは、時計の下の行事予定（7/16は水曜）から数えられます。',
-                                        '17:00まで残っていたのは、何曜日でしょう。持ち物の当番表を開いて、その曜日を選び、照らし合わせます。'];
+                                        '来室カードの退室の時刻は、15:30・12:40・17:00の3つ。12:40の日がどんな日かは、時計の下の行事予定でわかります。',
+                                        '図書室が閉まるのは17:00。17:00まで残っていた日を、来室カードから書き出してみましょう。',
+                                        '書き出した日を、当番表のカレンダーで一つずつ探します。曜日ではなく、日付で見くらべましょう。',
+                                        '17:00まで残っていたのは、6/13・6/17・6/19・6/20・7/4・7/8。持ち物の当番表を開いて、その6日を選びます。'];
       if (!R.know.has('traces')) return ['掲示板の保健だよりの、コラムを読んでみましょう。',
                                          '「夜の窓ガラスは、鏡になります」。部屋の明かりを消すには、どこを押せばいいでしょう。',
                                          '入口の脇（画面の手前左）に、照明のスイッチがあります。明かりを消してから、窓を調べてみましょう。'];
