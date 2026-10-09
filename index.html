@@ -905,7 +905,7 @@
   }
 
   // 調べた場所のカットイン（クローズアップの一枚絵）
-  const CUT_SWITCH = false;  // 保健室の入口の脇のスイッチのアップ（ci_inf_switch / _dark）
+  const CUT_SWITCH = true;   // 保健室の入口の脇のスイッチのアップ（ci_inf_switch / _dark）
   function showCut(name) {
     const el = $('#cutin');
     el.innerHTML = name === 'clock' ? clockSVG() : `<img src="img/${name}.webp" alt="">`;
