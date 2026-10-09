@@ -2375,7 +2375,12 @@
   // 言葉の雨：短い言葉は小さく散らして重ね、長い言葉は一つずつはっきり読ませる。崩した言葉はにじませて読めなくする。画面を押すと早く進む
   async function wordRain() {
     const box = fxLayer('rain');
-    const shorts = ['きもい', 'バカ', '邪魔', '使えない', '気持ち悪い', '役立たず'];   // どれも否定
+    // 短い言葉は、届いた言葉（ほかの人から言われた言葉）から切り出したものだけ。どれも否定。自分で自分に向けた言葉は、もう一人の自分の台詞に取っておく
+    const shorts = ['きもい', 'バカ', '邪魔', '使えない', '気持ち悪い', '役立たず', '汚い', '臭い', 'いらない', '無理', 'できない', '手遅れ', '最低',
+                    '出て行け', '甘えるな', 'ヘラヘラ', '構ってちゃん', '通用しない', 'みんな嫌ってる', '普通でしょ'];
+    // 同じ言葉が続かないように、全部を一巡するまで同じ言葉は出さない
+    let bag = [];
+    const nextShort = () => { if (!bag.length) bag = shorts.slice().sort(() => Math.random() - .5); return bag.pop(); };
     const crushed = ['菌が移る', '直さないと引っ叩くよ', '暴力を振るわれないとわからないの'];
     const longs = [['そんなんじゃ、社会で通用しない', 'neg'], ['誰も、相手にしないよ', 'neg'], ['みんな本当は、汚いって思ってるよ', 'neg'], ['きっとみんな、あなたのこと嫌ってるよ', 'neg'],
                    ['殴るよ', 'neg'], ['なんでそんなことするの', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
@@ -2392,7 +2397,7 @@
     };
     if (reduce) box.innerHTML = `<div class="rw-list">${longs.map(([l, k]) => `<p class="${k}">「${l}」</p>`).join('')}</div>`;
     else {
-      const rainT = setInterval(() => { drop(shorts[Math.floor(Math.random() * shorts.length)], 'short'); if (Math.random() < .18) drop(crushed[Math.floor(Math.random() * crushed.length)], 'crush'); }, 170);
+      const rainT = setInterval(() => { drop(nextShort(), 'short'); if (Math.random() < .18) drop(crushed[Math.floor(Math.random() * crushed.length)], 'crush'); }, 170);
       const pick = a => a[Math.floor(Math.random() * a.length)];
       for (const [l, k] of longs) {
         const how = pick(['in-fade', 'in-blur', 'in-drop', 'in-slide', 'in-zoom', 'in-type']);
