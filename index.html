@@ -412,6 +412,40 @@
 
   .dawn { background: linear-gradient(180deg, #f4e7d7 0%, #dfe6ee 100%); }
   .overlay.void { background: #000; }
+  /* 屋上 */
+  .roof-fx { position: fixed; inset: 0; z-index: 9; pointer-events: auto; overflow: hidden; transition: opacity .9s ease; }
+  .roof-fx.out { opacity: 0; }
+  .roof-fx.rain { background: rgba(0, 0, 0, .88); }
+  .roof-fx.rain.sink { background: #000; }
+  .rw { position: absolute; margin: 0; color: #d9d2c6; font-family: var(--serif); white-space: nowrap; transition: opacity 1s ease; }
+  .rw.gone { opacity: 0; }
+  .rw.short { font-size: 13px; opacity: .55; animation: rwfall linear forwards; }
+  .rw.crush { font-size: 15px; opacity: .45; filter: blur(2.2px); letter-spacing: -.25em; text-shadow: 3px 1px 0 #d9d2c6, -2px -1px 0 #d9d2c6; animation: rwfall linear forwards; }
+  .rw.long { font-size: 19px; animation: rwin .5s ease both; }
+  .rw.final { left: 0; right: 0; top: 42%; text-align: center; font-size: 22px; letter-spacing: .1em; animation: rwin 1.2s ease both; }
+  .rw.gopo { left: 0; right: 0; bottom: 18%; text-align: center; font-size: 13px; color: #6d6a66; letter-spacing: .3em; animation: rwin 1.5s ease both; }
+  .rw-list { position: absolute; inset: 10% 8%; overflow: auto; color: #d9d2c6; }
+  @keyframes rwfall { from { transform: translateY(0); } to { transform: translateY(85vh); } }
+  @keyframes rwin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .roof-fx.late { background: rgba(0, 0, 0, .55); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; padding: 16px; pointer-events: none; }
+  .lw { margin: 0; color: #cfc8bd; font-size: 14px; text-align: center; animation: rwin 1s ease both; transition: opacity 1.2s ease; }
+  .lw.dim { opacity: .35; }
+  .roof-fx.crack { pointer-events: none; background:
+      linear-gradient(115deg, transparent 47%, rgba(255,255,255,.85) 48%, transparent 49%),
+      linear-gradient(62deg, transparent 58%, rgba(255,255,255,.7) 59%, transparent 60%),
+      linear-gradient(160deg, transparent 33%, rgba(255,255,255,.6) 34%, transparent 35%),
+      rgba(120, 170, 200, .25); animation: crackin 1.4s ease both; }
+  @keyframes crackin { 0% { opacity: 0; transform: none; } 30% { opacity: 1; transform: translate(-4px, 2px); } 45% { transform: translate(3px, -2px); }
+                       100% { opacity: 1; transform: translateY(14px); filter: blur(3px); } }
+  .roof-fx.ripple { pointer-events: none; display: grid; place-items: center; }
+  .roof-fx.ripple i { position: absolute; width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid rgba(220, 240, 248, .8); animation: rip 2.2s ease-out both; }
+  @keyframes rip { from { transform: scale(.2); opacity: 1; } to { transform: scale(14); opacity: 0; } }
+  #scene.roof-dark #bgImg { filter: brightness(.35) saturate(.6); transition: filter 1.2s ease; }
+  #scene.roof-wind #bgImg { filter: brightness(.5) saturate(.5) hue-rotate(-10deg); transition: filter 1.2s ease; }
+  #scene.tint-warm #bgImg { filter: brightness(1.08) saturate(1.1) sepia(.15); transition: filter 1.6s ease; }
+  #scene.tint-pale #bgImg { filter: saturate(.4) brightness(1.1); transition: filter 1.6s ease; }
+  .roof-tint { position: absolute; inset: 0; background: #a2d7dd; mix-blend-mode: soft-light; opacity: 0; pointer-events: none; border-radius: inherit; transition: opacity 1.6s ease; }
+  .roof-tint.on { opacity: .9; }
   .void .ov-card { background: transparent; border: 0; box-shadow: none; text-align: center; }
   .void .void-text { display: flex; flex-direction: column; gap: 18px; margin: 24px 0 8px; }
   .void .void-text p { color: #d8d2c8; letter-spacing: .08em; }
@@ -2255,6 +2289,12 @@
       ...(P.cur.mtSplit ? ['ミオとツムギは、別々の道で、校門を出ていった。'] : []),
       '門の手前で、足が止まる。まだ、ここは通れない。'], 'unravelDim', 'chime_sky_1830'];
     else end = ['GOOD', '送り出した屋上', ['全員の背中を、校門の向こうへ見送った。', '夕焼けの屋上に、一人で立つ。', '足もとに、生徒手帳が一冊、落ちていた。'], 'unravel', 'rooftop'];
+    if (ROOF && (end[0] === 'GOOD' || end[0] === 'NORMAL2')) {
+      await endScene('chime_sky_1830');
+      const v = await uiWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px"><p>五人の背中を、校門の向こうへ見送った。</p><p>……チャイムは、まだ鳴っていない。</p></div>`, 'dawn', ['屋上へ向かう', 'ここで終える']);
+      closeOverlay();
+      if (v === 0) return roofScene(end[0] === 'NORMAL2');
+    }
     P.endings[end[0]] = true;
     if (end[0] === 'GOOD' && !P.shelf.me) { P.shelf.me = true; albumSync(); }  // 主人公のわすれもの（生徒手帳）
     // 朝を迎えるエンディングは、ほどけたあとの曲が流れていれば続けて聴かせる。BADは、その結末の曲が流れていなければ切り替える
@@ -2285,6 +2325,214 @@
       <p class="note">${endNote}</p>${achNote(got)}
       `,
       dawnEnd ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
+  }
+  /* ================================================================
+     屋上（18:30）。いまは確認用のURL（?roof）でだけ入れる。台詞は「屋上_台本案」第1稿
+     本編は、18:30 に屋上のフェンスの前で立ち尽くす主人公の思い返し。チャイムで意識が戻り、ここからは現実の時間
+     ================================================================ */
+  const ROOF = /[?&]roof\b/.test(location.search);
+  // 確認用：?roof のときだけ、コンソールから屋上の場面を直接始められる（__roof('split'|'awk'|'straight')）
+  if (ROOF) window.__roof = k => { P.cur.mtKind = k === 'awk' ? 'awk' : 'straight'; return roofScene(k === 'split'); };
+  const sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+  // 画面いっぱいの演出の層
+  function fxLayer(cls) {
+    const d = document.createElement('div'); d.className = 'roof-fx ' + (cls || ''); document.body.appendChild(d); return d;
+  }
+  // 言葉の雨：短い言葉は小さく散らして重ね、長い言葉は一つずつはっきり読ませる。崩した言葉はにじませて読めなくする。画面を押すと早く進む
+  async function wordRain() {
+    const box = fxLayer('rain');
+    const shorts = ['きもい', 'バカ', '邪魔', '使えない', '気持ち悪い', '役立たず'];
+    const crushed = ['菌が移る', '直さないと引っ叩くよ', '暴力を振るわれないとわからないの'];
+    const longs = ['そんなんじゃ、社会で通用しない', '誰も、相手にしないよ', 'みんな本当は、汚いって思ってるよ', 'きっとみんな、あなたのこと嫌ってるよ',
+                   '殴るよ', 'なんでそんなことするの', '普通に考えれば、わかるでしょ', 'あなたには、無理', '出て行け', 'もう手遅れだ', '最低の人間だね', 'お前なんか、いらない'];
+    let fast = false; box.onclick = () => { fast = true; };
+    const drop = (t, cls) => {
+      const e = document.createElement('span'); e.className = 'rw ' + cls; e.textContent = t;
+      e.style.left = (4 + Math.random() * 80) + '%'; e.style.top = (-8 + Math.random() * 30) + '%';
+      e.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
+      box.appendChild(e); setTimeout(() => e.remove(), 4200);
+    };
+    if (reduce) box.innerHTML = `<div class="rw-list">${longs.map(l => `<p>「${l}」</p>`).join('')}</div>`;
+    else {
+      const rainT = setInterval(() => { drop(shorts[Math.floor(Math.random() * shorts.length)], 'short'); if (Math.random() < .18) drop(crushed[Math.floor(Math.random() * crushed.length)], 'crush'); }, 170);
+      for (const l of longs) {
+        const e = document.createElement('p'); e.className = 'rw long'; e.textContent = `「${l}」`;
+        e.style.top = (14 + Math.random() * 62) + '%'; e.style.left = (6 + Math.random() * 40) + '%';
+        box.appendChild(e); setTimeout(() => e.classList.add('gone'), 2600); setTimeout(() => e.remove(), 3600);
+        await sleep(fast ? 90 : 1250);
+      }
+      await sleep(fast ? 100 : 900);
+      clearInterval(rainT);
+    }
+    // 最後の一つ。そのあと、すべての言葉が止まる
+    box.querySelectorAll('.rw, .rw-list').forEach(e => e.classList.add('gone'));
+    const last = document.createElement('p'); last.className = 'rw final'; last.textContent = '「あなたは、人間じゃない」'; box.appendChild(last);
+    await sleep(2600);
+    last.classList.add('gone'); await sleep(1400);
+    // 黒く底のない水に、沈んでいく音
+    box.classList.add('sink');
+    const g = document.createElement('p'); g.className = 'rw gopo'; g.textContent = 'ゴポ……　　ゴポ……'; box.appendChild(g);
+    await sleep(3200);
+    box.classList.add('out'); await sleep(900); box.remove();
+  }
+  // 遅れて混ざってくる、正論と慰めの言葉（小さく、一つずつ）
+  async function lateWords(list) {
+    const box = fxLayer('late');
+    for (const l of list) {
+      const e = document.createElement('p'); e.className = 'lw'; e.textContent = `「${l}」`; box.appendChild(e);
+      await sleep(1700);
+      e.classList.add('dim');
+    }
+    await sleep(1200);
+    box.classList.add('out'); await sleep(900); box.remove();
+  }
+  // 景色がひび割れて崩れる（思い返しの放課後から、現実の屋上へ）
+  async function crack() {
+    const box = fxLayer('crack'); await sleep(1500); box.classList.add('out'); await sleep(700); box.remove();
+  }
+  // 波紋：名前を書くと決める瞬間。音がすっと静まる
+  async function ripple() {
+    const box = fxLayer('ripple'); for (let i = 0; i < 3; i++) { const r = document.createElement('i'); r.style.animationDelay = (i * .5) + 's'; box.appendChild(r); }
+    await sleep(2600); box.classList.add('out'); await sleep(700); box.remove();
+  }
+  // 画面の色：本当の自分（瓶覗のごく淡い水色）／あたたかい雨
+  function roofTint(cls) {
+    $('#scene').classList.remove('tint-pale', 'tint-warm'); if (cls) $('#scene').classList.add(cls);
+    // 淡い水色は、絵の上に瓶覗の色を薄く重ねる（色相をずらすと緑がかるため）
+    const st = $('#bgImg').parentElement; let t = st.querySelector('.roof-tint');
+    if (!t) { t = document.createElement('div'); t.className = 'roof-tint'; st.appendChild(t); }
+    t.classList.toggle('on', cls === 'tint-pale');
+  }
+  function roofVoid(lines) { return uiWait(`<div class="fade void-text">${lines.map(l => `<p>${l}</p>`).join('')}</div>`, 'void', ['……']).then(closeOverlay); }
+
+  async function roofScene(split) {
+    const kind = split ? 'split' : (P.cur.mtKind || 'straight');
+    C = { ...INFIRMARY, id: 'roof', key: 'roof', name: '#roof', faces: {} };   // 名前は誰の台詞とも一致しない印（地の文でも立ち絵を出さない）   // 屋上では立ち絵を出さない（5人は文と声だけ）
+    talkHold = false; guest = null; guestRender();
+    // 上の欄：時刻は18:30のまま。チャイムの残りとヒント・チャイムを待つ・セーブは使わない
+    $('#clock').textContent = '18:30'; $('#remain').textContent = ''; $('#bells').style.visibility = 'hidden';
+    ['#btnHint', '#btnWait', '#btnSave'].forEach(q => { $(q).disabled = true; });
+    bgm(null);
+    await roofVoid(['チャイムが鳴っている。']);
+    await crack();
+    await endScene('rooftop');
+    await say(['……風が、強い。', '気がつくと、フェンスの前に立っていた。', '夕日が、山の稜線にかかっている。', '（……ここは）',
+               '足もとで、紙が風にあおられていた。', () => showCut('protag_notebook_dusk'), '生徒手帳だった。開いたまま、落ちている。']);
+    const pick = await choose(['手帳を拾う', '目をそらす']);
+    hideCut();
+    if (pick === 1) {
+      bgm('endless');
+      await say(['手帳から、目をそらした。', 'フェンスの向こうの夕日だけを見ていた。', '（……見なければ、思い出さなくていい）',
+                 'チャイムの音が、いつまでも遠くで鳴っている気がした。', '日は、沈みかけたまま、沈まなかった。']);
+      return roofEnd('BAD7', '目をそらした夕焼け');
+    }
+    await say(['手帳を拾った。', '開いていたのは、名前のページだった。', '春日ヒナ。井上ソウタ。水野ミオ。三浦ケイ。白石ツムギ。', '一行ずつ、違う字だった。',
+               'さらさらと流れる字。一画ずつ、ていねいな字。小さくて、ていねいな字。大きくて、まっすぐな字。丸くて、やわらかい字。',
+               '（……あの放課後は、本当にあった）', 'その下に、6行目があった。', '何も書かれていない。', '（ここには、誰の名前が入るはずだったんだろう）']);
+    $('#scene').classList.add('roof-dark');
+    await wordRain();
+    await say(['（……人間じゃないなら、何なんだよ）', '（……そうかもしれない）']);
+    await lateWords(['苦しいのは、あなただけじゃないよ', 'いつもヘラヘラしてるのに', '簡単に泣かない方がいいよ', '一時の感情に、流されないようにね',
+                     '考えすぎだよ', 'もう、頑張らなくてもいいよ', '時間が、解決してくれるんじゃないかな', '昔の私に似てる。……でも大丈夫。今は、こう変われたから']);
+    await say(['頭に、誰かの手が置かれる感触がした。']);
+    await lateWords(['まだ若いんだから、大丈夫', '人生、これからだよ', '生きてれば、いいことあるよ']);
+    await say(['（……言われたときは、傷ついたなんて思わなかった）', '（でも、ずっと、残っていた）',
+               '（……こんな心なんて、いらない）', '（心と身体を分けて、身体だけ、誰かにあげられたらいいのに）']);
+    // もう一人の自分（心の声を形にしたもの。そこに本当にいるわけではない）
+    $('#scene').classList.remove('roof-dark'); $('#scene').classList.add('roof-wind');
+    const O = 'もう一人の自分';
+    await say(['顔を上げると、フェンスの向こうの縁に、誰かが立っている気がした。', '自分と、同じ顔をしていた。',
+               [O, '……五人は救えたのに。自分のことは、救えないんだね'], [O, '名前も、書けないくせに'], [O, 'いつまで経っても、変わらないね'],
+               [O, 'この社会で生きていける未来なんて、全く見えない。……そうでしょ']]);
+    const t = await choose(['「……つらかったんだね。ずっと」', '「……普通の人に、ならなきゃ」', '「大丈夫。まだ、これからだよ」', '「……生きてる価値なんて、ないよね」']);
+    if (t === 3) return roofBad8();
+    await say([[[O, '……今さら？'], [O, 'そんな言葉、誰も言ってくれなかったのに'], [O, '自分で自分に言ったって、届かないよ']],
+               [[O, '……それ、言われてきた言葉だよね'], [O, '普通になれないから、ここにいるんじゃないの']],
+               [[O, '……これから？'], [O, '今までずっと地獄だったのに、それを、まだ何十年も続けろっていうの'], [O, 'それは、自分に向けられた言葉じゃない。……綺麗事だよ']]][t]);
+    await say(['もう一人の自分が、近づいてくる気がした。胸ぐらをつかむような勢いで。',
+               [O, '……あの時の言葉は、嘘だったの？'], [O, 'あの子たちにかけた言葉。……嘘だったの？　何とか言ってよ'],
+               '泣き叫ぶみたいな声だった。すがるみたいな声だった。', '何も、言えなかった。うつむいたまま。',
+               '（……迷惑かけて、ごめんなさい）', '（力になれなくて、ごめんなさい）', '（嫌な思いさせて、ごめんなさい）', '（生まれてきて、ごめんなさい）', '（生きてて、ごめん――）']);
+    // 5人が来る（思い返しと現実が重なる）
+    $('#scene').classList.remove('roof-wind');
+    await say(['扉が、開く音がした。', '「……いた！」',
+               '階段を駆け上がってきた足音が、いくつも重なる。', '振り返ると、扉のところに、五人が立っていた。', '息を切らして。名前も知らないはずの、こちらを見て。',
+               ['ケイ', '……やっぱり、あんただ'], ['ツムギ', '放課後、保健室に来てくれた人……だよね'],
+               ...(kind === 'split' ? ['ミオは扉のそばに、ツムギはフェンス寄りに立っていた。二人は、一度も目を合わせなかった。'] : []),
+               '誰も、近づいてこなかった。', '扉のところで、止まったまま。',
+               '「……もう、誰も近寄らないで」', '「……近くにいると、不幸になるから」',
+               ['ソウタ', '……知らねえよ、そんなの'], ['ソウタ', '放課後、ずっと隣にいたのは、お前だろ'],
+               ['ヒナ', '……私の絵、最後まで見ててくれたでしょ'], ['ミオ', '……あなた、何も聞かずに、待っててくれた'],
+               '（……ずっと、誰かにとっての一番になりたかった）', '気がつくと、涙が止まらなくなっていた。', '（泣きたくなんかないのに。勝手に、出てくる）',
+               ['ミオ', '……今は、泣いていいよ']]);
+    roofTint('tint-warm'); bgm('musicbox', 2);
+    await say(['ケイが、一歩だけ前に出た。', '手を差し出して、それ以上は来なかった。', ['ケイ', '……一人で、頑張らなくていいからな'], ['ケイ', '待ってるから'],
+               ['ツムギ', '……手、つないでもいい？']]);
+    if (await choose(['うなずく', '首を振る']) === 0) await say(['小さくうなずくと、ツムギが、そっと手をつないだ。']);
+    else await say([['ツムギ', '……うん'], 'ツムギは手を引っこめて、そのまま、隣に立った。']);
+    await say(['もう一人の自分は、まだそこにいる気がした。', 'うつむいたまま。', [O, '……それでも、そっちへ行くの？'], [O, 'また、生かされるの？'], '（……生かされるんじゃない）']);
+    if (await choose(['手帳の6行目に、名前を書く', '手帳を閉じる']) === 1) return roofBad8();
+    // TRUE
+    await say(['うつむいているもう一人の自分に、向き直った。', '「……待たせて、ごめん」', '「あなたは、自分が助ける。……必ず」']);
+    roofTint(null); await ripple();
+    await say(['ペンを持つ手が、少し震えた。', '6行目に、名前を書いた。', '（……一歩ずつ、進んでいこう）',
+               '顔を上げると、フェンスの向こうには、もう誰もいなかった。', '代わりに、手のひらが、あたたかい気がした。', '誰かと手をつないでいるみたいに。']);
+    roofTint('tint-pale');
+    await say(['（……久しぶり。あなたに会いたかった）', '扉のほうを見た。', '鍵が、挿さったままだった。', '（……扉、閉めてなかったんだ）']);
+    roofTint(null);
+    bgm('unravelTrue', 2);
+    await roofVoid(['ケイが呼んだ先生が来て、そのあとのことは、あまり覚えていない。', '家に帰ったのは、ずいぶん遅くだった。']);
+    $('#clock').textContent = '';   // 翌朝からは時刻を出さない
+    await endScene('rooftop_dawn');
+    await say(['朝が来た。']);
+    await endScene('infirmary');   // 仮：昼の保健室の絵はまだない
+    await say(['「……終業式、行きたい」', '自分で、そう言った。', '教室には入らず、一日を保健室で過ごすことになった。',
+               ...({ straight: ['ツムギは、朝のうちに、3組へ行ったらしい。……ミオの隣の席に。'],
+                    awk: ['ツムギは、朝、3組の扉の前まで行ったらしい。……入れたかどうかは、聞かなかった。'],
+                    split: ['ツムギは、今日も保健室にいた。隣のベッドのふちに座って、窓の外を見ていた。'] }[kind]),
+               '昼前、急に、重さが戻ってきた。', '理由はわからない。ただ、息が浅くなった。', '（……やっぱり、何も変わってないのかもしれない）',
+               kind === 'split' ? 'ツムギは何も言わずに、ただ、そこにいてくれた。' : '養護の先生は何も言わずに、ただ、そこにいてくれた。']);
+    await say(['終業式が終わって、扉が叩かれた。',
+               ...({ straight: ['入ってきたのは、ヒナと、ソウタと、ケイ。それから、ミオとツムギが、二人で。', 'ミオは丸椅子をひとつ運んできて、ツムギの隣に置いて座った。'],
+                    awk: ['入ってきたのは、ヒナと、ソウタと、ケイ。少し遅れて、ミオとツムギ。', '二人は隣に座ったけれど、あいだに、少しすき間があった。',
+                          ['ツムギ', '……教室、どうだった？'], ['ミオ', '……いつもどおり']],
+                    split: ['入ってきたのは、ヒナと、ソウタと、ケイと、ミオ。', ['ミオ', '……失礼します'], ['ツムギ', '……水野さん'],
+                            'それきり、二人は何も言わなかった。'] }[kind])]);
+    showCut('protag_notebook');   // 仮：保健室の台の上の絵は描き直し待ち（Q74c）
+    await say(['手帳の見開きに、ヒナが、五人の顔を描いていった。', '一人ずつ、その横に、自分の字で一言を書いていく。',
+               ...(kind === 'split' ? ['ペンがツムギからミオへ渡るとき、二人は、指が触れないように持ちかえた。'] : []),
+               ['ヒナ', '……あんたの顔も、いつか描かせて'], '6つ目の丸い枠は、顔を描かないまま残った。',
+               '（……この時間が、ずっと続けばいいのに）', '（……続かなくても、また明日がある）']);
+    hideCut();
+    await endScene('true_gate');   // 仮：光と影の直し待ち（Q61e）
+    await say(['六人で、正門を出た。',
+               ...({ straight: ['ミオとツムギは、並んで歩いていった。'],
+                    awk: ['ミオとツムギは、半歩ずれて並んでいた。', ['ミオ', '……当番の日なら、いるから']],
+                    split: ['ミオとツムギは、何も言わずに、別々の方向へ歩いていった。', '二人とも、一度ずつ振り返った。……振り返る時は、少しずれていた。'] }[kind])]);
+    await roofVoid(['……それが、いつだったのかは覚えていない。', '気づいた頃には、手帳の6つ目の丸い枠に、顔が描きこまれていた。']);
+    if (!P.saved) P.saved = {};
+    P.saved.me = true; P.shelf.me = true; albumSync();
+    return roofEnd('TRUE', '6人の朝');
+  }
+  async function roofBad8() {
+    $('#scene').classList.remove('roof-wind'); roofTint(null); bgm('vanish');
+    await say(['手帳を閉じた。', ['もう一人の自分', '……やっぱり、変われなかった']]);
+    $('#scene').classList.add('roof-dark');
+    await say(['五人の名前の字が、色を失っていく。', '6行目は、白いまま。']);
+    $('#scene').classList.remove('roof-dark');
+    $('#clock').textContent = '';   // 翌朝からは時刻を出さない
+    await endScene('rooftop_dawn');
+    await say(['朝が来た。', 'きれいだと、思えなかった。']);
+    return roofEnd('BAD8', 'こわれた心');
+  }
+  function roofEnd(tag, title) {
+    roofTint(null); $('#scene').classList.remove('roof-dark', 'roof-wind'); $('#bells').style.visibility = '';
+    P.endings[tag] = true;
+    const got = achGain(tag);
+    finishRun(true);
+    overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px"><p class="eyebrow">${tag === 'TRUE' ? 'TRUE END' : 'BAD END'}「${title}」</p></div>
+      <p class="note">この放課後は、ここで終わった。</p>${achNote(got)}`, tag === 'TRUE' ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ'])
+      .then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
   // エンディングの場面に切り替える。人物や調べる場所を消し、背景をフェードアウト→フェードインで差し替える
   async function endScene(img) {
@@ -5547,6 +5795,7 @@
     }
     // 仲直り：まっすぐなときは、まずオルゴール（仲直りの場面で『また明日』へ）。ぎこちないときは、ここから『また明日』
     const straight = risk === 0;
+    P.cur.mtKind = straight ? 'straight' : 'awk'; saveP();
     bgm(straight ? 'musicbox' : 'unravel');
     await say([['ツムギ', '……別々にいようって言ったの、私だよね', 'grief'], ['ツムギ', 'ミオを守りたかったのに。……一人にして、ごめん', 'grief']]);
     if (slips.includes('smile') || slips.includes('side')) await say([['ツムギ', '……さっきは、笑ってごまかして、ごめん', 'down']]);
