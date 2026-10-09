@@ -745,7 +745,7 @@
   // 立ち絵は「座った絵（_s）」と「立った絵（_p）」の2組。部屋では座っていて、立ち上がる場面から立った絵に切り替える（R.standing）
   // 立った絵は表情の数が少ないので、ない表情は近いものを使う
   const STAND_SET = { hina: 'angry despair down grief sad smile surprise pout', sota: 'angry crysmile despair down grief sad smile surprise',
-                      mio: 'angry crysmile despair down grief sad smile surprise stroke nb nb_apology nb_grief nb_crysmile nbleave nbleavewonder', kei: 'angry crysmile despair down grief sad smile surprise',
+                      mio: 'angry crysmile despair down grief sad smile surprise stroke offer offer_sad nb nb_apology nb_grief nb_crysmile nbleave nbleavewonder', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
                        blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', grip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise', sleeve: 'sad', wristhate: 'sad' };
@@ -4983,7 +4983,7 @@
              mioNormal: 'mio_bust', mioSad: 'mio_sad', mioDown: 'mio_down', mioSurprise: 'mio_surprise', mioGrief: 'mio_grief', mioCrySmile: 'mio_crysmile', mioDespair: 'mio_despair', mioSoftSmile: 'mio_softsmile',
              mioLeave: 'mio_nbleave', mioLeaveWonder: 'mio_nbleavewonder',   // 扉のほうを向いた姿
              // 本をツムギに渡したあとは、本を持たない立ち絵（絶望の顔はまだ無いので、泣き顔で代える）
-             mioNbDown: 'mio_nb', mioNbSad: 'mio_nb_apology', mioNbGrief: 'mio_nb_grief', mioNbDespair: 'mio_nb_grief', mioNbCrySmile: 'mio_nb_crysmile' },
+             mioOffer: 'mio_offer', mioOfferSad: 'mio_offer_sad', mioNbDown: 'mio_nb', mioNbSad: 'mio_nb_apology', mioNbGrief: 'mio_nb_grief', mioNbDespair: 'mio_nb_grief', mioNbCrySmile: 'mio_nb_crysmile' },
     lost: '保健室の来室カード',
     clock: { img: 'ci_clock_infirmary', cx: 782, cy: 430, s: 1.01 },
     clock2: ['時計の下に、行事予定の紙が貼ってある。', '「7/16（水）　終業式」', 'その下に、先生の字で小さく。「7/22（火）　白石さん　入院」'],
@@ -5388,8 +5388,9 @@
         }
         await say([() => bgm('tension'), ['ミオ', '……失礼します', 'mioDown'], ['ツムギ', '……ミオ', 'surprise'],
                    ['ミオ', '図書委員の、水野です。……予約の本を、届けに来ました', 'mioSad'],
-                   'ミオは、胸に抱えていた本を、両手で差し出した。『ひとりぶんの椅子』。', ['ミオ', '……当番、だから', 'mioNbSad'],
-                   'ツムギは本を受け取って、そっと表紙を撫でた。ページのあいだから、しおりがのぞいている。']);
+                   // 差し出すときは目を伏せ、「当番、だから」でツムギの目を見る。受け取られたら本を持たない絵に
+                   guestShow('mioOffer'), 'ミオは、胸に抱えていた本を、両手で差し出した。『ひとりぶんの椅子』。', ['ミオ', '……当番、だから', 'mioOfferSad'],
+                   guestShow('mioNbDown'), 'ツムギは本を受け取って、そっと表紙を撫でた。ページのあいだから、しおりがのぞいている。']);
         await say(['ツムギが、しおりを開いた。', '「一年のとき、この本を教えてくれてありがとう。一人で座っていた私に、最初に話しかけてくれたのは、ツムギだった。」',
                    '「黒板の字を書いたのは、私です。ごめんなさい。いてもいなくても同じなんかじゃない。」',
                    ['ミオ', '……ごめんなさい', 'mioNbGrief'], ['ミオ', 'ずっと、謝りたかった。……謝ったら、許してもらうのを待つことになるって、思ってた', 'mioNbGrief'],
