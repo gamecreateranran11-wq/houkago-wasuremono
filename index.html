@@ -3,7 +3,7 @@
 <title>放課後のわすれもの</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Shippori+Mincho+B1:wght@600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=Shippori+Mincho+B1:wght@600;800&family=Yomogi&family=Zen+Kurenaido&family=Zen+Kaku+Gothic+New:wght@700&display=swap">
 <style>
   [hidden] { display: none !important; }
   body { margin: 0; }
@@ -419,8 +419,14 @@
   .roof-fx.rain.sink { background: #000; }
   .rw { position: absolute; margin: 0; color: #d9d2c6; font-family: var(--serif); white-space: nowrap; transition: opacity 1s ease; }
   .rw.gone { opacity: 0; }
-  .rw.short { font-size: 13px; opacity: .55; animation: rwfall linear forwards; }
-  .rw.crush { font-size: 15px; opacity: .45; filter: blur(2.2px); letter-spacing: -.25em; text-shadow: 3px 1px 0 #d9d2c6, -2px -1px 0 #d9d2c6; animation: rwfall linear forwards; }
+  .rw.short { font-size: 13px; opacity: .6; animation: rwfall linear forwards; }
+  .rw.crush { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 700; font-size: 15px; color: #7a1f24; opacity: .5; filter: blur(2.2px); letter-spacing: -.25em; text-shadow: 3px 1px 0 #7a1f24, -2px -1px 0 #7a1f24; animation: rwfall linear forwards; }
+  .rw.neg, .lw.neg, .rw-list .neg { color: #a4373a; }
+  .rw.sei, .lw.sei, .rw-list .sei { color: #7f93a6; }
+  .rw.nag, .lw.nag, .rw-list .nag { color: #d8d0c2; }
+  .f-min { font-family: var(--serif); }
+  .f-yomogi { font-family: 'Yomogi', var(--serif); }
+  .f-kure { font-family: 'Zen Kurenaido', var(--serif); }
   .rw.long { font-size: 19px; animation: rwin .5s ease both; }
   .rw.final { left: 0; right: 0; top: 42%; text-align: center; font-size: 22px; letter-spacing: .1em; animation: rwin 1.2s ease both; }
   .rw.gopo { left: 0; right: 0; bottom: 18%; text-align: center; font-size: 13px; color: #6d6a66; letter-spacing: .3em; animation: rwin 1.5s ease both; }
@@ -2334,6 +2340,8 @@
   // 確認用：?roof のときだけ、コンソールから屋上の場面を直接始められる（__roof('split'|'awk'|'straight')）
   if (ROOF) window.__roof = k => { P.cur.mtKind = k === 'awk' ? 'awk' : 'straight'; return roofScene(k === 'split'); };
   const sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+  // 言葉の字：明朝と手書き（Yomogi・Zen Kurenaido）を混ぜる。いろいろな人から言われた言葉に見えるように
+  const rainFont = () => ['f-min', 'f-yomogi', 'f-kure'][Math.floor(Math.random() * 3)];
   // 画面いっぱいの演出の層
   function fxLayer(cls) {
     const d = document.createElement('div'); d.className = 'roof-fx ' + (cls || ''); document.body.appendChild(d); return d;
@@ -2341,22 +2349,24 @@
   // 言葉の雨：短い言葉は小さく散らして重ね、長い言葉は一つずつはっきり読ませる。崩した言葉はにじませて読めなくする。画面を押すと早く進む
   async function wordRain() {
     const box = fxLayer('rain');
-    const shorts = ['きもい', 'バカ', '邪魔', '使えない', '気持ち悪い', '役立たず'];
+    const shorts = ['きもい', 'バカ', '邪魔', '使えない', '気持ち悪い', '役立たず'];   // どれも否定
     const crushed = ['菌が移る', '直さないと引っ叩くよ', '暴力を振るわれないとわからないの'];
-    const longs = ['そんなんじゃ、社会で通用しない', '誰も、相手にしないよ', 'みんな本当は、汚いって思ってるよ', 'きっとみんな、あなたのこと嫌ってるよ',
-                   '殴るよ', 'なんでそんなことするの', '普通に考えれば、わかるでしょ', 'あなたには、無理', '出て行け', 'もう手遅れだ', '最低の人間だね', 'お前なんか、いらない'];
+    const longs = [['そんなんじゃ、社会で通用しない', 'neg'], ['誰も、相手にしないよ', 'neg'], ['みんな本当は、汚いって思ってるよ', 'neg'], ['きっとみんな、あなたのこと嫌ってるよ', 'neg'],
+                   ['殴るよ', 'neg'], ['なんでそんなことするの', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
+                   ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['お前なんか、いらない', 'neg']];
     let fast = false; box.onclick = () => { fast = true; };
     const drop = (t, cls) => {
-      const e = document.createElement('span'); e.className = 'rw ' + cls; e.textContent = t;
+      const e = document.createElement('span'); e.className = 'rw ' + cls + (cls === 'short' ? ' neg ' + rainFont() : ''); e.textContent = t;
+      if (cls === 'short') { e.style.fontSize = (11 + Math.random() * 6) + 'px'; e.style.rotate = (Math.random() * 10 - 5).toFixed(1) + 'deg'; }
       e.style.left = (4 + Math.random() * 80) + '%'; e.style.top = (-8 + Math.random() * 30) + '%';
       e.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
       box.appendChild(e); setTimeout(() => e.remove(), 4200);
     };
-    if (reduce) box.innerHTML = `<div class="rw-list">${longs.map(l => `<p>「${l}」</p>`).join('')}</div>`;
+    if (reduce) box.innerHTML = `<div class="rw-list">${longs.map(([l, k]) => `<p class="${k}">「${l}」</p>`).join('')}</div>`;
     else {
       const rainT = setInterval(() => { drop(shorts[Math.floor(Math.random() * shorts.length)], 'short'); if (Math.random() < .18) drop(crushed[Math.floor(Math.random() * crushed.length)], 'crush'); }, 170);
-      for (const l of longs) {
-        const e = document.createElement('p'); e.className = 'rw long'; e.textContent = `「${l}」`;
+      for (const [l, k] of longs) {
+        const e = document.createElement('p'); e.className = `rw long ${k} ${rainFont()}`; e.textContent = `「${l}」`;
         e.style.top = (14 + Math.random() * 62) + '%'; e.style.left = (6 + Math.random() * 40) + '%';
         box.appendChild(e); setTimeout(() => e.classList.add('gone'), 2600); setTimeout(() => e.remove(), 3600);
         await sleep(fast ? 90 : 1250);
@@ -2366,7 +2376,7 @@
     }
     // 最後の一つ。そのあと、すべての言葉が止まる
     box.querySelectorAll('.rw, .rw-list').forEach(e => e.classList.add('gone'));
-    const last = document.createElement('p'); last.className = 'rw final'; last.textContent = '「あなたは、人間じゃない」'; box.appendChild(last);
+    const last = document.createElement('p'); last.className = 'rw final neg'; last.textContent = '「あなたは、人間じゃない」'; box.appendChild(last);
     await sleep(2600);
     last.classList.add('gone'); await sleep(1400);
     // 黒く底のない水に、沈んでいく音
@@ -2378,8 +2388,8 @@
   // 遅れて混ざってくる、正論と慰めの言葉（小さく、一つずつ）
   async function lateWords(list) {
     const box = fxLayer('late');
-    for (const l of list) {
-      const e = document.createElement('p'); e.className = 'lw'; e.textContent = `「${l}」`; box.appendChild(e);
+    for (const [l, k] of list) {
+      const e = document.createElement('p'); e.className = `lw ${k} ${rainFont()}`; e.textContent = `「${l}」`; box.appendChild(e);
       await sleep(1700);
       e.classList.add('dim');
     }
@@ -2432,10 +2442,10 @@
     $('#scene').classList.add('roof-dark');
     await wordRain();
     await say(['（……人間じゃないなら、何なんだよ）', '（……そうかもしれない）']);
-    await lateWords(['苦しいのは、あなただけじゃないよ', 'いつもヘラヘラしてるのに', '簡単に泣かない方がいいよ', '一時の感情に、流されないようにね',
-                     '考えすぎだよ', 'もう、頑張らなくてもいいよ', '時間が、解決してくれるんじゃないかな', '昔の私に似てる。……でも大丈夫。今は、こう変われたから']);
+    await lateWords([['苦しいのは、あなただけじゃないよ', 'sei'], ['いつもヘラヘラしてるのに', 'neg'], ['簡単に泣かない方がいいよ', 'sei'], ['一時の感情に、流されないようにね', 'sei'],
+                     ['考えすぎだよ', 'nag'], ['もう、頑張らなくてもいいよ', 'nag'], ['時間が、解決してくれるんじゃないかな', 'nag'], ['昔の私に似てる。……でも大丈夫。今は、こう変われたから', 'nag']]);
     await say(['頭に、誰かの手が置かれる感触がした。']);
-    await lateWords(['まだ若いんだから、大丈夫', '人生、これからだよ', '生きてれば、いいことあるよ']);
+    await lateWords([['まだ若いんだから、大丈夫', 'nag'], ['人生、これからだよ', 'nag'], ['生きてれば、いいことあるよ', 'nag']]);
     await say(['（……言われたときは、傷ついたなんて思わなかった）', '（でも、ずっと、残っていた）',
                '（……こんな心なんて、いらない）', '（心と身体を分けて、身体だけ、誰かにあげられたらいいのに）']);
     // もう一人の自分（心の声を形にしたもの。そこに本当にいるわけではない）
