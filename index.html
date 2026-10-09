@@ -2276,7 +2276,7 @@
       // 部屋の絵と、わすれものの重ね絵を両方読み終えてから、同時に切り替える（重ね絵だけ後から現れないように）
       const dec = im => (im.decode ? im.decode() : Promise.resolve()).catch(() => {});
       const pre = new Image(); pre.src = `img/${img}.webp`;
-      const preLo = ch && ch.leftoverImg ? new Image() : null; if (preLo) preLo.src = `img/${ch.leftoverImg}.webp`;
+      const preLo = ch && ch.leftoverImg ? new Image() : null; if (preLo) preLo.src = `img/${(img.endsWith('_unlit') && ch.leftoverDark) || ch.leftoverImg}.webp`;
       bg.style.opacity = '0'; lo.style.transition = 'opacity .7s ease'; lo.style.opacity = '0';
       await Promise.all([wait(750), dec(pre), preLo ? dec(preLo) : null]);
       bg.src = pre.src;
@@ -4935,6 +4935,7 @@
     // 座り姿は、暗い部屋に合わせて色を作った絵があればそれに替える（フィルターはかけない）
     const sf = $('#sitFig');
     if (C && C.sit && C.sit.dark) { sf.src = `img/${on ? C.sit.dark : C.sit.src}.webp`; sf.classList.toggle('pretoned', !!on); }
+    const li = $('#leftover img'); if (li && C && C.leftoverDark) li.src = `img/${on ? C.leftoverDark : C.leftoverImg}.webp`;
     // 明かりを消した部屋では、立ち絵と座り姿も部屋と同じ暗さ・色味にする（#fRoomDark）
     $('#scene').classList.toggle('room-dark', !!on);
   }
@@ -4976,7 +4977,7 @@
     bg: 'infirmary', bgClock: { cx: 830, cy: 202, rx: 40, ry: 40 },
     // 手前のベッド（1）の角に座る。明かりを消すと、部屋の暗さ・色味に合わせた絵（dark）に替える
     sit: { src: 'tsumugi_sit', dark: 'tsumugi_sit_dark', style: 'left:78.19%;top:34.57%;height:55.37%' },
-    leftover: 'left:88%;top:62%;width:3.6%;height:1.6%;transform:rotate(-4deg)',   // 仮の紙（シーツの上の来室カードの絵は直し中：Q29d）
+    leftover: '', leftoverImg: 'i_left', leftoverDark: 'i_left_dark',   // 消えたあと、シーツの上に来室カード（細長い厚紙）。暗い部屋では暗い版
     faces: { normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
              grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile',
              angryCry: 'tsumugi_angrycry',  // 怒りと悔しさをにじませた涙
