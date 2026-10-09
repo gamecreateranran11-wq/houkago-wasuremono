@@ -413,6 +413,7 @@
   .dawn { background: linear-gradient(180deg, #f4e7d7 0%, #dfe6ee 100%); }
   .dawn .ov-card { background: rgba(255, 255, 255, .55); border-color: #c9c2ba; color: #2a2530; }
   .dawn .ov-card p { color: #2a2530; }
+  .dawn .ov-card p.mem { color: #5a4f66; font-size: .95em; }
   .dawn .eyebrow { color: #a4502c; }
   .dawn .note { color: #5b5462; border-color: #c9c2ba; }
   .dawn .btn { background: #fff; border-color: #c9c2ba; color: #2a2530; }
@@ -2459,6 +2460,7 @@
       <div class="fade" style="display:flex;flex-direction:column;gap:12px">
         ${lines.map(l => `<p>${l}</p>`).join('')}
         <p>${stop}</p>
+        ${(C.memory || []).map(l => `<p class="mem">${l}</p>`).join('')}
         <p>振り返ると、ほかの教室には、まだ明かりがついていた。</p>
         <p class="eyebrow">${C.label}　${C.name}の心がほどけた</p>
       </div>
@@ -2573,7 +2575,7 @@
     clock2: ['時計の下に、美術部の今月の予定表が貼ってある。', '「7/18　県展 搬入」の欄にだけ、赤い丸が何重にも描かれて、紙が毛羽立っていた。'],
     // 核心の曲は「破ったのは、お母さん」（選択のあと5文目）から始める
     coreAt: 5,
-    id: 'art', key: 'hina', name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom', bgClock: { cx: 755, cy: 163, rx: 34, ry: 35 },
+    id: 'art', key: 'hina', memory: ['（……思い出した。校門で、生徒手帳を差し出したこと。ヒナは少し驚いて、それから、さらさらと名前を書いてくれた）', '（もうひとつ。美術室の前の廊下で、窓ごしに、ひとりで描いている背中を見ていたことがある。……声は、かけなかった）'], name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom', bgClock: { cx: 755, cy: 163, rx: 34, ry: 35 },
     sit: { src: 'hina_sit', style: 'left:2.9%;top:36.7%;height:20.0%' },
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
     faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout' , grip: 'hina_grip',
@@ -3210,7 +3212,7 @@
   const MUSIC = {
     window2: ['窓際の机に、ソウタの鞄が置いてある。開いた口から、紙が一枚のぞいていた。', '模試の結果だ。「第一志望　E判定」。……何度も握りつぶしたように、しわだらけになっている。'],
     clock2: ['時計の針の音が、やけに大きく聞こえる。', '……ソウタは、時計のほうを見ないようにしているみたいだった。17:00。リハーサルが始まるはずだった時間を。'],
-    id: 'music', key: 'sota', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room', bgClock: { cx: 756, cy: 245, rx: 36, ry: 37 },
+    id: 'music', key: 'sota', memory: ['（……丸めた楽譜を脇にはさんで、ソウタは手帳に名前を書いてくれた。一画ずつ、ていねいに）'], name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room', bgClock: { cx: 756, cy: 245, rx: 36, ry: 37 },
     sit: { src: 'sota_sit', style: 'left:54.2%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
     faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
@@ -3635,6 +3637,7 @@
     await overlayWait(`<img class="cg" src="img/m_duet.webp" alt="夕日の音楽室で、ソウタと並んで連弾している">
       <p>ソウタの旋律に、ハルのパートが重なる。</p><p>たった4小節。それでも、二人の音が確かにひとつになった。</p><p>フレーズの終わりで手を止めると、ソウタはそのまま、ひとりで続きを弾き始めた。最後の小節まで、一度も止まらずに。</p>`, '', ['続ける']);
     closeOverlay();
+    await say(['（……この旋律を、知っている）', '（火曜の放課後。階段に座って、少し開いた扉のすき間から、二人の音を聴いていた。……二人とも、こっちには気づかなかった）']);
     await say([['ソウタ', '……テンポ、上げたほうがかっこいいな', 'softSmile'],
                ['ソウタ', 'ハルの言うとおりだった', 'softSmile']]);
     bgm(null);
@@ -3768,7 +3771,7 @@
     // 図書室は特別教室棟の2階で、窓は西向き（本校舎も保健室も見えない）。5章のツムギ（保健室の窓からミオの帰り道を見送っていた）と対になる伏線
     window2: ['窓の外、ずっと下のほうに、正門と、その先の市道が見える。', '……この窓からは、帰っていく生徒の背中が、毎日見えていたはずだ。ミオは、窓のほうを見ようとしなかった。'],
     clock2: ['時計の下に、開館時間の札。「放課後　〜17:30」。', 'その下に、小さな付箋が貼ってある。「7/15　当番　水野」。……今日の当番は、ミオひとりだけらしい。'],
-    id: 'library', key: 'mio', name: 'ミオ', who: 'この子', startMin: 60, room: '図書室', hall: 'hall_library', label: '第三章「図書室」', bg: 'library', bgClock: { cx: 1437, cy: 78, rx: 31, ry: 61 },
+    id: 'library', key: 'mio', memory: ['（……ミオは本を胸に抱えなおしてから、手帳の端に、小さく名前を書いた。貸出カードと同じ字だった）', '（図書室の隅の席。閉館のチャイムが鳴るまで、ここにいた日がある。……家に、帰りたくなかった）'], name: 'ミオ', who: 'この子', startMin: 60, room: '図書室', hall: 'hall_library', label: '第三章「図書室」', bg: 'library', bgClock: { cx: 1437, cy: 78, rx: 31, ry: 61 },
     sit: { src: 'mio_sit', style: 'left:12.2%;top:42.0%;height:46.5%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
@@ -4349,7 +4352,7 @@
     window2: ['高窓の外。部室棟の前の道の端に、さっきはいなかった誰かがしゃがみこんでいた。', '小柄な、ジャージ姿の男子。……ずっと、体育館のほうを見ている。'],
     clock2: ['時計の下に、体育館の使用予定表が貼ってある。', '「7/15（火）　16:00〜17:15（片付け〜17:30）　A面：男子バレー部　B面：男子バスケットボール部」',
              '「17:30〜18:00　延長（大会前）：男子バスケットボール部　全面　片付け・鍵の返却：部長」', '延長の欄にだけ、顧問の赤ペンで線が引かれていた。……今日の延長は、なくなったらしい。'],
-    id: 'gym', key: 'kei', name: 'ケイ', who: 'この人', startMin: 90, room: '体育館', hall: 'hall_gym', label: '第四章「体育館」', bg: 'gym', bgClock: { cx: 1464, cy: 90, rx: 31, ry: 32 },
+    id: 'gym', key: 'kei', memory: ['（……大きな、まっすぐな字で、ケイは手帳に名前を書いてくれた。ペンを返しながら、少しだけ笑った）', '（遅くまで残っていた日。明かりのついた体育館で、ひとりで走り続ける影を見たことがある。……あれは、ケイだったんだ）'], name: 'ケイ', who: 'この人', startMin: 90, room: '体育館', hall: 'hall_gym', label: '第四章「体育館」', bg: 'gym', bgClock: { cx: 1464, cy: 90, rx: 31, ry: 32 },
     sit: { src: 'kei_sit', style: 'left:79.5%;top:45.1%;height:21.8%' },
     // 消えたあと床に残るバッシュ（わすれものの絵と同じ靴を、ケイが座っていた床に置いた重ね絵）
     leftover: '', leftoverImg: 'g_left',
@@ -5005,7 +5008,7 @@
       '', [next ? '次の章に進む' : '放課後の終わりへ', 'タイトルへ']).then(v => v === 0 ? goNext(next) : showTitle(true));
   }
   const INFIRMARY = {
-    id: 'infirmary', key: 'tsumugi', name: 'ツムギ', who: 'この子', startMin: 120, room: '保健室', hall: 'hall_infirmary', label: '第五章「保健室」',
+    id: 'infirmary', key: 'tsumugi', memory: ['（……保健室を出る前、ツムギは丸い、やわらかな字で、手帳に名前を書いてくれた）', '（帰り道、保健室の窓の前を通ったことがある。ガラスに、指で書いた『またね』が透けていた。……自分に向けられた言葉だと、思ってしまった）'], name: 'ツムギ', who: 'この子', startMin: 120, room: '保健室', hall: 'hall_infirmary', label: '第五章「保健室」',
     bg: 'infirmary', bgClock: { cx: 830, cy: 202, rx: 40, ry: 40 },
     // 手前のベッド（1）の角に座る。明かりを消すと、部屋の暗さ・色味に合わせた絵（dark）に替える
     sit: { src: 'tsumugi_sit', dark: 'tsumugi_sit_dark', style: 'left:78.19%;top:34.57%;height:55.37%' },
