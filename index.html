@@ -4954,7 +4954,7 @@
     if (wasDark) {
       // 謎解きで部屋の明かりをもう消していたとき：消える明かりがないので、窓の夕焼けの最後の光が消える
       // 18:30はまだ太陽が稜線に沈みかけている途中なので、南の空の色は「消えた」ではなく「薄れはじめる」（このあと屋上で沈む夕日を見る結末とつながる）
-      $('#bgImg').src = 'img/infirmary_1830_dark.webp';
+      $('#bgImg').src = 'img/infirmary_dusk_fade.webp';   // 数分後、南の空の夕焼けが薄れはじめた絵
       await say(['……窓の外の夕焼けが、ゆっくりと色を失いはじめた。', '暗くなっていく保健室で、握った手のぬくもりだけが、いつまでも残っていた。']);
     } else {
       setDark(true);
@@ -4970,8 +4970,8 @@
   const INFIRMARY = {
     id: 'infirmary', key: 'tsumugi', name: 'ツムギ', who: 'この子', startMin: 120, room: '保健室', hall: 'hall_infirmary', label: '第五章「保健室」',
     bg: 'infirmary', bgClock: { cx: 830, cy: 202, rx: 40, ry: 40 },
-    sit: { src: 'blank', style: 'left:0;top:0;width:1px;height:1px' },
-    leftover: 'left:88%;top:60%;width:3.6%;height:1.6%;transform:rotate(-4deg)',
+    sit: { src: 'tsumugi_sit', style: 'left:78.26%;top:34.67%;height:55.18%' },   // 手前のベッド（1）の角に座る
+    leftover: '', leftoverImg: 'i_left',   // 消えたあと、シーツの上に来室カード
     faces: { normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
              grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile',
              angryCry: 'tsumugi_angrycry',  // 怒りと悔しさをにじませた涙
@@ -5033,9 +5033,10 @@
       ['switch', '入口のスイッチ', 'left:0;top:56%;width:6.5%;height:26%'],
       ['shelf', '薬品棚', 'left:68%;top:27%;width:8%;height:31%'],
       ['scale', '身長計', 'left:63.5%;top:19%;width:4.5%;height:40%'],
-      ['bed', '奥のベッド', 'left:76%;top:46%;width:7%;height:18%'],
       ['stool', '丸椅子', 'left:41.5%;top:62%;width:10.5%;height:21%'],
-      ['char', 'ツムギ', 'left:83%;top:44%;width:17%;height:48%'],
+      ['char', 'ツムギ', 'left:79%;top:35%;width:19%;height:56%'],
+      // ベッドは2台。調べるのはカーテンの奥の「2」（ツムギの頭の左、ひざより上）。ツムギより手前に置く
+      ['bed', 'カーテンの奥のベッド', 'left:76.5%;top:38%;width:9.3%;height:24%'],
     ],
     async intro(rem) {
       if (!rem) {
@@ -5173,7 +5174,7 @@
           const c = await choose(['救急箱を開ける', 'やめる']);
           if (c !== 0) return;
           R.taken.key = true;
-          await say(['救急箱のふたの裏に、小さな鍵がテープでとめてあった。札に、ベッドの番号らしい「3」。']);
+          await say(['救急箱のふたの裏に、小さな鍵がテープでとめてあった。札に、ベッドの番号らしい「2」。']);
           await tick(); return;
         }
         if (R.taken.key) { await say(['薬品棚。救急箱は、元の場所に戻した。']); return; }
@@ -5191,7 +5192,7 @@
             await say(['床頭台の扉を、鍵で開けた。図書委員会の当番表を、もう一度取り出す。']);
           } else {
             R.know.add('roster');
-            await say(['「3」のベッドの床頭台。扉の鍵穴に、救急箱の鍵を差しこんだ。……開いた。',
+            await say(['「2」のベッドの床頭台。扉の鍵穴に、救急箱の鍵を差しこんだ。……開いた。',
                        '中に、クリアファイルが一冊。図書委員会から届いた、6〜7月の当番表だった。', '二年の欄。曜日ごとに、当番の名前が並んでいる。',
                        '……ツムギは、委員のままなんだ。']);
           }
@@ -5203,13 +5204,13 @@
             await say(['ふと見ると、ツムギの座るベッドの下に、紙袋。入院の持ち物のリストが、ホチキスでとめてある。', '「パジャマ、タオル、歯ブラシ、本（予約中）」', '「本（予約中）」にだけ、丸がついていた。']);
             await tick(); return;
           }
-          await say(['「3」のベッドの床頭台。扉は開いたまま。']); return;
+          await say(['「2」のベッドの床頭台。扉は開いたまま。']); return;
         }
         if (!R.seen.has('bed1')) {
           R.seen.add('bed1');
-          await say(['ベッドの足側の柵に、番号の札。ツムギのベッドは「1」、カーテンの奥のベッドは「2」。', 'そのさらに奥、いちばん奥の「3」のベッド。枕もとに、白い床頭台。', '扉に、小さな鍵穴。……開かない。']);
+          await say(['ベッドの足側の柵に、番号の札。ツムギのベッドは「1」、カーテンの奥のベッドは「2」。', '奥の「2」のベッドの枕もとに、白い床頭台。', '扉に、小さな鍵穴。……開かない。']);
           await tick();
-        } else await say(['「3」のベッドの床頭台。扉に鍵がかかっている。']);
+        } else await say(['「2」のベッドの床頭台。扉に鍵がかかっている。']);
       },
       async stool() {
         showCut('ci_inf_stool');
@@ -5258,7 +5259,7 @@
     },
     async vanishScene() {
       await say(['ベッドのふちに、ツムギの姿はなかった。', '白いシーツの上に、カードが一枚だけ残っている。']);
-      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>保健室の来室カード</h2><img class="cg" src="img/ci_card_blank.webp" alt="保健室の来室カード">
+      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>保健室の来室カード</h2><img class="cg" src="img/card_bed.webp" alt="白いシーツの上に残された来室カード">
         <p>6月10日から、毎日の日付がびっしり並んでいる。最後の一行、7月15日だけが、空欄のままだった。</p>`, '', ['空欄を、明かりにかざす']);
       await overlayWait(`<p class="eyebrow">わすれもの</p><h2>空欄の行</h2>
         <p>「来室理由」の欄に、消しゴムで消した跡がある。……うっすらと、読める。</p>
@@ -5278,7 +5279,7 @@
     shelfItem(saved) {
       return saved
         ? { thumb: 'ci_card_done', title: '最後の行まで書いた来室カード', body: `<img class="cg" src="img/ci_card_done.webp" alt="最後の行まで書いた来室カード"><p>空いていた最後の行に、ツムギの字。「7/15　退室　18:30」。来室理由の欄には、「図書室へ」。</p>` }
-        : { thumb: 'ci_card_blank', title: '保健室の来室カード', body: `<img class="cg" src="img/ci_card_blank.webp" alt="来室カード"><p>最後の一行だけ空欄。来室理由の欄に、消しゴムで消した「図書室へ」の跡。</p>` };
+        : { thumb: 'card_bed', title: '保健室の来室カード', body: `<img class="cg" src="img/card_bed.webp" alt="白いシーツの上に残された来室カード"><p>最後の一行だけ空欄。来室理由の欄に、消しゴムで消した「図書室へ」の跡。</p>` };
     },
     async talk() {
       if (R.st === 'vanished') return say(['白いシーツの上には、来室カードだけが残っている。']);
@@ -5557,7 +5558,7 @@
                     img: 'hall_tsumugi', alt: '夕日の差す廊下を、渡り廊下のほうへ歩いていくツムギのうしろ姿',
                     stop: '廊下の途中で、足が止まる。まだ、この先へは行けない。', music: 'farewellLate' });
   }
-  const CUT_RECONCILE = false;  // 仲直りのカットイン（ci_reconcile）の絵ができたら true にする
+  const CUT_RECONCILE = true;   // 仲直りのカットイン（ci_reconcile）
   const CHAPTERS = { art: ART, music: MUSIC, library: LIBRARY, gym: GYM, infirmary: INFIRMARY };
   const ORDER = ['art', 'music', 'library', 'gym', 'infirmary'];
   // 章は順番に開放：前の章を終えると（ほどけた・追い出された）次の章が選べる
