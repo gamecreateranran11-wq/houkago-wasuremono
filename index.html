@@ -421,13 +421,36 @@
   .rw.gone { opacity: 0; }
   .rw.short { font-size: 13px; opacity: .6; animation: rwfall linear forwards; }
   .rw.crush { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 700; font-size: 15px; color: #7a1f24; opacity: .5; filter: blur(2.2px); letter-spacing: -.25em; text-shadow: 3px 1px 0 #7a1f24, -2px -1px 0 #7a1f24; animation: rwfall linear forwards; }
-  .rw.neg, .lw.neg, .rw-list .neg { color: #a4373a; }
+  .rw.neg, .lw.neg, .rw-list .neg { color: #c04a4a; }
   .rw.sei, .lw.sei, .rw-list .sei { color: #7f93a6; }
   .rw.nag, .lw.nag, .rw-list .nag { color: #d8d0c2; }
   .f-min { font-family: var(--serif); }
   .f-yomogi { font-family: 'Yomogi', var(--serif); }
   .f-kure { font-family: 'Zen Kurenaido', var(--serif); }
-  .rw.long { font-size: 19px; animation: rwin .5s ease both; }
+  .rw.long { font-size: 19px; }
+  .rw.long.in-fade { animation: rwin .6s ease both; }
+  .rw.long.in-blur { animation: inblur .9s ease both; }
+  .rw.long.in-drop { animation: indrop .5s cubic-bezier(.2, .9, .3, 1.25) both; }
+  .rw.long.in-slide { animation: inslide .7s ease both; }
+  .rw.long.in-zoom { animation: inzoom .45s ease-out both; }
+  .rw.long.in-type span { opacity: 0; animation: rwin .18s ease forwards; }
+  .rw.long.out-fade { animation: outfade 1s ease forwards; }
+  .rw.long.out-blur { animation: outblur 1.2s ease forwards; }
+  .rw.long.out-sink { animation: outsink 1.2s ease-in forwards; }
+  .rw.long.out-drift { animation: outdrift 1.4s ease forwards; }
+  .rw.short.m-sway { animation-name: rwsway; }
+  .rw.short.m-vanish { animation-name: rwvanish; }
+  @keyframes inblur { from { opacity: 0; filter: blur(7px); } to { opacity: 1; filter: none; } }
+  @keyframes indrop { from { opacity: 0; transform: translateY(-40px); } to { opacity: 1; transform: none; } }
+  @keyframes inslide { from { opacity: 0; transform: translateX(-34px); } to { opacity: 1; transform: none; } }
+  @keyframes inzoom { from { opacity: 0; transform: scale(1.7); } to { opacity: 1; transform: none; } }
+  @keyframes outfade { to { opacity: 0; } }
+  @keyframes outblur { to { opacity: 0; filter: blur(9px); } }
+  @keyframes outsink { to { opacity: 0; transform: translateY(46px); } }
+  @keyframes outdrift { to { opacity: 0; transform: translate(34px, -22px); letter-spacing: .35em; } }
+  @keyframes rwsway { 0% { transform: translate(0, 0); } 25% { transform: translate(14px, 21vh); } 50% { transform: translate(-10px, 42vh); } 75% { transform: translate(12px, 63vh); } 100% { transform: translate(0, 85vh); } }
+  @keyframes rwvanish { 0% { transform: translateY(0); opacity: .6; } 55% { opacity: .6; } 100% { transform: translateY(46vh); opacity: 0; } }
+  body.fx-on .clock { visibility: hidden; }
   .rw.final { left: 0; right: 0; top: 42%; text-align: center; font-size: 22px; letter-spacing: .1em; animation: rwin 1.2s ease both; }
   .rw.gopo { left: 0; right: 0; bottom: 18%; text-align: center; font-size: 13px; color: #6d6a66; letter-spacing: .3em; animation: rwin 1.5s ease both; }
   .rw-list { position: absolute; inset: 10% 8%; overflow: auto; color: #d9d2c6; }
@@ -2344,8 +2367,11 @@
   const rainFont = () => ['f-min', 'f-yomogi', 'f-kure'][Math.floor(Math.random() * 3)];
   // 画面いっぱいの演出の層
   function fxLayer(cls) {
-    const d = document.createElement('div'); d.className = 'roof-fx ' + (cls || ''); document.body.appendChild(d); return d;
+    const d = document.createElement('div'); d.className = 'roof-fx ' + (cls || ''); document.body.appendChild(d);
+    document.body.classList.add('fx-on');   // 演出のあいだは上の時刻を消す
+    return d;
   }
+  function fxEnd(box) { box.remove(); if (!document.querySelector('.roof-fx')) document.body.classList.remove('fx-on'); }
   // 言葉の雨：短い言葉は小さく散らして重ね、長い言葉は一つずつはっきり読ませる。崩した言葉はにじませて読めなくする。画面を押すと早く進む
   async function wordRain() {
     const box = fxLayer('rain');
@@ -2359,17 +2385,27 @@
       const e = document.createElement('span'); e.className = 'rw ' + cls + (cls === 'short' ? ' neg ' + rainFont() : ''); e.textContent = t;
       if (cls === 'short') { e.style.fontSize = (11 + Math.random() * 6) + 'px'; e.style.rotate = (Math.random() * 10 - 5).toFixed(1) + 'deg'; }
       e.style.left = (4 + Math.random() * 80) + '%'; e.style.top = (-8 + Math.random() * 30) + '%';
-      e.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
-      box.appendChild(e); setTimeout(() => e.remove(), 4200);
+      const r = Math.random();
+      if (cls === 'short') e.classList.add(r < .5 ? 'm-fall' : r < .8 ? 'm-sway' : 'm-vanish');
+      e.style.animationDuration = (1.6 + Math.random() * 2.6) + 's';
+      box.appendChild(e); setTimeout(() => e.remove(), 4400);
     };
     if (reduce) box.innerHTML = `<div class="rw-list">${longs.map(([l, k]) => `<p class="${k}">「${l}」</p>`).join('')}</div>`;
     else {
       const rainT = setInterval(() => { drop(shorts[Math.floor(Math.random() * shorts.length)], 'short'); if (Math.random() < .18) drop(crushed[Math.floor(Math.random() * crushed.length)], 'crush'); }, 170);
+      const pick = a => a[Math.floor(Math.random() * a.length)];
       for (const [l, k] of longs) {
-        const e = document.createElement('p'); e.className = `rw long ${k} ${rainFont()}`; e.textContent = `「${l}」`;
+        const how = pick(['in-fade', 'in-blur', 'in-drop', 'in-slide', 'in-zoom', 'in-type']);
+        const e = document.createElement('p'); e.className = `rw long ${k} ${rainFont()} ${how}`;
+        const t = `「${l}」`;
+        if (how === 'in-type') e.innerHTML = [...t].map((c, i) => `<span style="animation-delay:${i * 55}ms">${c}</span>`).join('');
+        else e.textContent = t;
         e.style.top = (14 + Math.random() * 62) + '%'; e.style.left = (6 + Math.random() * 40) + '%';
-        box.appendChild(e); setTimeout(() => e.classList.add('gone'), 2600); setTimeout(() => e.remove(), 3600);
-        await sleep(fast ? 90 : 1250);
+        box.appendChild(e);
+        const hold = 1700 + Math.random() * 1600;
+        setTimeout(() => e.classList.add(pick(['out-fade', 'out-blur', 'out-sink', 'out-drift'])), hold);
+        setTimeout(() => e.remove(), hold + 1500);
+        await sleep(fast ? 90 : 800 + Math.random() * 900);
       }
       await sleep(fast ? 100 : 900);
       clearInterval(rainT);
@@ -2383,7 +2419,7 @@
     box.classList.add('sink');
     const g = document.createElement('p'); g.className = 'rw gopo'; g.textContent = 'ゴポ……　　ゴポ……'; box.appendChild(g);
     await sleep(3200);
-    box.classList.add('out'); await sleep(900); box.remove();
+    box.classList.add('out'); await sleep(900); fxEnd(box);
   }
   // 遅れて混ざってくる、正論と慰めの言葉（小さく、一つずつ）
   async function lateWords(list) {
@@ -2394,16 +2430,16 @@
       e.classList.add('dim');
     }
     await sleep(1200);
-    box.classList.add('out'); await sleep(900); box.remove();
+    box.classList.add('out'); await sleep(900); fxEnd(box);
   }
   // 景色がひび割れて崩れる（思い返しの放課後から、現実の屋上へ）
   async function crack() {
-    const box = fxLayer('crack'); await sleep(1500); box.classList.add('out'); await sleep(700); box.remove();
+    const box = fxLayer('crack'); await sleep(1500); box.classList.add('out'); await sleep(700); fxEnd(box);
   }
   // 波紋：名前を書くと決める瞬間。音がすっと静まる
   async function ripple() {
     const box = fxLayer('ripple'); for (let i = 0; i < 3; i++) { const r = document.createElement('i'); r.style.animationDelay = (i * .5) + 's'; box.appendChild(r); }
-    await sleep(2600); box.classList.add('out'); await sleep(700); box.remove();
+    await sleep(2600); box.classList.add('out'); await sleep(700); fxEnd(box);
   }
   // 画面の色：本当の自分（瓶覗のごく淡い水色）／あたたかい雨
   function roofTint(cls) {
