@@ -411,6 +411,12 @@
   .slot.got:hover { background: var(--panel2); }
 
   .dawn { background: linear-gradient(180deg, #f4e7d7 0%, #dfe6ee 100%); }
+  .overlay.void { background: #000; }
+  .void .ov-card { background: transparent; border: 0; box-shadow: none; text-align: center; }
+  .void .void-text { display: flex; flex-direction: column; gap: 18px; margin: 24px 0 8px; }
+  .void .void-text p { color: #d8d2c8; letter-spacing: .08em; }
+  .void .row { justify-content: center; }
+  .void .btn { background: transparent; border-color: rgba(255,255,255,.25); color: #bdb6aa; }
   .dawn .ov-card { background: rgba(255, 255, 255, .55); border-color: #c9c2ba; color: #2a2530; }
   .dawn .ov-card p { color: #2a2530; }
   .dawn .ov-card .cg.recall { filter: blur(2px) saturate(.55) brightness(1.08); opacity: .7; }
@@ -2090,6 +2096,20 @@
       }
     } finally { scr = null; replay = null; busy = false; render(); if (!R.over) idle(); }
   }
+  // 序章と章のあいだ：本編は、18:30の屋上で立ち尽くす主人公の思い返し。その現実（チャイム・風・手から落ちて足もとにある生徒手帳）が、章のはじめに数行だけ割りこむ。
+  // 場所（屋上・高さ・フェンス）はわからせず、「何か紙のもの」だけを手がかりにする。手帳が手から落ちるのは序章の一度だけ
+  const VOID_LINES = {
+    art: ['チャイムが鳴っている。', '風の音。', '手の中から、何かが落ちた。'],
+    music: ['……どこかで、風の音がした。'],
+    library: ['指先に、紙のふちの感触が残っている気がした。'],
+    gym: ['どこかで、ページをめくる音がした。'],
+    infirmary: ['足もとで、紙が風にあおられている音がした。'],
+  };
+  async function voidLines() {
+    const t = VOID_LINES[C.id]; if (!t) return;
+    await uiWait(`<div class="fade void-text">${t.map(l => `<p>${l}</p>`).join('')}</div>`, 'void', ['……']);
+    closeOverlay();
+  }
   // ヒントは段階式：同じところで押すたびに、少しずつ具体的になる（配列の最後が答えに近いヒント）
   const hintScript = async () => {
     nmMark('hint');
@@ -2104,7 +2124,7 @@
     R.ticks = CHIME_AT - 1; await tick();
   };
   function scriptFn(key) {
-    if (key === 'intro') return () => { if (remembered(C.key)) nmMark('skip'); return C.intro(remembered(C.key)); };
+    if (key === 'intro') return async () => { if (remembered(C.key)) nmMark('skip'); await voidLines(); return C.intro(remembered(C.key)); };
     if (key === 'hint') return hintScript;
     if (key === 'wait') return waitScript;
     if (key.startsWith('hs:')) { const id = key.slice(3); return C.H[id] || COMMON[id] || null; }
