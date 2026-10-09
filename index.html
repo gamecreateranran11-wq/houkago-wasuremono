@@ -413,7 +413,8 @@
   .dawn { background: linear-gradient(180deg, #f4e7d7 0%, #dfe6ee 100%); }
   .dawn .ov-card { background: rgba(255, 255, 255, .55); border-color: #c9c2ba; color: #2a2530; }
   .dawn .ov-card p { color: #2a2530; }
-  .dawn .ov-card p.mem { color: #5a4f66; font-size: .95em; }
+  .dawn .ov-card .cg.recall { filter: blur(2px) saturate(.55) brightness(1.08); opacity: .7; }
+  .dawn .ov-card .recall-text p { color: #4a4058; }
   .dawn .eyebrow { color: #a4502c; }
   .dawn .note { color: #5b5462; border-color: #c9c2ba; }
   .dawn .btn { background: #fff; border-color: #c9c2ba; color: #2a2530; }
@@ -2456,16 +2457,20 @@
     const now = chStart() + R.ticks * MIN_PER_TICK;
     R.over = true; clearRun(); P.saved[C.key] = true; saveP(); albumSync(); render(); idle(); if (music) keepBgm(music, [music]); else keepBgm('unravel', WARM);
     const next = recordResult('saved');
-    overlayWait(`<img class="cg" src="img/${img}.webp" alt="${alt}">
+    const btns = [next ? `次の章に進む（${hm((next.startMin || 0))}）` : '放課後の終わりへ', 'タイトルへ'];
+    const note = `<p class="note">${hm(now)}。チャイムは、まだ鳴っていない。${next ? `鳴る前に、明かりのついた${next.room}へ向かう。` : ''}</p>${achNoteTake()}`;
+    const scene = `<img class="cg" src="img/${img}.webp" alt="${alt}">
       <div class="fade" style="display:flex;flex-direction:column;gap:12px">
         ${lines.map(l => `<p>${l}</p>`).join('')}
         <p>${stop}</p>
-        ${(C.memory || []).map(l => `<p class="mem">${l}</p>`).join('')}
         <p>振り返ると、ほかの教室には、まだ明かりがついていた。</p>
         <p class="eyebrow">${C.label}　${C.name}の心がほどけた</p>
-      </div>
-      <p class="note">${hm(now)}。チャイムは、まだ鳴っていない。${next ? `鳴る前に、明かりのついた${next.room}へ向かう。` : ''}</p>${achNoteTake()}`,
-      'dawn', [next ? `次の章に進む（${hm((next.startMin || 0))}）` : '放課後の終わりへ', 'タイトルへ']).then(v => v === 0 ? goNext(next) : showTitle(true));
+      </div>`;
+    const go = v => v === 0 ? goNext(next) : showTitle(true);
+    // 取り戻した記憶は、見送りのあとに1枚分けて出す（見送りの文を長くしない）
+    if (!(C.memory && C.memory.length)) { overlayWait(scene + note, 'dawn', btns).then(go); return; }
+    overlayWait(scene, 'dawn', ['続ける']).then(() => overlayWait(`<img class="cg recall" src="img/${img}.webp" alt="">
+      <div class="fade recall-text" style="display:flex;flex-direction:column;gap:14px">${C.memory.map(l => `<p>${l}</p>`).join('')}</div>${note}`, 'dawn', btns)).then(go);
   }
 
   /* ---------- 共通の調べもの ---------- */
