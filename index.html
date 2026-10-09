@@ -4970,8 +4970,9 @@
   const INFIRMARY = {
     id: 'infirmary', key: 'tsumugi', name: 'ツムギ', who: 'この子', startMin: 120, room: '保健室', hall: 'hall_infirmary', label: '第五章「保健室」',
     bg: 'infirmary', bgClock: { cx: 830, cy: 202, rx: 40, ry: 40 },
-    sit: { src: 'tsumugi_sit', style: 'left:78.26%;top:34.67%;height:55.18%' },   // 手前のベッド（1）の角に座る
-    leftover: '', leftoverImg: 'i_left',   // 消えたあと、シーツの上に来室カード
+    // 部屋の座り姿（手前のベッドの角）と、消えたあとシーツの上に残るカードは、絵を直し中（Q51b・Q29c）。届くまで出さない
+    sit: { src: 'blank', style: 'left:0;top:0;width:1px;height:1px' },
+    leftover: 'left:88%;top:62%;width:3.6%;height:1.6%;transform:rotate(-4deg)',   // 仮の紙（Q29c が届くまで）
     faces: { normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
              grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile',
              angryCry: 'tsumugi_angrycry',  // 怒りと悔しさをにじませた涙
