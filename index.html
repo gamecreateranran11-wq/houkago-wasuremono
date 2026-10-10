@@ -479,7 +479,8 @@
   .void .void-text { display: flex; flex-direction: column; gap: 18px; margin: 24px 0 8px; }
   .void .void-text p { color: #d8d2c8; letter-spacing: .08em; }
   .void .row { justify-content: center; }
-  .void .btn { background: transparent; border-color: rgba(255,255,255,.25); color: #bdb6aa; }
+  .void .btn, .void .btn.primary { background: transparent; border: 0; color: #8f887c; font-size: 18px; padding: 10px 18px; animation: rise .8s ease both; animation-delay: var(--void-delay, 1.2s); }
+  .void .btn.primary:focus-visible { outline: 1px solid rgba(255,255,255,.3); }
   .dawn .ov-card { background: rgba(255, 255, 255, .55); border-color: #c9c2ba; color: #2a2530; }
   .dawn .ov-card p { color: #2a2530; }
   .dawn .ov-card .cg.recall { filter: blur(2px) saturate(.55) brightness(1.08); opacity: .7; }
@@ -2168,10 +2169,13 @@
     gym: ['どこかで、ページをめくる音がした。'],
     infirmary: ['足もとで、紙が風にあおられている音がした。'],
   };
-  async function voidLines() {
-    const t = VOID_LINES[C.id]; if (!t) return;
-    await uiWait(`<div class="fade void-text">${t.map(l => `<p>${l}</p>`).join('')}</div>`, 'void', ['……']);
-    closeOverlay();
+  async function voidLines() { const t = VOID_LINES[C.id]; if (t) await voidWait(t); }
+  // 黒い画面の文：文が一つずつ浮かび、全部出てから進むしるし（▷）を出す
+  function voidWait(lines) {
+    const d = reduce ? 0 : (0.8 * (lines.length - 1) + 1.6);
+    const pr = uiWait(`<div class="fade void-text">${lines.map(l => `<p>${l}</p>`).join('')}</div>`, 'void', ['▷']);
+    card.style.setProperty('--void-delay', d + 's');
+    return pr.then(() => { card.style.removeProperty('--void-delay'); closeOverlay(); });
   }
   // ヒントは段階式：同じところで押すたびに、少しずつ具体的になる（配列の最後が答えに近いヒント）
   const hintScript = async () => {
@@ -2454,7 +2458,7 @@
     if (!t) { t = document.createElement('div'); t.className = 'roof-tint'; st.appendChild(t); }
     t.classList.toggle('on', cls === 'tint-pale');
   }
-  function roofVoid(lines) { return uiWait(`<div class="fade void-text">${lines.map(l => `<p>${l}</p>`).join('')}</div>`, 'void', ['……']).then(closeOverlay); }
+  const roofVoid = lines => voidWait(lines);
 
   async function roofScene(split) {
     const kind = split ? 'split' : (P.cur.mtKind || 'straight');
