@@ -2170,10 +2170,10 @@
     infirmary: ['足もとで、紙が風にあおられている音がした。'],
   };
   async function voidLines() { const t = VOID_LINES[C.id]; if (t) await voidWait(t); }
-  // 黒い画面の文：文が一つずつ浮かび、全部出てから進むしるし（▷）を出す
+  // 黒い画面の文：文が一つずつ浮かび、全部出てから進むしるし（▼。本編の文章送りと同じ印）を出す
   function voidWait(lines) {
     const d = reduce ? 0 : (0.8 * (lines.length - 1) + 1.6);
-    const pr = uiWait(`<div class="fade void-text">${lines.map(l => `<p>${l}</p>`).join('')}</div>`, 'void', ['▷']);
+    const pr = uiWait(`<div class="fade void-text">${lines.map(l => `<p>${l}</p>`).join('')}</div>`, 'void', ['▼']);
     card.style.setProperty('--void-delay', d + 's');
     return pr.then(() => { card.style.removeProperty('--void-delay'); closeOverlay(); });
   }
