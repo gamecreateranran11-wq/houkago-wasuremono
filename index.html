@@ -3146,7 +3146,7 @@
       if (R.st === 'vanished') return say(['椅子の上には、スケッチブックだけが残っている。']);
       if (R.st === 'unraveled') {
         if (R.items.has('blue')) return hinaPaint();
-        return say([['ヒナ', '……青い絵の具、どこかにあったはずなんだけど', 'bagSmile'], '（流しのあたりを探してみよう）']);
+        return say([['ヒナ', '……青い絵の具、どこかにあったはずなんだけど', 'smile'], '（流しのあたりを探してみよう）']);
       }
       // わすれものの記憶を引き継いでいる周回では、手がかり集め・組み合わせなしで対話に入れる
       if (!remembered('hina')) {
@@ -3308,7 +3308,7 @@
                  ['', 'ヒナは袖で目元をこすって、それから、少しだけ笑った。', 'bagSmile']]);
       R.st = 'unraveled'; render();
       bgm('unravel');
-      await say([`……張りつめていた部屋の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ヒナ', 'ねえ。青い絵の具、持ってない？', 'bagSmile']]);
+      await say([`……張りつめていた部屋の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ヒナ', 'ねえ。青い絵の具、持ってない？', 'smile']]);
       if (R.items.has('blue')) return hinaPaint();
       await say(['（流しに、青い絵の具があったはずだ）']);
     },
