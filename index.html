@@ -648,6 +648,40 @@
   .title-side .btn { color: var(--ink); }
   .title-side .btn.primary { color: var(--blue); }
   .title-side .note { color: var(--muted); }
+
+  /* ===== 紙の見た目：残っていた暗い板（セーブ・棚・実績・曲目・謎解き）も紙に =====
+     一覧の行は、薄い紙を重ねた札。選べる行は重ねると青い線。印は朱・金 */
+  .save-slot, .pair-side, .ach-row, .slot, .ost-row { background: #efe7d6; border: 1px solid var(--line); border-left: 3px solid var(--line); color: var(--ink); }
+  .save-slot .info { color: var(--ink); }
+  .save-slot .no, .save-slot .when, .slot .who, .ost-row .no, .ost-row .desc, .ost-row .st, .ach-row .cond, .ach-row .when, .ach-row .ach-mark { color: var(--muted); }
+  .save-slot .btn { border-bottom: 1px solid var(--blue); color: var(--blue); }
+  .save-slot .btn:hover { border-bottom-width: 2px; padding-bottom: 6px; }
+  .save-slot .btn:disabled { opacity: .3; color: var(--muted); border-bottom-color: var(--line); }
+  button.pair-side:hover, .album .slot.got:hover, .ost-row:hover { border-left-color: var(--blue); background: #ebe2cd; }
+  .pair-side.saved, .album .slot.saved, .shelf .slot.got.saved { border-left-color: var(--gold); box-shadow: none; }
+  .shelf .slot.got { border-left-color: var(--blue); box-shadow: none; }
+  .slot .thumb-empty, .pair-side .thumb-empty { color: #b3a68d; background: repeating-linear-gradient(135deg, #e6dcc7 0 6px, #ded3bb 6px 12px); border-radius: 0; }
+  .slot .thumb { border-radius: 0; border: 2px solid #fbf7ee; box-sizing: border-box; }
+  .slot .tag { background: var(--blue); color: #fbf7ee; border-radius: 0; }
+  .slot.saved .tag { background: var(--gold); }
+  @keyframes shelfGlow { 50% { box-shadow: 0 0 0 2px rgba(45, 79, 138, .35); } }
+  @keyframes shelfGlowGold { 50% { box-shadow: 0 0 0 2px rgba(143, 109, 34, .45); } }
+  .shelf-bar { border-radius: 0; }
+  .shelf-bar i { background: var(--blue); }
+  .ost-row.on { background: #e8dec6; border-left-color: var(--akane); border-color: var(--line); border-left-color: var(--akane); }
+  .ost-row.on .st { color: var(--akane); }
+  .ost-row:hover { border-color: var(--line); border-left-color: var(--blue); }
+  .ost-row.locked:hover { border-left-color: var(--line); background: #efe7d6; }
+  .ost-row.bonus { border-style: solid; border-left-color: var(--gold); }
+  .ost-row .ttl small { border-radius: 0; }
+  .ach-row.on .ach-mark { color: var(--akane); }
+  .ach-row.x { border-color: var(--line); border-left-color: var(--gold); box-shadow: none; background: #ebe2cd; }
+  .ach-row.x .ttl, .ach-row .x-msg, .ach-note, .ach-x-note { color: var(--gold); }
+  .wheel output { background: #fbf7ee; border: 1px solid var(--line); border-radius: 0; color: var(--ink); }
+  .fboard { background: #efe7d6; border-radius: 0; }
+  .cutin, .scene { background-color: #cfc3ab; }
+  .btn.primary { color: var(--blue); }
+  .poem { border-radius: 0; box-shadow: 2px 5px 0 rgba(60, 45, 30, .18); }
 </style>
 
 <div id="app">
