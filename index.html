@@ -2160,14 +2160,14 @@
       }
       if (windNodes || !P.sound) return;
       const a = audio(), dst = out(), t = a.currentTime;
-      const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.5 * seMul(), t + 2.5); g.connect(dst);
+      const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(1.3 * seMul(), t + 2.5); g.connect(dst);
       // 低いうなり
       const s1 = a.createBufferSource(), f1 = a.createBiquadFilter(), g1 = a.createGain();
-      s1.buffer = getNoise(); s1.loop = true; f1.type = 'lowpass'; f1.frequency.value = 160; f1.Q.value = 1.2; g1.gain.value = 0.9;
+      s1.buffer = getNoise(); s1.loop = true; f1.type = 'lowpass'; f1.frequency.value = 260; f1.Q.value = 1.0; g1.gain.value = 1.0;
       s1.connect(f1).connect(g1).connect(g);
       // フェンスや縁を抜ける、少し高い風
       const s2 = a.createBufferSource(), f2 = a.createBiquadFilter(), g2 = a.createGain();
-      s2.buffer = getNoise(); s2.loop = true; f2.type = 'bandpass'; f2.frequency.value = 420; f2.Q.value = 2.5; g2.gain.value = 0.12;
+      s2.buffer = getNoise(); s2.loop = true; f2.type = 'bandpass'; f2.frequency.value = 520; f2.Q.value = 1.6; g2.gain.value = 0.3;
       s2.connect(f2).connect(g2).connect(g);
       const lfo = a.createOscillator(), lg = a.createGain(); lfo.type = 'sine'; lfo.frequency.value = 0.09; lg.gain.value = 0.3;
       lfo.connect(lg).connect(g1.gain); lfo.start(t);
@@ -2175,8 +2175,8 @@
       // 突風：数秒おきに、低いうなりが吹き上がって、高い風も強まる
       const timer = setInterval(() => { try {
         if (Math.random() < 0.45) { const at = a.currentTime + 0.1, d = 2 + Math.random() * 2.5;
-          f1.frequency.cancelScheduledValues(at); f1.frequency.setValueAtTime(160, at); f1.frequency.linearRampToValueAtTime(260, at + d * 0.4); f1.frequency.linearRampToValueAtTime(160, at + d);
-          g2.gain.cancelScheduledValues(at); g2.gain.setValueAtTime(0.12, at); g2.gain.linearRampToValueAtTime(0.4, at + d * 0.4); g2.gain.linearRampToValueAtTime(0.12, at + d); }
+          f1.frequency.cancelScheduledValues(at); f1.frequency.setValueAtTime(260, at); f1.frequency.linearRampToValueAtTime(420, at + d * 0.4); f1.frequency.linearRampToValueAtTime(260, at + d);
+          g2.gain.cancelScheduledValues(at); g2.gain.setValueAtTime(0.3, at); g2.gain.linearRampToValueAtTime(0.8, at + d * 0.4); g2.gain.linearRampToValueAtTime(0.3, at + d); }
       } catch (e) {} }, 3500);
       windNodes = { g, s1, s2, lfo, timer };
     } catch (e) {}
