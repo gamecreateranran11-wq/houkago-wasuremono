@@ -828,7 +828,7 @@
   // 立ち絵は「座った絵（_s）」と「立った絵（_p）」の2組。部屋では座っていて、立ち上がる場面から立った絵に切り替える（R.standing）
   // 立った絵は表情の数が少ないので、ない表情は近いものを使う
   const STAND_SET = { hina: 'angry despair down grief sad smile surprise pout', sota: 'angry crysmile despair down grief sad smile surprise',
-                      mio: 'angry crysmile despair down grief sad smile surprise stroke offer offer_sad nb nb_apology nb_grief nb_crysmile nbleave nbleavewonder', kei: 'angry crysmile despair down grief sad smile surprise',
+                      mio: 'angry crysmile despair down grief sad smile surprise stroke offer offer_sad nb nb_apology nb_grief nb_crysmile nb_skirt nb_surprise nb_down nb_plead nbleave nbleavewonder', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
                        blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', grip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise', sleeve: 'sad', wristhate: 'sad' };
@@ -5361,7 +5361,7 @@
              mioLeave: 'mio_nbleave', mioLeaveWonder: 'mio_nbleavewonder',   // 扉のほうを向いた姿
              // 本をツムギに渡したあとは、本を持たない立ち絵（絶望の顔はまだ無いので、泣き顔で代える）
              mioOffer: 'mio_offer', mioOfferSad: 'mio_offer_sad', mioNbDown: 'mio_nb', mioNbSad: 'mio_nb_apology', mioNbGrief: 'mio_nb_grief', mioNbDespair: 'mio_nb_grief', mioNbCrySmile: 'mio_nb_crysmile',
-             mioNbSkirt: 'mio_nb_skirt', mioNbSurprise: 'mio_nb_surprise', mioNbSadDown: 'mio_nb_down' },   // スカートを握って涙をこらえる／驚き／自分を責める悲しい俯き（涙なし）
+             mioNbSkirt: 'mio_nb_skirt', mioNbSurprise: 'mio_nb_surprise', mioNbSadDown: 'mio_nb_down', mioNbPlead: 'mio_nb_plead' },   // スカートを握って涙をこらえる／驚き／自分を責める悲しい俯き（涙なし）
     lost: '保健室の来室カード',
     clock: { img: 'ci_clock_infirmary', cx: 782, cy: 430, s: 1.01 },
     clock2: ['時計の下に、行事予定の紙が貼ってある。', '「6/24（火）〜6/27（金）　期末試験」「7/9（水）〜7/15（火）　三者面談（午前授業）」', '「7/16（水）　終業式」', 'その下に、先生の字で小さく。「7/22（火）　白石さん　入院」'],
@@ -5826,7 +5826,7 @@
                  'ツムギは、自分で言ったことに驚いたように、口を押さえた。', ['ミオ', '……うん', 'mioNbGrief']]);
     }
     // 2段目：ミオが扉へ向かう
-    await say(['ミオは、ベッドから一歩さがった。', ['ミオ', '……私、もう会わないほうがいいね', 'mioNbDespair'], 'ミオは、扉のほうへ向き直った。', guestShow('mioLeave', 'mid'),
+    await say(['ミオは、ベッドから一歩さがった。', ['ミオ', '……私、もう会わないほうがいいね', 'mioNbDespair'], 'ミオは、扉のほうへ向き直った。', guestShow('mioLeave'),
                '（引き止める言葉なら、いくらでも浮かぶ。……でも、それは自分の言葉で、ミオの言葉じゃない）']);
     c = [2, 0, 1][await choose(['何も言わずに、ミオが振り返るのを待つ', 'また逃げるの？', '話さないと、きっと後悔するよ'])];   // 0：追い詰める 1：正論 2：正解
     if (c === 0) {
@@ -5876,14 +5876,14 @@
       // 「次はしない」は宣言にせず、うつむいたままぽつりと。ツムギは約束で返さず、短い一言で受ける（対等なまま）
       await say([['ミオ', '……ううん。私こそ', 'mioNbGrief'],
                  'ミオは、自分の手を見つめたまま、小さく言った。',
-                 ['ミオ', '……明日、また何か書けって言われても、もう書かない', 'mioNbDown'],
+                 ['ミオ', '……明日、また何か書けって言われても、もう書かない', 'mioNbSadDown'],
                  ['ツムギ', '……そのときは、呼んで', 'down'],
-                 ['ミオ', '……ツムギ。もう一回、最初から。……友だちに、なってくれる？', 'mioNbDown'],
+                 ['ミオ', '……ツムギ。もう一回、最初から。……友だちに、なってくれる？', 'mioNbPlead'],
                  'ツムギは、目をまるくして、それから、くしゃっと笑った。', () => bgm('unravel'), ['ツムギ', '……うん。なりたい', 'crySmile'],
                  // 主人公は二人にとって他人なので、ここで自分から場所を空ける
                  '（……ここから先は、二人の話だ）',
                  '座っていた丸椅子から、そっと立ち上がって、一歩さがった。',
-                 guestShow('mioNbCrySmile', 0), 'ミオは、ちらりとこちらを見て、小さくうなずいた。それから、その丸椅子を持ち上げて、ツムギのすぐ隣に置いた。',
+                 'ミオは、ちらりとこちらを見て、小さくうなずいた。それから、その丸椅子を持ち上げて、ツムギのすぐ隣に置いた。',
                  ['ミオ', '……今度は、私が運ぶ番、だから', 'mioNbCrySmile'],
                  ['ツムギ', '……ふふ。それ、図書室の椅子じゃないよ', 'crySmile'],
                  ['ミオ', '……知ってる', 'mioNbCrySmile'],
@@ -5899,7 +5899,7 @@
                  ['ミオ', '……もう、二度と書かない', 'mioNbDown'],
                  ['ミオ', 'だからって、許してほしいとは言わないけど', 'mioNbSad'],
                  ['ツムギ', '……うん。わかった', 'down'],
-                 guestShow('mioNbDown', 0), 'ツムギが、そっと手を差し出した。',
+                 'ツムギが、そっと手を差し出した。',
                  'ミオは、伸ばしかけた手を、一度止めた。……一呼吸おいてから、その手を握った。',
                  ['ツムギ', '……退院したら、図書室、行ってもいい？', 'down'], ['ミオ', '……うん。当番の日なら、いるから', 'mioNbDown'],
                  '約束は、それだけだった。……二人とも、それ以上は、まだ言葉にできなかった。',
