@@ -2112,26 +2112,47 @@
     } catch (e) {}
   }
   let rainNodes = null;
-  function rainSE(on) {
+  function rainSE(on, fade = 2.2) {
     if (replay) return;
     try {
-      if (!on) { if (rainNodes) { const a = audio(), g = rainNodes.g, t = a.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0.0001, t + 2.2); const r = rainNodes; rainNodes = null; setTimeout(() => { try { r.s1.stop(); r.s2.stop(); r.lfo.stop(); } catch (e) {} }, 2500); } return; }
+      if (!on) {
+        if (rainNodes) {
+          const a = audio(), g = rainNodes.g, t = a.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0.0001, t + fade);
+          const r = rainNodes; rainNodes = null; clearInterval(r.timer); setTimeout(() => { try { r.s1.stop(); r.s2.stop(); r.lfo.stop(); } catch (e) {} }, fade * 1000 + 300);
+        }
+        return;
+      }
       if (rainNodes || !P.sound) return;
       const a = audio(), dst = out(), t = a.currentTime;
-      const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.55 * seMul(), t + 1.8); g.connect(dst);
-      // 高い「ザー」（屋根と床をたたく雨）
+      const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.6 * seMul(), t + 1.8); g.connect(dst);
+      // 遠くの雨の「サー」（弱め。砂嵐に聞こえないように高い成分を落とす）
       const s1 = a.createBufferSource(), f1 = a.createBiquadFilter(), g1 = a.createGain();
-      s1.buffer = getNoise(); s1.loop = true; f1.type = 'bandpass'; f1.frequency.value = 2600; f1.Q.value = 0.5; g1.gain.value = 0.5;
+      s1.buffer = getNoise(); s1.loop = true; f1.type = 'bandpass'; f1.frequency.value = 1500; f1.Q.value = 0.8; g1.gain.value = 0.22;
       s1.connect(f1).connect(g1).connect(g);
-      // 低い「ゴー」（遠くの雨音と風）
+      // 低い「ゴー」（雨と風）
       const s2 = a.createBufferSource(), f2 = a.createBiquadFilter(), g2 = a.createGain();
-      s2.buffer = getNoise(); s2.loop = true; f2.type = 'lowpass'; f2.frequency.value = 420; g2.gain.value = 0.7;
+      s2.buffer = getNoise(); s2.loop = true; f2.type = 'lowpass'; f2.frequency.value = 380; g2.gain.value = 0.6;
       s2.connect(f2).connect(g2).connect(g);
-      // 強弱のうねり（ゆっくり）
-      const lfo = a.createOscillator(), lg = a.createGain(); lfo.type = 'sine'; lfo.frequency.value = 0.13; lg.gain.value = 0.18;
+      const lfo = a.createOscillator(), lg = a.createGain(); lfo.type = 'sine'; lfo.frequency.value = 0.13; lg.gain.value = 0.08;
       lfo.connect(lg).connect(g1.gain); lfo.start(t);
       s1.start(t); s2.start(t + 0.01);
-      rainNodes = { g, s1, s2, lfo };
+      // 大粒の雨粒が屋上の床や鉄柵をたたく音。1秒に十数粒、ばらばらの大きさと高さで
+      let next = t + 0.2;
+      const drop = at => {
+        const big = Math.random() < 0.3, v = (big ? 0.9 : 0.4) * (0.6 + Math.random() * 0.6);
+        const s = a.createBufferSource(), f = a.createBiquadFilter(), gg = a.createGain();
+        s.buffer = getNoise(); f.type = 'bandpass'; f.frequency.value = big ? 500 + Math.random() * 400 : 900 + Math.random() * 1200; f.Q.value = big ? 2.5 : 1.5;
+        gg.gain.setValueAtTime(0.0001, at); gg.gain.linearRampToValueAtTime(v, at + 0.003); gg.gain.exponentialRampToValueAtTime(0.0001, at + (big ? 0.07 : 0.035));
+        s.connect(f).connect(gg).connect(g); s.start(at); s.stop(at + 0.1);
+        if (big) {  // 水たまりに落ちる「ポッ」
+          const o = a.createOscillator(), og = a.createGain(); o.type = 'sine';
+          o.frequency.setValueAtTime(600 + Math.random() * 500, at); o.frequency.exponentialRampToValueAtTime(180, at + 0.05);
+          og.gain.setValueAtTime(0.0001, at); og.gain.linearRampToValueAtTime(v * 0.35, at + 0.004); og.gain.exponentialRampToValueAtTime(0.0001, at + 0.06);
+          o.connect(og).connect(g); o.start(at); o.stop(at + 0.08);
+        }
+      };
+      const timer = setInterval(() => { try { while (next < a.currentTime + 0.6) { drop(next); next += 0.03 + Math.random() * 0.09; } } catch (e) {} }, 250);
+      rainNodes = { g, s1, s2, lfo, timer };
     } catch (e) {}
   }
   function bounce(n = 1) {
@@ -2461,14 +2482,15 @@
     const box = fxLayer('rain');
     // 短い言葉は、届いた言葉（ほかの人から言われた言葉）から切り出したものだけ。どれも否定。自分で自分に向けた言葉は、もう一人の自分の台詞に取っておく
     const shorts = ['きもい', 'バカ', '邪魔', '使えない', '気持ち悪い', '役立たず', '汚い', '臭い', 'いらない', '無理', 'できない', '手遅れ', '最低',
-                    '出て行け', '甘えるな', 'ヘラヘラ', '泣くな', '通用しない', 'みんな嫌ってる', '普通でしょ', '弱虫', '情けない', '惨め'];
+                    '出て行け', '甘えるな', 'ヘラヘラ', '泣くな', '通用しない', 'みんな嫌ってる', '普通でしょ', '弱虫', '情けない', '惨め', 'のろま', '出来損ない'];
     // 同じ言葉が続かないように、全部を一巡するまで同じ言葉は出さない
     let bag = [];
     const nextShort = () => { if (!bag.length) bag = shorts.slice().sort(() => Math.random() - .5); return bag.pop(); };
     const crushed = ['菌が移る', '直さないと引っ叩くよ', '暴力を振るわれないとわからないの'];
     const longs = [['そんなんじゃ、社会で通用しない', 'neg'], ['誰も、相手にしないよ', 'neg'], ['みんな本当は、汚いって思ってるよ', 'neg'], ['きっとみんな、あなたのこと嫌ってるよ', 'neg'],
                    ['殴るよ', 'neg'], ['なんでそんなことするの', 'sei'], ['やる気、あんの？', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
-                   ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['お前なんか、いらない', 'neg']];
+                   ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['お前なんか、いらない', 'neg'],
+                   ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['よそはよそ、うちはうち', 'sei']];
     let fast = false; box.onclick = () => { fast = true; };
     const drop = (t, cls) => {
       const e = document.createElement('span'); e.className = 'rw ' + cls + (cls === 'short' ? ' neg ' + rainFont() : ''); e.textContent = t;
@@ -2564,9 +2586,8 @@
                '（……あの放課後は、本当にあった）', 'その下に、6行目があった。', '何も書かれていない。', '（ここには、誰の名前が入るはずだったんだろう）']);
     await endScene('rooftop_rain'); rainSE(true);
     await wordRain();
-    await say(['（……人間じゃないなら、何なんだよ）', '（……そうかもしれない）']);
     await lateWords([['苦しいのは、あなただけじゃないよ', 'sei'], ['いつもヘラヘラしてるのに', 'neg'], ['簡単に泣かない方がいいよ', 'sei'], ['一時の感情に、流されないようにね', 'sei'],
-                     ['考えすぎだよ', 'nag'], ['かわいそう', 'nag'], ['もう、頑張らなくてもいいよ', 'nag'], ['時間が、解決してくれるんじゃないかな', 'nag'], ['昔の私に似てる。……でも大丈夫。今は、こう変われたから', 'nag']]);
+                     ['考えすぎだよ', 'nag'], ['かわいそう', 'nag'], ['もう、頑張らなくてもいいよ', 'nag'], ['時間が、解決してくれるんじゃないかな', 'nag'], ['昔の私に似てる。……でも大丈夫。今は、変われたから', 'nag']]);
     await say(['頭に、誰かの手が置かれる感触がした。']);
     await lateWords([['まだ若いんだから、大丈夫', 'nag'], ['人生、これからだよ', 'nag'], ['生きてれば、いいことあるよ', 'nag']]);
     await say(['（……言われたときは、傷ついたなんて思わなかった）', '（でも、ずっと、残っていた）',
@@ -2581,7 +2602,14 @@
     rainSE(false); await endScene('rooftop'); $('#scene').classList.add('roof-wind');
     const O = 'もう一人の自分';
     await say(['顔を上げると、フェンスの向こうの縁に、誰かが立っている気がした。', '自分と、同じ顔をしていた。',
-               [O, '……五人は救えたのに。自分のことは、救えないんだね'], [O, '名前も、書けないくせに'], [O, 'いつまで経っても、変わらないね'],
+               [O, '……五人は救えたのに。自分のことは、救えないんだね'], [O, '名前も、書けないくせに'],
+               '（……書けないんじゃない）', '（書いていい名前だと、思えないだけだ）',
+               [O, 'ほら。そうやって、また理由をつける'],
+               [O, 'あの子たちの話は、最後まで聞けたのに。自分の話は、いつも途中でやめる'],
+               [O, '聞いたら、認めなきゃいけなくなるから'], '（……何を）', [O, 'ずっと、苦しかったってこと'],
+               '風が、フェンスを鳴らした。', '何も、言い返せなかった。',
+               [O, '……ねえ。あの子たちの前では、ちゃんと息ができてたよね'], [O, 'ひとりに戻ったとたん、これだ'],
+               [O, 'いつまで経っても、変わらないね'],
                [O, 'この世で生きていける未来なんて、全く見えない。……そうでしょ']]);
     const t = await choose(['「……つらかったんだね。ずっと」', '「……普通の人に、ならなきゃ」', '「大丈夫。まだ、これからだよ」', '「……生きてる価値なんて、ないよね」']);
     if (t === 3) return roofBad8('self');
@@ -2661,7 +2689,7 @@
     await say([...({ despair: ['今度は、指は止まらなかった。'],
                      self: ['もう一人の自分が、静かに笑った気がした。'],
                      close: ['五人の声が、遠くなっていく。'] }[from] || []),
-               '手帳を閉じた。', ['もう一人の自分', '……やっぱり、変われなかった']]);
+               () => rainSE(false, 7), '手帳を閉じた。', ['もう一人の自分', '……やっぱり、変われなかった']]);
     $('#scene').classList.add('roof-dark');
     await say(['五人の名前の字が、色を失っていく。', '6行目は、白いまま。']);
     $('#scene').classList.remove('roof-dark');
