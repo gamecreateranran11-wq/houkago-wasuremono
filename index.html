@@ -2082,7 +2082,7 @@
         // ゴム底の重い足音。かかとの「ドス」を床の低音で支え、長めに残す。つま先の擦れは小さく
         const n = 9;
         for (let k = 0; k < n; k++) {
-          const at = t0 + k * 0.86 + (k % 2 ? 0.05 : 0), v = 1.15 * Math.pow(Math.sin(Math.PI * (k + 0.6) / (n + 0.2)), 1.4);
+          const at = t0 + k * 0.86 + (k % 2 ? 0.05 : 0), v = 2.3 * Math.pow(Math.sin(Math.PI * (k + 0.6) / (n + 0.2)), 1.4);
           thump(at, 95, 48, v * 0.9, 0.32);            // 床に伝わる重い低音
           step(at, 85, 1.0, v * 0.8, 0.26, 0.004);      // かかとの「ドス」
           step(at + 0.015, 190, 1.6, v * 0.35, 0.12, 0.004); // 体重がのる音
@@ -2132,7 +2132,7 @@
       const send = a.createGain(); send.gain.value = 1.0; send.connect(rv);
       let at = t0;
       for (let k = 0; k < n; k++) {
-        const v = (n === 1 ? 0.6 : 0.5 * (0.8 + 0.2 * Math.sin(k * 1.7))) * (k === n - 1 && n > 1 ? 0.8 : 1);
+        const v = (n === 1 ? 1.2 : 1.0 * (0.8 + 0.2 * Math.sin(k * 1.7))) * (k === n - 1 && n > 1 ? 0.8 : 1);
         // ボールの皮が床を打つ「パン」と、空気の入った球体の「ボン」（低い音程がすぐ下がる）
         const o = a.createOscillator(), g = a.createGain();
         o.type = 'sine'; o.frequency.setValueAtTime(210, at); o.frequency.exponentialRampToValueAtTime(70, at + 0.09);
