@@ -92,6 +92,7 @@
   /* 章の子とは別に、その場にいる子（第五章のミオ）。左寄りに立つ。far は少し離れた所（二回り小さく、奥に） */
   .guest { position: absolute; left: 4%; bottom: 0; height: 94%; width: auto; opacity: 0; transition: opacity .45s ease, height .45s ease, bottom .45s ease, left .45s ease; pointer-events: none; z-index: 3; }
   .guest.show { opacity: 1; }
+  .guest.mid { height: 80%; bottom: 6%; left: 9%; }
   .guest.far { height: 64%; bottom: 14%; left: 14%; filter: brightness(.9); }
   .scene.talk .guest.show { filter: none; }
   .hs { position: absolute; background: transparent; border: 1px dashed transparent; border-radius: 4px; padding: 0; cursor: pointer; }
@@ -847,7 +848,7 @@
     return s === 'bust' ? `${key}_p` : `${key}_p_${s}`;
   }
   // 地の文で子どもが立ち上がったら、そこから立った絵にする（「立ち上がりかけて」「立ち上がろうと」は座ったまま）
-  const STAND_RE = /立ち上がっ|立ち上がると/, STAND_NOT = /立ち上がりかけ|立ち上がろう/;  // 表情の絵を読み込んで持っておく（切り替えの瞬間に前の絵が残らないように）
+  const STAND_RE = /立ち上がっ|立ち上がると/, STAND_NOT = /立ち上がりかけ|立ち上がろう|丸椅子から、そっと立ち上がって/;  // 表情の絵を読み込んで持っておく（切り替えの瞬間に前の絵が残らないように）
   let talkHold = false;
   function setTalk(on, f) {
     const faces = C ? C.faces : {};
@@ -879,9 +880,9 @@
     if (!guest || !C || !C.faces[guest.f]) { g.classList.remove('show'); return; }
     const url = `img/${faceFile(guest.f)}.webp`;
     if (g.getAttribute('src') !== url) g.src = url;
-    g.classList.toggle('far', !!guest.far); g.classList.add('show');
+    g.classList.toggle('far', guest.far === true); g.classList.toggle('mid', guest.far === 'mid'); g.classList.add('show');
   }
-  const guestShow = (f, far = false, who = 'ミオ') => () => { guest = { f, far, who }; guestRender(); };
+  const guestShow = (f, far, who = 'ミオ') => () => { guest = { f, far: far === undefined && guest ? guest.far : (far || false), who }; guestRender(); };
   const guestHide = () => () => { guest = null; guestRender(); };
   // 既読の文でも、前の文と次の文がどちらも未読なら飛ばさない（1文だけ飛ぶと、不具合に見えるため）
   async function say(lines) {
@@ -4119,7 +4120,7 @@
     sit: { src: 'mio_sit', style: 'left:12.2%;top:42.0%;height:46.5%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
-    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown' },
+    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap' },   // lap：本を膝の上に下ろして、小さく決意した顔
     lost: '返却期限の過ぎた一冊',
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う。背景 infirmary の壁の時計は bgClock: { cx: 829, cy: 202, rx: 49, ry: 48 }
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
@@ -4543,10 +4544,10 @@
                  '「許してもらうためじゃなくて。……ツムギさんが、いてもいなくても同じなんかじゃないって、伝えるために」',
                  'ミオは、長いあいだ黙っていた。']);
       bgm(null);
-      await say(['ぎゅっと抱えていた本を、ミオは、ゆっくりと膝の上に下ろした。']);
+      await say([['', 'ぎゅっと抱えていた本を、ミオは、ゆっくりと膝の上に下ろした。', 'lap']]);
       bgm('musicbox');
-      await say([['ミオ', '……届けなきゃ。この本', 'sad'],
-                 ['ミオ', 'ツムギのところに。……それから、あの黒板の字は、私が書いたって、言う', 'sad'],
+      await say([['ミオ', '……届けなきゃ。この本', 'lap'],
+                 ['ミオ', 'ツムギのところに。……それから、あの黒板の字は、私が書いたって、言う', 'lap'],
                  ['ミオ', '許してもらえなくても。……言わなきゃいけないこと、だから', 'crySmile']]);
       R.st = 'unraveled'; R.standing = true; render();  // ミオはカウンターへ立っていく
       bgm('unravel');
@@ -4986,10 +4987,10 @@
                                   ['ケイ', '悪いけど、もう閉めるわ。部長の仕事だから', 'reject'],
                                   ['ケイ', '……出てってくれる？', 'reject']],
                                  ['扉を叩いた。返事はない。', '……体育館の中で、ボールが一度だけ、床に跳ねる音がした。']);
-      await say([['', 'ケイは、少しだけ目を丸くして、それから笑った。', 'smile'],
+      await say([['', 'ケイは、少しだけ目を丸くして、それから笑った。', 'surprise'],
                  ['ケイ', '……いいよ。どうせ俺しかいないし', 'smile'],
-                 ['ケイ', '三年が引退して、二年は俺ひとりしか残らなかったんだ', 'down'],
-                 ['ケイ', 'あとは一年が五人。ユウマ、ハヤト、ミナト、ダイチ、シュン', 'smile'],
+                 ['ケイ', '三年が引退して、二年は俺ひとりしか残らなかったんだ', 'normal'],
+                 ['ケイ', 'あとは一年が五人。ユウマ、ハヤト、ミナト、ダイチ、シュン', 'normal'],
                  ['ケイ', '下手くそだけど、いいやつらなんだよ。……あいつらと試合するの、好きなんだ', 'smile'],
                  'ケイは、指のテーピングを、ぼんやり撫でた。']);
 
@@ -5254,28 +5255,42 @@
     closeOverlay();
   }
   // 当番表：日付ごとのカレンダー。ツムギが17:00まで残っていた日のマスを選んで、照らし合わせる
+  // 当番表：見るだけの画面。来室カードを持っていれば、画面の下に持ち物を出す（3章の図書だよりと同じ流れ）
+  // 押すと「来室カードと照らし合わせる」かを選び、照らし合わせると日付のマスが選べるようになる
   function viewRoster() {
     const r = replayed(); if (r) return Promise.resolve(r.v);
     return new Promise(res0 => {
       const res = v => res0(rec(v));
-      const on = new Set();
+      const on = new Set(), canUse = R.items.has('card');
       const cell = c => !c ? '<td class="rs-none"></td>'
         : c[1].startsWith('試験') ? `<td class="rs-off"><b>${c[0]}</b><span>${c[1]}</span></td>`
-        : `<td><button type="button" class="rs-cell" data-d="${c[0]}"><b>${c[0]}</b><span>${c[1].replace('・', '<br>')}</span></button></td>`;
+        : `<td><button type="button" class="rs-cell" data-d="${c[0]}" disabled><b>${c[0]}</b><span>${c[1].replace('・', '<br>')}</span></button></td>`;
       openOverlay(`<p class="eyebrow">持ち物</p><h2>図書委員会の当番表</h2>
         <p class="note">2年・6〜7月。貸出カウンターの当番。図書室は17:00まで。</p>
         <div class="rs-wrap"><table class="roster-cal"><tr><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th></tr>
           ${ROSTER.map(w => `<tr>${w.map(cell).join('')}</tr>`).join('')}</table></div>
-        <p class="note">来室カードと照らし合わせる：ツムギが17:00まで残っていた日を選ぶ</p>
-        <div class="row"><button type="button" class="btn primary" id="rsOk">照らし合わせる</button><button type="button" class="btn" id="rsNo">閉じる</button></div>`);
-      card.querySelectorAll('.rs-cell').forEach(b => { b.onclick = () => { const d = b.dataset.d; if (on.has(d)) on.delete(d); else on.add(d); b.classList.toggle('on', on.has(d)); }; });
-      $('#rsOk').onclick = () => { closeOverlay(); res([...on].sort().join(',')); };
+        ${canUse ? `<div class="ov-inv" id="rsInv"><span class="label">持ち物</span><button type="button" class="chip" id="useCard"><img src="img/ci_card_blank.webp" alt=""><span>ツムギの来室カード</span></button></div>` : ''}
+        <div class="row" id="rsAsk" hidden><button type="button" class="btn primary" id="rsYes">来室カードと照らし合わせる</button><button type="button" class="btn" id="rsNoUse">やめる</button></div>
+        <p class="note" id="rsSel" hidden>ツムギが17:00まで残っていた日のマスを、すべて選ぶ</p>
+        <div class="row" id="rsMain"><button type="button" class="btn primary" id="rsNo">閉じる</button></div>
+        <div class="row" id="rsDone" hidden><button type="button" class="btn primary" id="rsOk">選んだ日を、じっと見る</button><button type="button" class="btn" id="rsBack">やめる</button></div>`);
       $('#rsNo').onclick = () => { closeOverlay(); res(null); };
+      if (canUse) {
+        $('#useCard').onclick = () => { $('#rsAsk').hidden = false; $('#useCard').classList.add('on'); };
+        $('#rsNoUse').onclick = () => { $('#rsAsk').hidden = true; $('#useCard').classList.remove('on'); };
+        $('#rsYes').onclick = () => {
+          $('#rsAsk').hidden = true; $('#rsInv').hidden = true; $('#rsMain').hidden = true; $('#rsSel').hidden = false; $('#rsDone').hidden = false;
+          card.querySelectorAll('.rs-cell').forEach(b => { b.disabled = false; b.onclick = () => { const d = b.dataset.d; if (on.has(d)) on.delete(d); else on.add(d); b.classList.toggle('on', on.has(d)); }; });
+        };
+        $('#rsOk').onclick = () => { closeOverlay(); res([...on].sort().join(',')); };
+        $('#rsBack').onclick = () => { closeOverlay(); res(null); };
+      }
     });
   }
   async function useRoster() {
     const v = await viewRoster();
     if (v === null) return;
+    if (v === '') { await say(['来室カードと当番表を見比べた。……まだ、何も選んでいない。']); return; }
     if (v !== ROSTER_ANSWER) { nmMark('puz'); await say(['来室カードと当番表を見比べた。……どこか、合わない気がする。']); return; }
     if (R.know.has('match')) { await say(['17:00まで残っていた日は、どれも「水野」が当番に入った日だ。……曜日が変わった6/19も。']); return; }
     R.know.add('match'); R.seen.add('match');
@@ -5345,7 +5360,8 @@
              mioNormal: 'mio_bust', mioSad: 'mio_sad', mioDown: 'mio_down', mioSurprise: 'mio_surprise', mioGrief: 'mio_grief', mioCrySmile: 'mio_crysmile', mioDespair: 'mio_despair', mioSoftSmile: 'mio_softsmile',
              mioLeave: 'mio_nbleave', mioLeaveWonder: 'mio_nbleavewonder',   // 扉のほうを向いた姿
              // 本をツムギに渡したあとは、本を持たない立ち絵（絶望の顔はまだ無いので、泣き顔で代える）
-             mioOffer: 'mio_offer', mioOfferSad: 'mio_offer_sad', mioNbDown: 'mio_nb', mioNbSad: 'mio_nb_apology', mioNbGrief: 'mio_nb_grief', mioNbDespair: 'mio_nb_grief', mioNbCrySmile: 'mio_nb_crysmile' },
+             mioOffer: 'mio_offer', mioOfferSad: 'mio_offer_sad', mioNbDown: 'mio_nb', mioNbSad: 'mio_nb_apology', mioNbGrief: 'mio_nb_grief', mioNbDespair: 'mio_nb_grief', mioNbCrySmile: 'mio_nb_crysmile',
+             mioNbSkirt: 'mio_nb_skirt', mioNbSurprise: 'mio_nb_surprise', mioNbSadDown: 'mio_nb_down' },   // スカートを握って涙をこらえる／驚き／自分を責める悲しい俯き（涙なし）
     lost: '保健室の来室カード',
     clock: { img: 'ci_clock_infirmary', cx: 782, cy: 430, s: 1.01 },
     clock2: ['時計の下に、行事予定の紙が貼ってある。', '「6/24（火）〜6/27（金）　期末試験」「7/9（水）〜7/15（火）　三者面談（午前授業）」', '「7/16（水）　終業式」', 'その下に、先生の字で小さく。「7/22（火）　白石さん　入院」'],
@@ -5468,13 +5484,15 @@
         // 入口の脇（画面の外、手前左）にある照明のスイッチ。アップの絵ができたら CUT_SWITCH を true にする
         if (CUT_SWITCH) showCut(R.taken.dark ? 'ci_inf_switch_dark' : 'ci_inf_switch');
         if (!R.taken.dark) {
+          await say(['入口の脇の、照明のスイッチを切った。']);
           setDark(true);
           if (CUT_SWITCH) showCut('ci_inf_switch_dark');
-          await say(['入口の脇の、照明のスイッチを切った。蛍光灯が消えて、保健室が夕焼けの色に沈む。', ['ツムギ', 'わ。……暗い', 'surprise'], ['ツムギ', '……でも、このくらいが、落ち着くかも', 'normal']]);
+          await say(['蛍光灯が消えて、保健室が夕焼けの色に沈む。', ['ツムギ', 'わ。……暗い', 'surprise'], ['ツムギ', '……でも、このくらいが、落ち着くかも', 'normal']]);
         } else {
+          await say(['入口の脇の、照明のスイッチを入れた。']);
           setDark(false);
           if (CUT_SWITCH) showCut('ci_inf_switch');
-          await say(['入口の脇の、照明のスイッチを入れた。蛍光灯が、白く光る。']);
+          await say(['蛍光灯が、白く光る。']);
         }
       },
       async notice() {
@@ -5756,7 +5774,7 @@
                    guestShow('mioNbDown'), 'ツムギは本を受け取って、そっと表紙を撫でた。ページのあいだから、しおりがのぞいている。']);
         await say(['ツムギが、しおりを開いた。', '「一年のとき、この本を教えてくれてありがとう。一人で座っていた私に、最初に話しかけてくれたのは、ツムギだった。」',
                    '「黒板の字を書いたのは、私です。ごめんなさい。いてもいなくても同じなんかじゃない。」',
-                   ['ミオ', '……ごめんなさい', 'mioNbGrief'], ['ミオ', 'ずっと、謝りたかった。……謝ったら、許してもらうのを待つことになるって、思ってた', 'mioNbGrief'],
+                   ['ミオ', '……ごめんなさい', 'mioNbGrief'], ['ミオ', 'ずっと、謝りたかった。……謝ったら、許してもらうのを待つことになるって、思ってた', 'mioNbSkirt'],
                    'ツムギは、手紙から顔を上げた。……いつもの、やわらかい笑顔だった。',
                    ['ツムギ', '……怒ってないよ。ほんとに', 'smile']]);
         return mioTsumugi();
@@ -5794,11 +5812,11 @@
     if (c === 0) {
       wrong('smile');
       await say(['「……よかった」', ['ツムギ', '……うん', 'smile'],
-                 'ツムギは笑ったまま、うなずいた。……ミオは、その笑顔を見て、うつむいた。', ['ミオ', '……いつもの顔だ', 'mioNbDown'],
+                 'ツムギは笑ったまま、うなずいた。……ミオは、その笑顔を見て、うつむいた。', ['ミオ', '……いつもの顔だ', 'mioNbGrief'],
                  ['ミオ', 'ツムギ、それ、つらいときの笑い方だよ。……やっぱり、無理させてる', 'mioNbGrief']]);
     } else if (c === 1) {
       wrong('side');
-      await say(['「ミオも、この本をずっと持ってたんだよ」', 'ミオが、驚いたようにこちらを見た。',
+      await say(['「ミオも、この本をずっと持ってたんだよ」', guestShow('mioNbSurprise'), 'ミオが、驚いたようにこちらを見た。',
                  ['ツムギ', '……そう、だよね。ミオも、苦しかったよね', 'smile'],
                  ['ミオ', '……ちがう。いちばん苦しかったのは、私じゃない', 'mioNbGrief'],
                  ['ミオ', 'ツムギ、また笑ってる。……やっぱり、無理させてる', 'mioNbGrief']]);
@@ -5808,7 +5826,7 @@
                  'ツムギは、自分で言ったことに驚いたように、口を押さえた。', ['ミオ', '……うん', 'mioNbGrief']]);
     }
     // 2段目：ミオが扉へ向かう
-    await say(['ミオは、ベッドから一歩さがった。', ['ミオ', '……私、もう会わないほうがいいね', 'mioNbDespair'], 'ミオは、扉のほうへ向き直った。', guestShow('mioLeave'),
+    await say(['ミオは、ベッドから一歩さがった。', ['ミオ', '……私、もう会わないほうがいいね', 'mioNbDespair'], 'ミオは、扉のほうへ向き直った。', guestShow('mioLeave', 'mid'),
                '（引き止める言葉なら、いくらでも浮かぶ。……でも、それは自分の言葉で、ミオの言葉じゃない）']);
     c = [2, 0, 1][await choose(['何も言わずに、ミオが振り返るのを待つ', 'また逃げるの？', '話さないと、きっと後悔するよ'])];   // 0：追い詰める 1：正論 2：正解
     if (c === 0) {
@@ -5865,7 +5883,7 @@
                  // 主人公は二人にとって他人なので、ここで自分から場所を空ける
                  '（……ここから先は、二人の話だ）',
                  '座っていた丸椅子から、そっと立ち上がって、一歩さがった。',
-                 'ミオは、ちらりとこちらを見て、小さくうなずいた。それから、その丸椅子を持ち上げて、ツムギのすぐ隣に置いた。',
+                 guestShow('mioNbCrySmile', 0), 'ミオは、ちらりとこちらを見て、小さくうなずいた。それから、その丸椅子を持ち上げて、ツムギのすぐ隣に置いた。',
                  ['ミオ', '……今度は、私が運ぶ番、だから', 'mioNbCrySmile'],
                  ['ツムギ', '……ふふ。それ、図書室の椅子じゃないよ', 'crySmile'],
                  ['ミオ', '……知ってる', 'mioNbCrySmile'],
@@ -5881,7 +5899,7 @@
                  ['ミオ', '……もう、二度と書かない', 'mioNbDown'],
                  ['ミオ', 'だからって、許してほしいとは言わないけど', 'mioNbSad'],
                  ['ツムギ', '……うん。わかった', 'down'],
-                 'ツムギが、そっと手を差し出した。',
+                 guestShow('mioNbDown', 0), 'ツムギが、そっと手を差し出した。',
                  'ミオは、伸ばしかけた手を、一度止めた。……一呼吸おいてから、その手を握った。',
                  ['ツムギ', '……退院したら、図書室、行ってもいい？', 'down'], ['ミオ', '……うん。当番の日なら、いるから', 'mioNbDown'],
                  '約束は、それだけだった。……二人とも、それ以上は、まだ言葉にできなかった。',
@@ -5905,7 +5923,7 @@
       bgm(null);
       await say(['ツムギの手の中で、本の表紙が、小さく鳴った。', () => bgm('burst'), ['ツムギ', '……そっか。今度は、ミオの番なんだ', 'despair'],
                  ['ツムギ', '謝って、楽になりたいだけでしょ', 'angry'], ['ツムギ', '……ミオは、それでいいかもしれないけど', 'angry'],
-                 ['ツムギ', '私は、謝る相手もいなかったのに', 'angryCry'], 'ミオの顔から、すっと色が消えた。',
+                 ['ツムギ', '私は、謝る相手もいなかったのに', 'angryCry'], guestShow('mioNbSadDown'), 'ミオの顔から、すっと色が消えた。',
                  ['ツムギ', '……ちがう。ミオに、こんなこと言いたかったんじゃ……', 'surprise'],
                  ['ミオ', '……ううん。そうだよね', 'mioNbDespair'], guestShow('mioLeave'), 'ミオは、小さく頭を下げて、扉のほうへ歩いていった。', guestHide(), '扉が、静かに閉まった。']);
       await say([['ツムギ', '……私、怒ってたんだ', 'grief'], ['ツムギ', 'ずっと。……誰にも、怒っちゃいけないと思ってたのに', 'grief'],
