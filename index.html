@@ -1647,8 +1647,9 @@
       // 後半：ホルンがうねり、バスドラムが鼓動のように（不規則に）
       if (late) {
         horn(root + 7, t, d + 0.3, B * 0.014); horn(ch[1], t + q * 2, q * 2 + 0.3, B * 0.011);
-        bassDrum(t, B * (0.14 + (cyc ? 0.04 : 0))); bassDrum(t + q * 2.5, B * (0.09)); if (bar >= 12) bassDrum(t + q * 3.5, B * (0.07));
-      } else if (bar % 2 === 1) bassDrum(t + q * 2, B * (0.07));
+        const j = () => (Math.random() - 0.5) * 0.3;
+        bassDrum(t + j() * 0.5, B * (0.14 + (cyc ? 0.04 : 0))); if (Math.random() < 0.8) bassDrum(t + q * 2.5 + j(), B * (0.09)); if (bar >= 12 && Math.random() < 0.7) bassDrum(t + q * 3.5 + j(), B * (0.07));
+      } else if (Math.random() < 0.45) bassDrum(t + q * (1.5 + Math.random() * 2), B * (0.07));
       // 最後の小節：すべてが低く崩れ落ちる
       if (bar === 15) { contrabass(26, t + q * 3, q + 1.2, B * 0.04); tuba(26, t + q * 3, q + 1.0, B * 0.03); bassDrum(t + q * 3, B * (0.2)); }
       return d;
@@ -2191,12 +2192,21 @@
       const s2 = a.createBufferSource(), f2 = a.createBiquadFilter(), g2 = a.createGain();
       s2.buffer = getNoise(); s2.loop = true; f2.type = 'bandpass'; f2.frequency.value = 520; f2.Q.value = 1.6; g2.gain.value = 0.3;
       s2.connect(f2).connect(g2).connect(g);
-      const lfo = a.createOscillator(), lg = a.createGain(); lfo.type = 'sine'; lfo.frequency.value = 0.09; lg.gain.value = 0.3;
-      lfo.connect(lg).connect(g1.gain); lfo.start(t);
-      s1.start(t); s2.start(t + 0.01);
+      // 人の声くらいの高さ（300〜700Hz）で、うなるように揺れる風。高さはゆっくり不規則に動く
+      const s3 = a.createBufferSource(), f3 = a.createBiquadFilter(), g3 = a.createGain();
+      s3.buffer = getNoise(); s3.loop = true; f3.type = 'bandpass'; f3.frequency.value = 420; f3.Q.value = 9; g3.gain.value = 0.5;
+      s3.connect(f3).connect(g3).connect(g);
+      const lfo = a.createOscillator(); lfo.frequency.value = 0.001; lfo.start(t);   // 置き場所の都合で残す（止めるときに使う）
+      s1.start(t); s2.start(t + 0.01); s3.start(t + 0.02);
+      // うなりの強弱と高さは、周期を持たせず、ばらばらの間隔で目標を変える
+      let next1 = t;
+      const wander = () => { try { const now = a.currentTime; if (now < next1) return; const d = 1.5 + Math.random() * 4;
+        g1.gain.setTargetAtTime(0.6 + Math.random() * 0.6, now, d * 0.5);
+        f3.frequency.setTargetAtTime(300 + Math.random() * 400, now, d * 0.4); g3.gain.setTargetAtTime(0.25 + Math.random() * 0.5, now, d * 0.5);
+        next1 = now + d; } catch (e) {} };
       // 突風：数秒おきに、低いうなりが吹き上がって、高い風も強まる
       let gustEnd = 0;
-      const timer = setInterval(() => { try {
+      const timer = setInterval(() => { wander(); try {
         const now = a.currentTime;
         if (now > gustEnd && Math.random() < 0.45) { const at = now + 0.05, d = 2 + Math.random() * 2.5; gustEnd = at + d + 0.5;
           f1.frequency.cancelScheduledValues(at); f1.frequency.setValueAtTime(f1.frequency.value, at); f1.frequency.linearRampToValueAtTime(420, at + d * 0.4); f1.frequency.linearRampToValueAtTime(260, at + d);
@@ -2227,8 +2237,7 @@
       const s2 = a.createBufferSource(), f2 = a.createBiquadFilter(), g2 = a.createGain();
       s2.buffer = getNoise(); s2.loop = true; f2.type = 'lowpass'; f2.frequency.value = 380; g2.gain.value = 0.6;
       s2.connect(f2).connect(g2).connect(g);
-      const lfo = a.createOscillator(), lg = a.createGain(); lfo.type = 'sine'; lfo.frequency.value = 0.13; lg.gain.value = 0.08;
-      lfo.connect(lg).connect(g1.gain); lfo.start(t);
+      const lfo = a.createOscillator(); lfo.frequency.value = 0.001; lfo.start(t);
       s1.start(t); s2.start(t + 0.01);
       // 大粒の雨粒が屋上の床や鉄柵をたたく音。1秒に十数粒、ばらばらの大きさと高さで
       let next = t + 0.2;
@@ -2584,7 +2593,7 @@
     const box = fxLayer('rain');
     // 短い言葉は、届いた言葉（ほかの人から言われた言葉）から切り出したものだけ。どれも否定。自分で自分に向けた言葉は、もう一人の自分の台詞に取っておく
     const shorts = ['きもい', 'バカ', '邪魔', '使えない', '気持ち悪い', '役立たず', '汚い', '臭い', 'いらない', '無理', 'できない', '手遅れ', '最低',
-                    '出て行け', '甘えるな', 'ヘラヘラ', '泣くな', '通用しない', 'みんな嫌ってる', '普通でしょ', '弱虫', '情けない', '惨め', 'のろま', '出来損ない'];
+                    '出て行け', '甘えるな', 'ヘラヘラ', '泣くな', '通用しない', 'みんな嫌ってる', '普通でしょ', '弱虫', '情けない', '惨め', 'のろま', '出来損ない', '帰れ', '帰って'];
     // 同じ言葉が続かないように、全部を一巡するまで同じ言葉は出さない
     let bag = [];
     const nextShort = () => { if (!bag.length) bag = shorts.slice().sort(() => Math.random() - .5); return bag.pop(); };
@@ -2592,7 +2601,7 @@
     const longs = [['そんなんじゃ、社会で通用しない', 'neg'], ['誰も、相手にしないよ', 'neg'], ['みんな本当は、汚いって思ってるよ', 'neg'], ['きっとみんな、あなたのこと嫌ってるよ', 'neg'],
                    ['殴るよ', 'neg'], ['なんでそんなことするの', 'sei'], ['やる気、あんの？', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
                    ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['お前なんか、いらない', 'neg'],
-                   ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['よそはよそ、うちはうち', 'sei']];
+                   ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['よそはよそ、うちはうち', 'sei'], ['頑張って', 'nag']];
     let fast = false; box.onclick = () => { fast = true; };
     const drop = (t, cls) => {
       const e = document.createElement('span'); e.className = 'rw ' + cls + (cls === 'short' ? ' neg ' + rainFont() : ''); e.textContent = t;
@@ -2704,7 +2713,7 @@
                '雨は、まだ、強くなっていく。', '（……こんな心なんて、いらない）', '（心と身体を分けて、身体だけ、誰かにあげられたらいいのに）',
                '（今日を生きるだけで精一杯な人たちの、代わりになれたらいいのに）', '（そうしたら、少しは、役に立つのに）']);
     for (let n = 0; ; n++) {
-      if (await choose(['（……どうせ、何も変わらない）', '（……それなのに、どうしてだろう）']) === 1) break;
+      if (await choose([n ? '（……やっぱり、何も変わらない）' : '（……どうせ、何も変わらない）', '（……それなのに、どうしてだろう）']) === 1) break;
       if (n > 0) return roofBad8('despair');
       nmMark('miss');
       await say(['手帳を、閉じかけた。', '……指が、6行目のところで止まった。', '（……まだ、白いままだ）', '白い行から、目をそらした。……見ていると、足もとが崩れる気がした。']);
@@ -2731,8 +2740,8 @@
                [[O, '……これから？'], [O, '今までずっと地獄だったのに、それを、まだ何十年も続けろっていうの'], [O, 'それは、自分に向けられた言葉じゃない。……綺麗事だよ']]][t]);
     await say([[O, '……ねえ。あの子たちには、言えたよね'], [O, '「つらかったんだね」って。「一人で抱えなくていい」って。……何度も'],
                'もう一人の自分が、近づいてくる気がした。胸ぐらをつかむような勢いで。',
-               [O, 'どうして、自分には言えないの？'], [O, 'じゃあ、あの子たちにかけた言葉は、嘘だったの！？'], [O, '……なんとか言えよ！！'],
-               '泣き叫ぶみたいな声だった。すがるみたいな声だった。', '何も、言えなかった。うつむいたまま。',
+               [O, 'どうして、自分には言えないの？'], [O, 'あの子たちにかけた言葉は、嘘だったの！？'], [O, '……なんとか言えよ！！'],
+               '泣き叫ぶような、すがるような声だった。', '何も、言えなかった。うつむいたまま。',
                '口を開いても、出てくるのは、いつもの言葉だけだった。',
                '（……迷惑かけて、ごめんなさい）', '（力になれなくて、ごめんなさい）', '（嫌な思いさせて、ごめんなさい）', '（生まれてきて、ごめんなさい）', '（生きてて、ごめん――）']);
     // 5人が来る（思い返しと現実が重なる）
@@ -3153,7 +3162,7 @@
     idleFree: '（ヒナが待っている。チャイムが鳴る前に）',
     async onTick() {
       await memStage('gaze', [
-        ['……どこかから、小さな鼻歌が聞こえた気がした。', 'クレヨンが紙をすべる音と、いっしょに。', 'ヒナの、鞄を抱える腕が、ほんの少しだけゆるんだ。'],
+        ['……どこかから、小さな鼻歌が聞こえた気がした。', 'クレヨンが紙をすべる音と、いっしょに。', 'ヒナの肩が、ほんの少しだけゆるんだ。'],
         ['……ふと、背後から、誰かに見られている気がした。', '振り返る。扉のガラスの向こうには、誰もいない。', 'ヒナが、同じように扉のほうを見ていた。すぐに目をそらして、袖を握りしめる。'],
         [() => footsteps('heel'), '……また、背後に視線を感じた。', '廊下を、誰かの足音が通り過ぎていった気がする。コツ、コツと、固いヒールの音。', 'ヒナは膝を抱えて、小さく身を縮めた。'],
         ['扉のガラスに、一瞬だけ、大人の女の人の影が映った。', 'まばたきをすると、もう誰もいなかった。', 'ヒナは両手で耳をふさいで、じっと床を見ていた。'],
