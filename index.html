@@ -6259,13 +6259,14 @@
         ${redoHTML(save)}
         <button type="button" class="btn" id="tSet">設定<span class="sub">既読スキップ・文字の速さ・音量</span></button>
         <button type="button" class="btn-reset" id="tWipe">プレイデータをリセット</button>
-        <p class="note">この作品には、自傷・死・いじめ・家庭での心理的虐待を示唆する表現が含まれます。</p>
+        <p class="note">この作品には、自傷・自死をほのめかす描写・事故死・いじめ・罵倒や暴言・家庭や部活動での心理的虐待（体罰を含む）を示唆する表現が含まれます。</p>
         <p class="note">この作品はフィクションです。実在の人物・団体・学校・サービスとは関係ありません。</p>
         ${RELEASE ? `<p class="note ver">ver ${VERSION}</p>` : ''}
       </div>`, 'title-screen', 'ov-card title-card');
     // 進み具合（終えた教室の数）に合わせて、タイトルの絵の時刻を変える（16:00→18:30）
     const TITLE_IMG = ['title', 'title_1630', 'title_1700', 'title_1730', 'title_1800', 'title_1830'];
-    ov.style.setProperty('--title-img', `url("img/${TITLE_IMG[Math.min(Object.keys(P.cur.results).length, 5)]}.webp")`);
+    // TRUE を見たあとは、終業式の日の昼（12:00）の校舎
+    ov.style.setProperty('--title-img', `url("img/${P.endings && P.endings.TRUE ? 'title_1200' : TITLE_IMG[Math.min(Object.keys(P.cur.results).length, 5)]}.webp")`);
     bgm('title');
     if ($('#tGo')) $('#tGo').onclick = () => goRoom();
     if ($('#tReset')) $('#tReset').onclick = () => resetAll();
