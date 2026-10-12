@@ -2843,6 +2843,7 @@
   // エンディングの場面に切り替える。人物や調べる場所を消し、背景をフェードアウト→フェードインで差し替える
   async function endScene(img) {
     closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = '';
+    guest = null; guestRender();   // その場にいた子（ミオなど）の立ち絵も消す
     $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = ''; $('#leftover').style.display = 'none';
     const bg = $('#bgImg');
     if (bg.getAttribute('src') === `img/${img}.webp`) return;
