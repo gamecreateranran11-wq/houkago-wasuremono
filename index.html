@@ -2195,12 +2195,14 @@
       lfo.connect(lg).connect(g1.gain); lfo.start(t);
       s1.start(t); s2.start(t + 0.01);
       // 突風：数秒おきに、低いうなりが吹き上がって、高い風も強まる
+      let gustEnd = 0;
       const timer = setInterval(() => { try {
-        if (Math.random() < 0.45) { const at = a.currentTime + 0.1, d = 2 + Math.random() * 2.5;
-          f1.frequency.cancelScheduledValues(at); f1.frequency.setValueAtTime(260, at); f1.frequency.linearRampToValueAtTime(420, at + d * 0.4); f1.frequency.linearRampToValueAtTime(260, at + d);
-          g2.gain.cancelScheduledValues(at); g2.gain.setValueAtTime(0.3, at); g2.gain.linearRampToValueAtTime(0.8, at + d * 0.4); g2.gain.linearRampToValueAtTime(0.3, at + d); }
-      } catch (e) {} }, 3500);
-      windNodes = { g, s1, s2, lfo, timer };
+        const now = a.currentTime;
+        if (now > gustEnd && Math.random() < 0.45) { const at = now + 0.05, d = 2 + Math.random() * 2.5; gustEnd = at + d + 0.5;
+          f1.frequency.cancelScheduledValues(at); f1.frequency.setValueAtTime(f1.frequency.value, at); f1.frequency.linearRampToValueAtTime(420, at + d * 0.4); f1.frequency.linearRampToValueAtTime(260, at + d);
+          g2.gain.cancelScheduledValues(at); g2.gain.setValueAtTime(g2.gain.value, at); g2.gain.linearRampToValueAtTime(0.8, at + d * 0.4); g2.gain.linearRampToValueAtTime(0.3, at + d); }
+      } catch (e) {} }, 1500);
+      windNodes = { g, s1, s2, lfo, timer, base: 1.7 };
     } catch (e) {}
   }
   let rainNodes = null;
@@ -2244,7 +2246,7 @@
         }
       };
       const timer = setInterval(() => { try { while (next < a.currentTime + 0.6) { drop(next); next += 0.03 + Math.random() * 0.09; } } catch (e) {} }, 250);
-      rainNodes = { g, s1, s2, lfo, timer };
+      rainNodes = { g, s1, s2, lfo, timer, base: 0.42 };
     } catch (e) {}
   }
   function bounce(n = 1) {
@@ -2571,6 +2573,7 @@
   async function darkSwap(img, inMs = 1500, holdMs = 700, outMs = 1800) {
     const wait = ms => new Promise(r => setTimeout(r, ms));
     const d = fxLayer('dark'); await wait(40); d.classList.add('on'); await wait(inMs);
+    spk.hidden = true; txt.textContent = ''; chs.innerHTML = ''; more.hidden = true;   // 暗転のあいだに、前の文を消す
     await endScene(img); await wait(holdMs);
     d.classList.remove('on'); await wait(outMs); fxEnd(d);
   }
@@ -6765,7 +6768,8 @@
       if (bgmGain) { try { bgmGain.gain.setTargetAtTime(bgmLevel(), audio().currentTime, 0.1); } catch (er) {} }
     });
     let seMoved = 0;
-    sEl.addEventListener('input', e => { P.seVol = e.target.value / 100; saveP(); $('#volSe').value = e.target.value; seMoved = Date.now(); });
+    sEl.addEventListener('input', e => { P.seVol = e.target.value / 100; saveP(); $('#volSe').value = e.target.value; seMoved = Date.now();
+      try { const t = audio().currentTime; [rainNodes, windNodes].forEach(r => { if (r && r.base) r.g.gain.setTargetAtTime(r.base * seMul(), t, 0.1); }); } catch (er) {} });
     // 動かし終えたら、確かめの音（高いド）を一度だけ鳴らす。
     // スマホでは、選んだままアプリを切り替えると「動かし終えた」の合図だけが出ることがあるので、実際に動かした直後のときだけ鳴らし、鳴らしたら選択を外す
     sEl.addEventListener('change', () => {
