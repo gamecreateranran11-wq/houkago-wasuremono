@@ -1619,7 +1619,7 @@
     // 屋上『胸の奥の声』：どこまでも沈んでいく版。明るい和音はすべて短調・減和音に。前半は低いチェロのため息と風、後半はチェロの叫びにホルン・チューバ・バスドラムが重なる
     // 風の低いうなり（air）を曲の一部として鳴らす
     roofCore(t, i) {
-      const q = 1.35, bar = i % 16, cyc = (i >> 4) % 2, late = bar >= 8, d = q * 4;
+      const q = 1.35, bar = i % 16, cyc = (i >> 4) % 2, late = bar >= 8, d = q * 4, B = 2.0;   // B：雨の音に負けないよう、全体を大きく
       //            Dm  Dm  Gm  B♭m Cm  Dm  E°  A   Dm  Gm  B♭m C#° Dm  A   A♭9 Dm
       const ch = [[38, 45, 50, 53], [38, 45, 50, 53], [31, 38, 43, 46], [34, 41, 46, 49], [36, 43, 48, 51], [38, 45, 50, 53], [40, 46, 52, 55], [33, 40, 45, 49],
                   [38, 45, 50, 53], [31, 38, 43, 46], [34, 41, 46, 49], [37, 43, 46, 52], [38, 45, 50, 53], [33, 40, 45, 49], [33, 40, 46, 49], [38, 45, 50, 53]][bar];
@@ -1629,28 +1629,28 @@
       air(t, d + 0.6, gust ? 0.07 : 0.035 + (bar % 3) * 0.008, gust ? 160 : 95 + (bar % 4) * 12);
       if (gust) air(t + q * 1.5, q * 2.2, 0.045, 260);
       // 土台：コントラバスとチューバの長い低音（2周目は少し強く）
-      contrabass(root - 12, t, d + 0.4, 0.036 * (cyc ? 1.1 : 1));
+      contrabass(root - 12, t, d + 0.4, B * 0.036 * (cyc ? 1.1 : 1));
       tuba(root - 12, t, d + 0.3, (late ? 0.024 : 0.012) * (cyc ? 1.15 : 1));
       // 内声：ビオラとチェロの和音。後半は弓を返して重く
-      if (late) [0, 2].forEach(k => { viola(ch[2] + 12, t + k * q, q * 2 + 0.15, 0.012); viola(ch[3] + 12, t + k * q, q * 2 + 0.15, 0.01); cello(ch[1], t + k * q, q * 2 + 0.15, 0.016); });
-      else { viola(ch[2] + 12, t, d + 0.2, 0.011); viola(ch[3] + 12, t, d + 0.2, 0.009); cello(ch[1], t, d + 0.2, 0.014); }
+      if (late) [0, 2].forEach(k => { viola(ch[2] + 12, t + k * q, q * 2 + 0.15, B * 0.012); viola(ch[3] + 12, t + k * q, q * 2 + 0.15, B * 0.01); cello(ch[1], t + k * q, q * 2 + 0.15, B * 0.016); });
+      else { viola(ch[2] + 12, t, d + 0.2, B * 0.011); viola(ch[3] + 12, t, d + 0.2, B * 0.009); cello(ch[1], t, d + 0.2, B * 0.014); }
       // チェロの主旋律：前半は低いため息（『胸の奥の声』の記憶の旋律を2オクターブ下で、ゆっくり）。後半は叫び（本編の後半の旋律を1オクターブ下で）
       const sighs = [[[53, 2], [52, 1], [50, 1]], [[50, 2, 1], [46, 2]], [[46, 2], [50, 1], [49, 1]], [[36, 2], [43, 1], [48, 1, 2]],
                      [[51, 2, 1], [50, 1], [48, 1]], [[50, 3], [46, 1]], [[46, 1], [49, 1], [52, 1, 1], [50, 1]], [[45, 3], [44, 1]]];
       const cries = [[[50, 1], [62, 2, 3], [60, 1]], [[58, 1], [55, 1], [62, 2, 2]], [[65, 2, 2], [62, 1], [58, 1]], [[64, 1], [61, 1], [58, 2, 1]],
                      [[58, 1], [62, 1], [65, 1], [70, 1, 2]], [[72, 2, 3], [69, 1], [65, 1]], [[70, 2, 2], [68, 1], [61, 1, 1]], [[62, 2, 1], [50, 1], [38, 1]]];
       const cel = late ? cries[bar - 8] : sighs[bar];
-      const cv = (late ? 0.036 : 0.026) * (cyc ? 1.12 : 1);
+      const cv = B * (late ? 0.036 : 0.026) * (cyc ? 1.12 : 1);
       let x = t; cel.forEach(([n, len, cry]) => { celloSing(n, x, len * q * 1.08, cv * (n < 45 ? 1.25 : 1), cry || 0); x += len * q; });
       // 高い弦：半音でぶつかる持続音が、遠くで軋む（4小節ごとに現れて消える）
-      if (bar % 4 >= 2) { violin(ch[3] + 24, t, d + 0.3, 0.005); violin(ch[3] + 25, t + q * 0.5, d - 0.2, 0.004); }
+      if (bar % 4 >= 2) { violin(ch[3] + 24, t, d + 0.3, B * 0.005); violin(ch[3] + 25, t + q * 0.5, d - 0.2, B * 0.004); }
       // 後半：ホルンがうねり、バスドラムが鼓動のように（不規則に）
       if (late) {
-        horn(root + 7, t, d + 0.3, 0.014); horn(ch[1], t + q * 2, q * 2 + 0.3, 0.011);
-        bassDrum(t, 0.14 + (cyc ? 0.04 : 0)); bassDrum(t + q * 2.5, 0.09); if (bar >= 12) bassDrum(t + q * 3.5, 0.07);
-      } else if (bar % 2 === 1) bassDrum(t + q * 2, 0.07);
+        horn(root + 7, t, d + 0.3, B * 0.014); horn(ch[1], t + q * 2, q * 2 + 0.3, B * 0.011);
+        bassDrum(t, B * (0.14 + (cyc ? 0.04 : 0))); bassDrum(t + q * 2.5, B * (0.09)); if (bar >= 12) bassDrum(t + q * 3.5, B * (0.07));
+      } else if (bar % 2 === 1) bassDrum(t + q * 2, B * (0.07));
       // 最後の小節：すべてが低く崩れ落ちる
-      if (bar === 15) { contrabass(26, t + q * 3, q + 1.2, 0.04); tuba(26, t + q * 3, q + 1.0, 0.03); bassDrum(t + q * 3, 0.2); }
+      if (bar === 15) { contrabass(26, t + q * 3, q + 1.2, B * 0.04); tuba(26, t + q * 3, q + 1.0, B * 0.03); bassDrum(t + q * 3, B * (0.2)); }
       return d;
     },
     // 重い核心（身代わり）：低く沈んだ弦の和音
@@ -2216,7 +2216,7 @@
       }
       if (rainNodes || !P.sound) return;
       const a = audio(), dst = out(), t = a.currentTime;
-      const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.6 * seMul(), t + 1.8); g.connect(dst);
+      const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.42 * seMul(), t + 1.8); g.connect(dst);
       // 遠くの雨の「サー」（弱め。砂嵐に聞こえないように高い成分を落とす）
       const s1 = a.createBufferSource(), f1 = a.createBiquadFilter(), g1 = a.createGain();
       s1.buffer = getNoise(); s1.loop = true; f1.type = 'bandpass'; f1.frequency.value = 1500; f1.Q.value = 0.8; g1.gain.value = 0.22;
@@ -2569,9 +2569,10 @@
     return d;
   }
   async function darkSwap(img, inMs = 1500, holdMs = 700, outMs = 1800) {
-    const d = fxLayer('dark'); await sleep(30); d.classList.add('on'); await sleep(reduce ? 0 : inMs);
-    await endScene(img); await sleep(reduce ? 0 : holdMs);
-    d.classList.remove('on'); await sleep(reduce ? 0 : outMs); fxEnd(d);
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const d = fxLayer('dark'); await wait(40); d.classList.add('on'); await wait(inMs);
+    await endScene(img); await wait(holdMs);
+    d.classList.remove('on'); await wait(outMs); fxEnd(d);
   }
   function fxEnd(box) { box.remove(); if (!document.querySelector('.roof-fx')) document.body.classList.remove('fx-on'); }
   // 言葉の雨：短い言葉は小さく散らして重ね、長い言葉は一つずつはっきり読ませる。崩した言葉はにじませて読めなくする。画面を押すと早く進む
@@ -2699,7 +2700,7 @@
                '雨は、まだ、強くなっていく。', '（……こんな心なんて、いらない）', '（心と身体を分けて、身体だけ、誰かにあげられたらいいのに）',
                '（今日を生きるだけで精一杯な人たちの、代わりになれたらいいのに）', '（そうしたら、少しは、役に立つのに）']);
     for (let n = 0; ; n++) {
-      if (await choose(['（……どうせ、何も変わらない）', '（……それでも、まだ）']) === 1) break;
+      if (await choose(['（……どうせ、何も変わらない）', '（……それなのに、どうしてだろう）']) === 1) break;
       if (n > 0) return roofBad8('despair');
       nmMark('miss');
       await say(['手帳を、閉じかけた。', '……指が、6行目のところで止まった。', '（……まだ、白いままだ）', '白い行から、目をそらした。……見ていると、足もとが崩れる気がした。']);
@@ -2724,8 +2725,9 @@
     await say([[[O, '……今さら？'], [O, 'そんな言葉、誰も言ってくれなかったのに'], [O, '自分で自分に言ったって、届かないよ']],
                [[O, '……それ、言われてきた言葉だよね'], [O, '普通になれないから、ここにいるんじゃないの']],
                [[O, '……これから？'], [O, '今までずっと地獄だったのに、それを、まだ何十年も続けろっていうの'], [O, 'それは、自分に向けられた言葉じゃない。……綺麗事だよ']]][t]);
-    await say(['もう一人の自分が、近づいてくる気がした。胸ぐらをつかむような勢いで。',
-               [O, '……どうして自分には言えないの？　じゃあ、あの子たちにかけた言葉は嘘だったの！？'], [O, '……なんとか言えよ！！'],
+    await say([[O, '……ねえ。あの子たちには、言えたよね'], [O, '「つらかったんだね」って。「一人で抱えなくていい」って。……何度も'],
+               'もう一人の自分が、近づいてくる気がした。胸ぐらをつかむような勢いで。',
+               [O, 'どうして、自分には言えないの？'], [O, 'じゃあ、あの子たちにかけた言葉は、嘘だったの！？'], [O, '……なんとか言えよ！！'],
                '泣き叫ぶみたいな声だった。すがるみたいな声だった。', '何も、言えなかった。うつむいたまま。',
                '（……迷惑かけて、ごめんなさい）', '（力になれなくて、ごめんなさい）', '（嫌な思いさせて、ごめんなさい）', '（生まれてきて、ごめんなさい）', '（生きてて、ごめん――）']);
     // 5人が来る（思い返しと現実が重なる）
