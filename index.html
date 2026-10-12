@@ -682,6 +682,15 @@
   .cutin, .scene { background-color: #cfc3ab; }
   .btn.primary { color: var(--blue); }
   .poem { border-radius: 0; box-shadow: 2px 5px 0 rgba(60, 45, 30, .18); }
+  /* 章の終わり・朝の結末（dawn）：絵の上に透けた板を置かず、紙を一枚敷く */
+  .overlay.dawn { background: linear-gradient(180deg, rgba(244, 237, 221, .96), rgba(231, 220, 198, .96)); }
+  .dawn .ov-card { background: var(--panel); border-color: var(--line); color: var(--ink); }
+  .dawn .ov-card p { color: var(--ink); }
+  .dawn .ov-card .recall-text p { color: #4a3f36; }
+  .dawn .eyebrow { color: var(--akane); }
+  .dawn .note { color: var(--muted); border-color: var(--line); }
+  .dawn .btn { background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); }
+  .dawn .btn.primary { background: none; border-bottom: 2px solid var(--blue); color: var(--blue); }
 </style>
 
 <div id="app">
