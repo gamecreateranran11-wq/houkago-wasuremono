@@ -4172,7 +4172,7 @@
     sit: { src: 'mio_sit', style: 'left:12.2%;top:42.0%;height:46.5%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
-    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap', clench: 'mio_clench' },   // lap：本を膝の上に下ろして小さく決意した顔／clench：本を強く握りしめ、目をぎゅっとつむった悲痛な顔
+    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap', clench: 'mio_clench', clenchDown: 'mio_clenchdown', frown: 'mio_frown' },   // clenchDown：本を握りしめて伏せ目／frown：眉をひそめてうつむく   // lap：本を膝の上に下ろして小さく決意した顔／clench：本を強く握りしめ、目をぎゅっとつむった悲痛な顔
     lost: '返却期限の過ぎた一冊',
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う。背景 infirmary の壁の時計は bgClock: { cx: 829, cy: 202, rx: 49, ry: 48 }
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
@@ -4518,12 +4518,14 @@
                  ['ミオ', '六月の、あの朝。グループの子に、チョークを渡されたの。『ミオも、書けるよね？』って。クラスのみんなが、こっちを見てた', 'sad'],
                  ['ミオ', '逆らったら、次は私。……それに、ツムギならきっと大丈夫だって、少しだけ思っちゃったの', 'down'],
                  ['ミオ', '考えるより先に、手が動いてた。……黒板に、書いた。『いてもいなくても同じ』って', 'sad'],
-                 ['ミオ', '中学のとき、私の机に書いた子たちのこと、ずっと許せなかった。私だけは、絶対にあんなことしないって思ってた', 'sad'],
-                 ['ミオ', '……チョークを持ったとき、きっと、あのときの子たちと同じ顔をしてた', 'sad'],
-                 ['', 'ミオは、本の背を、指が白くなるほど握りしめた。', 'clench'],
-                 ['ミオ', '中学のとき、誰も助けてくれなかった。だから、自分だけは自分の味方でいようって、決めてたの', 'clench'],
-                 ['ミオ', '……その自分に、裏切られた。もう、誰のことも……私のことも、信じられない', 'clench'],
                  ['ミオ', '何を感じてたのかも、もうわからない。……ただ、眉ひとつでも動かしたら、見つかって、目をつけられる気がしてた', 'sad'],
+                 ['', 'ミオは、そこで言葉を切った。本の表紙に目を落としたまま、しばらく、何も言わなかった。', 'down'],
+                 ['', '……遠いどこかを見ているような目だった。', 'down'],
+                 ['ミオ', '……私の机に、書いた子たちのこと。ずっと許せなかった。私だけは、絶対にあんなことしないって思ってた', 'sad'],
+                 ['ミオ', '……チョークを持ったとき、きっと、あのときの子たちと同じ顔をしてた', 'sad'],
+                 ['', 'ミオは、本の背を、指が白くなるほど握りしめた。', 'clenchDown'],
+                 ['ミオ', '中学のとき、誰も助けてくれなかった。だから、自分だけは自分の味方でいようって、決めてたの', 'clenchDown'],
+                 ['ミオ', '……その自分に、裏切られた。もう、誰のことも……私のことも、信じられない', 'clench'],
                  ['ミオ', '書き終わって席に戻ったころに、ツムギが教室に入ってきたの。黒板の字を見て、何も言わないで、そのまま帰った', 'sad'],
                  ['ミオ', '誰が書いたのかは、知らないまま。……次の日から、教室に来なくなった', 'sad'],
                  ['ミオ', '次の日の朝、当番で返却ポストを開けたら、この本が入ってたの。ツムギが借りてた本', 'sad'],
@@ -4533,7 +4535,7 @@
                  ['ミオ', '……今日、知らないアカウントから、私の机の写真が送られてきたの。……誰からかなんて、わかってるけど', 'sad'],
                  ['ミオ', '落書きは、写真にあとから書き足してあるだけ。教室の机は、きっときれいなまま。……先生に見せても、ただのいたずらで終わるの', 'sad'],
                  ['ミオ', '明日の終業式から、次は私なんだって', 'sad'],
-                 ['ミオ', 'お父さんにも、お母さんにも、言えない。中学のときのことも、話してないの。……心配、させたくないから', 'down'],
+                 ['ミオ', 'お父さんにも、お母さんにも、言えない。中学のときのことも、話してないの。……心配、させたくないから', 'frown'],
                  ['ミオ', 'それにね。さっき、保健室の前で、先生たちが話してるの聞いちゃった。ツムギ、病気がまた悪くなって、来週から入院するって', 'sad']]);
       await line(['ミオ', '……私のせいだ。全部', 'sad'], false);
       a = await ask([['やったことは消えないよ。ちゃんと謝らなきゃ', 'seiron'], ['チョークを渡されたとき、怖かったんだ', 'yori'],
