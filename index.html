@@ -90,10 +90,10 @@
   .portrait { right: 1%; bottom: 0; height: 97%; width: auto; opacity: 0; transform: translateX(12px); transition: opacity .4s ease, transform .4s ease; pointer-events: none; }
   .portrait.show { opacity: 1; transform: none; }
   /* 章の子とは別に、その場にいる子（第五章のミオ）。左寄りに立つ。far は少し離れた所（二回り小さく、奥に） */
-  .guest { position: absolute; left: 4%; bottom: 0; height: 94%; width: auto; opacity: 0; transition: opacity .45s ease, height .45s ease, bottom .45s ease, left .45s ease; pointer-events: none; z-index: 3; }
+  .guest { position: absolute; left: 4%; bottom: -7%; height: 100%; width: auto; opacity: 0; transition: opacity .45s ease, height .45s ease, bottom .45s ease, left .45s ease; pointer-events: none; z-index: 3; }
   .guest.show { opacity: 1; }
   .guest.mid { height: 80%; bottom: 6%; left: 9%; }
-  .guest.far { height: 64%; bottom: 14%; left: 14%; filter: brightness(.9); }
+  .guest.far { height: 70%; bottom: -3%; left: 14%; filter: brightness(.9); }
   .scene.talk .guest.show { filter: none; }
   .hs { position: absolute; background: transparent; border: 1px dashed transparent; border-radius: 4px; padding: 0; cursor: pointer; }
   .hs::after { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -4px 0 0 -4px; border-radius: 50%; background: #fff4de; box-shadow: 0 0 8px 2px rgba(255, 220, 170, .7); opacity: .55; animation: glint 2.8s ease-in-out infinite; }
@@ -5815,13 +5815,13 @@
                  ['ツムギ', '……最後の日くらい、ちゃんと言いたかったんだ。目を見て、『またね』って', 'grief']]);
       if (mioRes() === 'saved') {
         bgm(null);  // ノックの前に音楽を消す。緊張の曲は「……失礼します」から
-        await say([knockTwice(), 'そのとき、扉が、小さく二回、叩かれた。', ['ツムギ', '……え', 'surprise'], '扉が、ゆっくり開いた。', guestShow('mioDown')]);
+        await say([knockTwice(), 'そのとき、扉が、小さく二回、叩かれた。', ['ツムギ', '……え', 'surprise'], '扉が、ゆっくり開いた。']);
         // 窓の指の跡を見るために明かりを消していたら、ここで主人公がつける（ツムギが「目を見て」言えるように）
         if (R.taken.dark || $('#scene').classList.contains('room-dark')) {
           setDark(false); R.taken.dark = false;
           await say(['扉の脇のスイッチを入れた。蛍光灯が、まばたきするように灯った。']);
         }
-        await say([() => bgm('tension'), ['ミオ', '……失礼します', 'mioDown'], ['ツムギ', '……ミオ', 'surprise'],
+        await say([() => bgm('tension'), guestShow('mioDown'), ['ミオ', '……失礼します', 'mioDown'], ['ツムギ', '……ミオ', 'surprise'],
                    ['ミオ', '図書委員の、水野です。……予約の本を、届けに来ました', 'mioSad'],
                    // 差し出すときは目を伏せ、「当番、だから」でツムギの目を見る。受け取られたら本を持たない絵に
                    guestShow('mioOffer'), 'ミオは、胸に抱えていた本を、両手で差し出した。『ひとりぶんの椅子』。', ['ミオ', '……当番、だから', 'mioOfferSad'],
@@ -5902,7 +5902,7 @@
     await say([['ミオ', '……明日から、次は私なんだって', 'mioNbDespair'], ['ツムギ', '……え', 'surprise'],
                ['ミオ', 'さっき、図書室で、私の机の写真が送られてきたの。……終業式から、私の番だって', 'mioNbDespair'],
                ['ミオ', 'だから、ツムギに許してもらう資格なんか、最初からないの。……同じ目にあって、やっと、わかったくらいだから', 'mioNbGrief'],
-               'ツムギは、何か言いかけて、黙りこんだ。本を持つ手に、力が入っていた。']);
+               ['', 'ツムギは、何か言いかけて、黙りこんだ。本を持つ手に、力が入っていた。', 'down']]);
     // 3段目：ツムギが黙りこむ
     await say(['（ツムギが、何か言おうとしている。……言葉にならないまま、本を握りしめている）']);
     c = [1, 0, 2][await choose(['無理に、今決めなくてもいいんじゃないかな', '今度はミオがつらいんだから、許してあげようよ', '……ツムギ、と、名前だけ呼ぶ'])];   // 0：正論 1：慰める 2：正解
@@ -5916,7 +5916,7 @@
       await say(['「無理に、今決めなくてもいいんじゃないかな」', 'ツムギも、ミオも、うなずいた。……でも、どちらも、自分の言葉は出てこなかった。']);
       if (risk >= 2) return mtSplit('quiet', 'both');
     } else {
-      await say(['「……ツムギ」', 'ツムギが、顔を上げた。こちらを見て、それから、扉の前のミオを見た。']);
+      await say(['「……ツムギ」', ['', 'ツムギが、顔を上げた。こちらを見て、それから、扉の前のミオを見た。', 'normal']]);
     }
     // 仲直り：まっすぐなときは、まずオルゴール（仲直りの場面で『また明日』へ）。ぎこちないときは、ここから『また明日』
     const straight = risk === 0;
@@ -5933,7 +5933,7 @@
                  ['ミオ', '……明日、また何か書けって言われても、もう書かない', 'mioNbSadDown'],
                  ['ツムギ', '……そのときは、呼んで', 'down'],
                  ['ミオ', '……ツムギ。もう一回、最初から。……友だちに、なってくれる？', 'mioNbPlead'],
-                 'ツムギは、目をまるくして、それから、くしゃっと笑った。', () => bgm('unravel'), ['ツムギ', '……うん。なりたい', 'crySmile'],
+                 ['', 'ツムギは、目をまるくして、それから、くしゃっと笑った。', 'surprise'], () => bgm('unravel'), ['ツムギ', '……うん。なりたい', 'crySmile'],
                  // 主人公は二人にとって他人なので、ここで自分から場所を空ける
                  '（……ここから先は、二人の話だ）',
                  '座っていた丸椅子から、そっと立ち上がって、一歩さがった。',
