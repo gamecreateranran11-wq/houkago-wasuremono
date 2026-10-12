@@ -2148,6 +2148,39 @@
       g.gain.setTargetAtTime(bgmLevel(), t + dur, 0.8);
     } catch (e) {}
   }
+  // 屋上の風（効果音。曲が無音のあいだに鳴らす）。低くうなる音に、ときどき吹き上がる突風
+  let windNodes = null;
+  function windSE(on, fade = 2.5) {
+    if (replay) return;
+    try {
+      if (!on) {
+        if (windNodes) { const a = audio(), g = windNodes.g, t = a.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0.0001, t + fade);
+          const r = windNodes; windNodes = null; clearInterval(r.timer); setTimeout(() => { try { r.s1.stop(); r.s2.stop(); r.lfo.stop(); } catch (e) {} }, fade * 1000 + 300); }
+        return;
+      }
+      if (windNodes || !P.sound) return;
+      const a = audio(), dst = out(), t = a.currentTime;
+      const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.5 * seMul(), t + 2.5); g.connect(dst);
+      // 低いうなり
+      const s1 = a.createBufferSource(), f1 = a.createBiquadFilter(), g1 = a.createGain();
+      s1.buffer = getNoise(); s1.loop = true; f1.type = 'lowpass'; f1.frequency.value = 160; f1.Q.value = 1.2; g1.gain.value = 0.9;
+      s1.connect(f1).connect(g1).connect(g);
+      // フェンスや縁を抜ける、少し高い風
+      const s2 = a.createBufferSource(), f2 = a.createBiquadFilter(), g2 = a.createGain();
+      s2.buffer = getNoise(); s2.loop = true; f2.type = 'bandpass'; f2.frequency.value = 420; f2.Q.value = 2.5; g2.gain.value = 0.12;
+      s2.connect(f2).connect(g2).connect(g);
+      const lfo = a.createOscillator(), lg = a.createGain(); lfo.type = 'sine'; lfo.frequency.value = 0.09; lg.gain.value = 0.3;
+      lfo.connect(lg).connect(g1.gain); lfo.start(t);
+      s1.start(t); s2.start(t + 0.01);
+      // 突風：数秒おきに、低いうなりが吹き上がって、高い風も強まる
+      const timer = setInterval(() => { try {
+        if (Math.random() < 0.45) { const at = a.currentTime + 0.1, d = 2 + Math.random() * 2.5;
+          f1.frequency.cancelScheduledValues(at); f1.frequency.setValueAtTime(160, at); f1.frequency.linearRampToValueAtTime(260, at + d * 0.4); f1.frequency.linearRampToValueAtTime(160, at + d);
+          g2.gain.cancelScheduledValues(at); g2.gain.setValueAtTime(0.12, at); g2.gain.linearRampToValueAtTime(0.4, at + d * 0.4); g2.gain.linearRampToValueAtTime(0.12, at + d); }
+      } catch (e) {} }, 3500);
+      windNodes = { g, s1, s2, lfo, timer };
+    } catch (e) {}
+  }
   let rainNodes = null;
   function rainSE(on, fade = 2.2) {
     if (replay) return;
@@ -2608,7 +2641,7 @@
     bgm(null);
     await roofVoid(['チャイムが鳴っている。']);
     await endScene('rooftop');
-    await say(['……風が、強い。', '気がつくと、フェンスの前に立っていた。', '夕日が、山の稜線にかかっている。', '（……ここは）',
+    await say([() => windSE(true), '……風が、強い。', '気がつくと、フェンスの前に立っていた。', '夕日が、山の稜線にかかっている。', '（……ここは）',
                '足もとで、紙が風にあおられていた。', () => showCut('protag_notebook_dusk'), '生徒手帳だった。開いたまま、落ちている。']);
     const pick = await choose(['（……拾わなきゃ）', '（……見たくない）']);
     hideCut();
@@ -2621,7 +2654,7 @@
     await say(['手帳を拾った。', '開いていたのは、名前のページだった。', '春日ヒナ。井上ソウタ。水野ミオ。三浦ケイ。白石ツムギ。', '一行ずつ、違う字だった。',
                'さらさらと流れる字。一画ずつ、ていねいな字。小さくて、ていねいな字。大きくて、まっすぐな字。丸くて、やわらかい字。',
                '（……あの放課後は、本当にあった）', 'その下に、6行目があった。', '何も書かれていない。', '（ここには、誰の名前が入るはずだったんだろう）']);
-    await endScene('rooftop_rain'); rainSE(true); bgm('roofCore', 4);
+    windSE(false, 3); await endScene('rooftop_rain'); rainSE(true); bgm('roofCore', 4);
     await wordRain();
     await lateWords([['苦しいのは、あなただけじゃないよ', 'sei'], ['いつもヘラヘラしてるのに', 'neg'], ['簡単に泣かない方がいいよ', 'sei'], ['一時の感情に、流されないようにね', 'sei'],
                      ['考えすぎだよ', 'nag'], ['かわいそう', 'nag'], ['もう、頑張らなくてもいいよ', 'nag'], ['時間が、解決してくれるんじゃないかな', 'nag'], ['昔の私に似てる。……でも大丈夫。今は、変われたから', 'nag']]);
@@ -2741,7 +2774,7 @@
     return roofEnd('BAD8', 'こわれた心');
   }
   function roofEnd(tag, title) {
-    rainSE(false); roofTint(null); $('#scene').classList.remove('roof-dark', 'roof-wind'); $('#bells').style.visibility = '';
+    rainSE(false); windSE(false); roofTint(null); $('#scene').classList.remove('roof-dark', 'roof-wind'); $('#bells').style.visibility = '';
     P.endings[tag] = true;
     const got = achGain(tag);
     finishRun(true);
