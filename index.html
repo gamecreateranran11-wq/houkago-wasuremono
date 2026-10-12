@@ -559,6 +559,71 @@
     .sit, .painting .grey, .portrait, .scene .chime-cg, .cutin, .get-item, .get-in { transition: none; }
     .hs::after { animation: none; }
   }
+
+  /* ===== 見た目の方針：つくりものっぽい「整った暗い画面」をやめ、夜の学校に置かれた紙と鉛筆の手ざわりに寄せる =====
+     ・角丸・光る縁・ガラス風の板をなくし、罫線と下線だけで区切る
+     ・画面全体に薄い紙目（ノイズ）をのせ、ボタンは「書いた字に線を引く」形に
+     ・色数を増やさず、茜色は「印」にだけ使う */
+  body { background: #141119; }
+  body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50; opacity: .07; mix-blend-mode: screen;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 .95  0 0 0 0 .85  0 0 0 .5 0'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>"); }
+  /* 角丸をやめる */
+  .bar-actions button, .menu-panel, .seg button, .bar-actions .menu-panel .seg button, .title-redo, .btn-sub, .scene, .hs, .chip, .msg, .choice, .ov-card, .btn, .cg, .btn-reset, .btn-tab, .shelf-bar, .btn-quiet { border-radius: 0; }
+  /* 上の欄：時刻は壁の時計の字のまま。ボタンは枠をやめ、字の下に細い線 */
+  .bar-actions button { border: 0; border-bottom: 1px solid var(--line); padding: 5px 6px; letter-spacing: .06em; background: none; }
+  .bar-actions button:hover { border-bottom-color: var(--akane); color: #fff6e8; }
+  .bar-actions button:disabled { opacity: .3; border-bottom-color: transparent; }
+  .bells i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--akane); transform: rotate(-8deg); }
+  .bells i.on { background: var(--akane); box-shadow: none; }
+  .menu-panel { border: 1px solid var(--line); box-shadow: 0 10px 20px rgba(0,0,0,.45); background: #1b1722; padding: 8px; }
+  .bar-actions .menu-panel button { border: 0; border-bottom: 1px dashed transparent; }
+  .bar-actions .menu-panel button:hover { border-bottom-color: var(--akane); }
+  .seg button, .bar-actions .menu-panel .seg button { background: none; border: 0; border-bottom: 1px solid var(--line); }
+  .seg button[aria-pressed="true"], .bar-actions .menu-panel .seg button[aria-pressed="true"] { background: none; border-bottom: 2px solid var(--akane); color: #fff6e8; }
+  /* 場面の絵：写真を置いたように、縁は細い一本線だけ */
+  .scene { border: 1px solid #2a2433; background: #15111b; box-shadow: 0 0 0 4px #141119, 0 0 0 5px #221c2b; }
+  .hs::after { width: 6px; height: 6px; margin: -3px 0 0 -3px; box-shadow: 0 0 4px 1px rgba(255, 220, 170, .5); }
+  .hs span { border-radius: 0; background: rgba(20, 17, 25, .85); border-bottom: 1px solid var(--akane); padding: 1px 6px; }
+  /* 持ち物：札ではなく、ノートに貼ったメモ */
+  .chip { border: 0; background: #221c2b; border-bottom: 1px solid var(--line); padding: 4px 10px; }
+  .chip:hover { border-bottom-color: var(--akane); background: #271f31; }
+  .chip.act { color: var(--akane); border-bottom-color: var(--akane); }
+  /* 文章の欄：ノートの1ページ。左に綴じの線、上下に罫 */
+  .msg { background: #1b1722; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 14px 18px 20px 22px; box-shadow: none; }
+  .msg::before { content: ""; position: absolute; left: 10px; top: 10px; bottom: 10px; width: 1px; background: rgba(227, 135, 92, .45); }
+  .speaker { letter-spacing: .14em; }
+  .speaker::before { content: "─ "; color: rgba(227, 135, 92, .6); font-weight: 400; }
+  .more { bottom: 8px; right: 16px; }
+  /* 選択肢：枠のある板ではなく、ノートの行。押すと鉛筆で線を引いたように */
+  .choice { background: none; border: 0; border-bottom: 1px solid var(--line); padding: 9px 10px 9px 26px; position: relative; }
+  .choice::before { content: "・"; position: absolute; left: 8px; top: 9px; color: var(--muted); }
+  .choice:hover { border-bottom: 2px solid var(--akane); padding-bottom: 8px; color: #fff6e8; }
+  .choice:hover::before { content: "▶"; color: var(--akane); font-size: 11px; top: 12px; }
+  .choices { gap: 2px; margin-top: 10px; }
+  /* 重ねて出す画面：黒いガラスではなく、暗い紙 */
+  .overlay { background: rgba(14, 11, 18, .93); }
+  .ov-card { background: #1b1722; border: 1px solid var(--line); padding: 24px 22px; box-shadow: 0 16px 40px rgba(0,0,0,.5); }
+  .ov-card h2 { letter-spacing: .06em; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .eyebrow { letter-spacing: .2em; }
+  .btn { background: none; border: 0; border-bottom: 1px solid var(--line); padding: 10px 14px; letter-spacing: .06em; }
+  .btn:hover { border-bottom-color: var(--akane); color: #fff6e8; }
+  .btn.primary { background: none; color: var(--akane); border-bottom: 2px solid var(--akane); font-weight: 600; }
+  .btn.primary:hover { background: rgba(227, 135, 92, .08); }
+  .btn-sub { border: 0; border-bottom: 1px solid var(--line); background: none; }
+  .btn-sub:hover { border-bottom-color: var(--akane); }
+  .title-redo { border: 0; border-left: 1px solid var(--line); background: none; padding-left: 14px; }
+  .btn-reset { border: 0; border-bottom: 1px solid var(--akane); padding: 6px 4px; background: none; }
+  .btn-reset:hover { background: none; color: #fff6e8; border-bottom-width: 2px; }
+  .btn-tab { border: 0; border-bottom: 1px solid var(--line); padding: 3px 8px; }
+  .btn-tab.on { border-bottom: 2px solid var(--gold); }
+  .shelf .slot, .album .slot { border-radius: 0; }
+  .shelf-bar { height: 4px; background: #1b1722; border-bottom: 1px solid var(--line); }
+  /* タイトル：暗い板の上に絵。字は縦書きのまま */
+  .title-screen { background: linear-gradient(90deg, rgba(12, 9, 16, .92) 0%, rgba(12, 9, 16, .6) 42%, rgba(12, 9, 16, .12) 100%), var(--title-img) center / cover no-repeat, var(--ground); }
+  .settings .set-row { border-bottom: 1px dashed var(--line); }
+  /* 選ばれている印（キーボード・自動の移動）：枠で囲まず、下に点線 */
+  button:focus-visible, .btn:focus-visible, .choice:focus-visible { outline: 0; box-shadow: 0 2px 0 0 var(--akane); }
+  .ov-card .btn.primary:focus:not(:hover) { box-shadow: none; }
 </style>
 
 <div id="app">
