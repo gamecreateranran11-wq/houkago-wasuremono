@@ -2274,17 +2274,18 @@
   function flash() { if (replay) return; const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
 
   // 背景の壁の時計：針を消した背景に、今の時刻の針を重ねる（C.bgClock は背景 1536×1024 基準の文字盤の中心と半径）
+  let bgClockOverride = null;   // 翌朝など、上の時刻を出さない場面で、壁の時計だけに時刻を出す（'8:30' など）
   function syncBgClock() {
     // いま映っている背景がどの部屋かで決める（BAD5 で別の部屋の背景を順に映すときも、針を出す）
     const bg = $('#bgImg'), sv = $('#bgClock'), src = bg.getAttribute('src');
     let chs = []; try { chs = Object.values(CHAPTERS); } catch (e) {}
-    const room = chs.find(ch => ch.bgClock && (src === `img/${ch.bg}.webp` || src === `img/${ch.bg}_unlit.webp`)), ck = room && room.bgClock;
+    const room = chs.find(ch => ch.bgClock && (src === `img/${ch.bg}.webp` || src === `img/${ch.bg}_unlit.webp` || src === `img/${ch.bg}_morning.webp`)), ck = room && room.bgClock;
     sv.style.display = ck ? '' : 'none';
     if (!ck) return;
     sv.style.opacity = bg.style.opacity;
     // 遊んでいる章の部屋ならその章の時刻、ほかの部屋なら画面の時計と同じ時刻
-    const [hh, mm] = ($('#clock').textContent || '16:00').split(':').map(Number);
-    const min = room === C ? chStart() + (R.st === 'unraveled' ? SPAN + 1 : R.ticks * MIN_PER_TICK) : (hh - 16) * 60 + mm;
+    const [hh, mm] = (bgClockOverride || $('#clock').textContent || '16:00').split(':').map(Number);
+    const min = (room === C && !bgClockOverride) ? chStart() + (R.st === 'unraveled' ? SPAN + 1 : R.ticks * MIN_PER_TICK) : (hh - 16) * 60 + mm;
     const hAng = (16 * 30 + min * 0.5) % 360, mAng = (min * 6) % 360;
     const hand = (deg, len, tail, w) => `<polygon transform="rotate(${deg})" points="${-w / 2},${tail} ${-w / 5},${-len} ${w / 5},${-len} ${w / 2},${tail}"/>`;
     sv.innerHTML = `<g transform="translate(${ck.cx} ${ck.cy}) scale(${ck.rx / 100} ${ck.ry / 100})" fill="#1e1a18" opacity=".9">
@@ -2774,13 +2775,14 @@
     $('#clock').textContent = '';   // 翌朝からは時刻を出さない
     await endScene('rooftop_dawn');
     await say(['朝が来た。']);
-    await endScene('infirmary');   // 仮：昼の保健室の絵はまだない
+    bgClockOverride = '8:30'; await endScene('infirmary_morning'); syncBgClock();
     await say(['「……終業式、行きたい」', '自分で、そう言った。', '教室には入らず、一日を保健室で過ごすことになった。',
                ...({ straight: ['ツムギは、朝のうちに、3組へ行ったらしい。……ミオの隣の席に。'],
                     awk: ['ツムギは、朝、3組の扉の前まで行ったらしい。……入れたかどうかは、聞かなかった。'],
                     split: ['ツムギは、今日も保健室にいた。隣のベッドのふちに座って、窓の外を見ていた。'] }[kind]),
-               '昼前、急に、重さが戻ってきた。', '理由はわからない。ただ、息が浅くなった。', '（……やっぱり、何も変わってないのかもしれない）',
+               () => { bgClockOverride = '10:50'; syncBgClock(); }, '昼前、急に、重さが戻ってきた。', '理由はわからない。ただ、息が浅くなった。', '（……やっぱり、何も変わってないのかもしれない）',
                kind === 'split' ? 'ツムギは何も言わずに、ただ、そこにいてくれた。' : '養護の先生は何も言わずに、ただ、そこにいてくれた。']);
+    bgClockOverride = '11:10'; syncBgClock();
     await say(['終業式が終わって、扉が叩かれた。',
                ...({ straight: ['入ってきたのは、ヒナと、ソウタと、ケイ。それから、ミオとツムギが、二人で。', 'ミオは丸椅子をひとつ運んできて、ツムギの隣に置いて座った。'],
                     awk: ['入ってきたのは、ヒナと、ソウタと、ケイ。少し遅れて、ミオとツムギ。', '二人は隣に座ったけれど、あいだに、少しすき間があった。',
@@ -2818,7 +2820,7 @@
     return roofEnd('BAD8', 'こわれた心');
   }
   function roofEnd(tag, title) {
-    rainSE(false); windSE(false); roofTint(null); $('#scene').classList.remove('roof-dark', 'roof-wind'); $('#bells').style.visibility = '';
+    bgClockOverride = null; rainSE(false); windSE(false); roofTint(null); $('#scene').classList.remove('roof-dark', 'roof-wind'); $('#bells').style.visibility = '';
     P.endings[tag] = true;
     const got = achGain(tag);
     finishRun(true);
