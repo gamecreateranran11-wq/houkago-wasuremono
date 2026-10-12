@@ -2079,10 +2079,11 @@
         o.connect(g); g.connect(dst); g.connect(send); o.start(at); o.stop(at + dur + 0.02);
       };
       if (kind === 'coach') {
+        duckBgm(9 * 0.86 + 0.8);
         // ゴム底の重い足音。かかとの「ドス」を床の低音で支え、長めに残す。つま先の擦れは小さく
         const n = 9;
         for (let k = 0; k < n; k++) {
-          const at = t0 + k * 0.86 + (k % 2 ? 0.05 : 0), v = 2.3 * Math.pow(Math.sin(Math.PI * (k + 0.6) / (n + 0.2)), 1.4);
+          const at = t0 + k * 0.86 + (k % 2 ? 0.05 : 0), v = 1.6 * Math.pow(Math.sin(Math.PI * (k + 0.6) / (n + 0.2)), 1.4);
           thump(at, 95, 48, v * 0.9, 0.32);            // 床に伝わる重い低音
           step(at, 85, 1.0, v * 0.8, 0.26, 0.004);      // かかとの「ドス」
           step(at + 0.015, 190, 1.6, v * 0.35, 0.12, 0.004); // 体重がのる音
@@ -2102,6 +2103,14 @@
     } catch (e) {}
   }
   // バスケットボールが床に跳ねる音。n回（1回なら「一度だけ跳ねた」、何回かならドリブル）。遠くの体育館で鳴っている
+  // 効果音のあいだだけBGMを下げる（ダッキング）。dur 秒たったら戻す
+  function duckBgm(dur, level = 0.3) {
+    try {
+      const g = bgmGain; if (!g) return; const a = audio(), t = a.currentTime;
+      g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(bgmLevel() * level, t, 0.25);
+      g.gain.setTargetAtTime(bgmLevel(), t + dur, 0.8);
+    } catch (e) {}
+  }
   let rainNodes = null;
   function rainSE(on) {
     if (replay) return;
@@ -2130,6 +2139,7 @@
     try {
       const a = audio(), t0 = a.currentTime + 0.05, dst = out(), rv = reverb();
       const send = a.createGain(); send.gain.value = 1.0; send.connect(rv);
+      duckBgm(n * 0.5 + 0.7, n === 1 ? 0.35 : 0.3);
       let at = t0;
       for (let k = 0; k < n; k++) {
         const v = (n === 1 ? 1.2 : 1.0 * (0.8 + 0.2 * Math.sin(k * 1.7))) * (k === n - 1 && n > 1 ? 0.8 : 1);
