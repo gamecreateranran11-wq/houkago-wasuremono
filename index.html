@@ -4153,7 +4153,7 @@
     sit: { src: 'mio_sit', style: 'left:12.2%;top:42.0%;height:46.5%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
-    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap' },   // lap：本を膝の上に下ろして、小さく決意した顔
+    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap', clench: 'mio_clench' },   // lap：本を膝の上に下ろして小さく決意した顔／clench：本を強く握りしめ、目をぎゅっとつむった悲痛な顔
     lost: '返却期限の過ぎた一冊',
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う。背景 infirmary の壁の時計は bgClock: { cx: 829, cy: 202, rx: 49, ry: 48 }
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
@@ -4501,9 +4501,9 @@
                  ['ミオ', '考えるより先に、手が動いてた。……黒板に、書いた。『いてもいなくても同じ』って', 'sad'],
                  ['ミオ', '中学のとき、私の机に書いた子たちのこと、ずっと許せなかった。私だけは、絶対にあんなことしないって思ってた', 'sad'],
                  ['ミオ', '……チョークを持ったとき、きっと、あのときの子たちと同じ顔をしてた', 'sad'],
-                 ['', 'ミオは、本の背を、指が白くなるほど握りしめた。', 'down'],
-                 ['ミオ', '中学のとき、誰も助けてくれなかった。だから、自分だけは自分の味方でいようって、決めてたの', 'down'],
-                 ['ミオ', '……その自分に、裏切られた。もう、誰のことも……私のことも、信じられない', 'grief'],
+                 ['', 'ミオは、本の背を、指が白くなるほど握りしめた。', 'clench'],
+                 ['ミオ', '中学のとき、誰も助けてくれなかった。だから、自分だけは自分の味方でいようって、決めてたの', 'clench'],
+                 ['ミオ', '……その自分に、裏切られた。もう、誰のことも……私のことも、信じられない', 'clench'],
                  ['ミオ', '何を感じてたのかも、もうわからない。……ただ、眉ひとつでも動かしたら、見つかって、目をつけられる気がしてた', 'sad'],
                  ['ミオ', '書き終わって席に戻ったころに、ツムギが教室に入ってきたの。黒板の字を見て、何も言わないで、そのまま帰った', 'sad'],
                  ['ミオ', '誰が書いたのかは、知らないまま。……次の日から、教室に来なくなった', 'sad'],
@@ -4581,7 +4581,7 @@
       bgm('musicbox');
       await say([['ミオ', '……届けなきゃ。この本', 'lap'],
                  ['ミオ', 'ツムギのところに。……それから、あの黒板の字は、私が書いたって、言う', 'lap'],
-                 ['ミオ', '許してもらえなくても。……言わなきゃいけないこと、だから', 'crySmile']]);
+                 ['ミオ', '許してもらえなくても。……言わなきゃいけないこと、だから', 'lap']]);
       R.st = 'unraveled'; R.standing = true; render();  // ミオはカウンターへ立っていく
       bgm('unravel');
       await say([`……張りつめていた部屋の空気が、ふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ミオ', '……ねえ。カウンターのペン、取ってくれる？', 'softSmile']]);
@@ -5970,7 +5970,7 @@
                  '扉が、静かに閉まった。', ['ツムギ', '……またね、って、言えなかった', 'grief'], 'ツムギは、閉まった扉を、ずっと見つめていた。']);
     }
     await say(['長いあいだ、ツムギは何も言わなかった。窓の外の夕日が、少しずつ低くなっていく。',
-               'やがて、ツムギは本を開いて、しおりの手紙を、もう一度だけ読んだ。', () => bgm('farewellLate'),
+               'やがて、ツムギは本を開いて、しおりの手紙を、もう一度だけ読んだ。',
                ['ツムギ', '……でも、今日は、自分で決めたい', 'down'], ['ツムギ', '……図書室、行ってみる。あの子の椅子に、座ってみたいの', 'crySmile']]);
     R.st = 'unraveled'; render();
     await say([`ツムギは、涙のあとを手の甲でぬぐって、立ち上がった。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`]);
