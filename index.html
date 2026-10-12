@@ -2064,29 +2064,62 @@
     try {
       const a = audio(), t0 = a.currentTime + 0.05, dst = out(), rv = reverb();
       const send = a.createGain(); send.gain.value = 0.8; send.connect(rv);
-      const step = (at, fr, q, vol, dur) => {
+      // atk：立ち上がりの時間。0だと木を叩いたような乾いた音になるので、布や靴底の音には少しつける
+      const step = (at, fr, q, vol, dur, atk = 0) => {
         const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
         s.buffer = getNoise(); f.type = 'bandpass'; f.frequency.value = fr; f.Q.value = q;
-        g.gain.setValueAtTime(vol * seMul(), at); g.gain.exponentialRampToValueAtTime(0.0008, at + dur);
-        s.connect(f).connect(g); g.connect(dst); g.connect(send); s.start(at); s.stop(at + dur + 0.01);
+        g.gain.setValueAtTime(0.0008, at); g.gain.linearRampToValueAtTime(vol * seMul(), at + atk + 0.002); g.gain.exponentialRampToValueAtTime(0.0008, at + atk + dur);
+        s.connect(f).connect(g); g.connect(dst); g.connect(send); s.start(at); s.stop(at + atk + dur + 0.01);
+      };
+      // 床に伝わる低い「ドン」（正弦波。音程を少し下げながら消える）
+      const thump = (at, f0, f1, vol, dur) => {
+        const o = a.createOscillator(), g = a.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(f0, at); o.frequency.exponentialRampToValueAtTime(f1, at + dur * 0.6);
+        g.gain.setValueAtTime(0.0008, at); g.gain.linearRampToValueAtTime(vol * seMul(), at + 0.006); g.gain.exponentialRampToValueAtTime(0.0008, at + dur);
+        o.connect(g); g.connect(dst); g.connect(send); o.start(at); o.stop(at + dur + 0.02);
       };
       if (kind === 'coach') {
-        // ゴム底なので高い音は出さない。かかとの鈍い低音＋つま先の小さな擦れ。間をあけて、重くゆっくり
+        // ゴム底の重い足音。かかとの「ドス」を床の低音で支え、長めに残す。つま先の擦れは小さく
         const n = 9;
         for (let k = 0; k < n; k++) {
-          const at = t0 + k * 0.82 + (k % 2 ? 0.04 : 0), v = 0.55 * Math.pow(Math.sin(Math.PI * (k + 0.6) / (n + 0.2)), 1.4);
-          step(at, 110, 1.2, v, 0.16);           // かかとが床を踏む、腹に響く低い音
-          step(at + 0.01, 260, 2, v * 0.45, 0.09); // 体重がのる音
-          step(at + 0.13, 1400, 1.5, v * 0.06, 0.07); // つま先の、ゴムの小さな擦れ
+          const at = t0 + k * 0.86 + (k % 2 ? 0.05 : 0), v = 0.7 * Math.pow(Math.sin(Math.PI * (k + 0.6) / (n + 0.2)), 1.4);
+          thump(at, 95, 48, v * 0.9, 0.32);            // 床に伝わる重い低音
+          step(at, 85, 1.0, v * 0.8, 0.26, 0.004);      // かかとの「ドス」
+          step(at + 0.015, 190, 1.6, v * 0.35, 0.12, 0.004); // 体重がのる音
+          step(at + 0.16, 900, 1.5, v * 0.04, 0.06, 0.01);   // つま先の、ゴムの小さな擦れ
         }
       } else if (kind === 'heel') {
         for (let k = 0; k < 7; k++) { const at = t0 + k * 0.55, v = 0.35 * Math.sin(Math.PI * (k + 0.5) / 7); step(at, 2600, 2, v, 0.03); step(at, 420, 3, v * 0.6, 0.06); }
       } else {
+        // 子ども二人が上履きで駆けていく。ゴム底が床をはたく「パタパタ」（やわらかい立ち上がり・低めの音・短い余韻）
         for (let k = 0; k < 12; k++) {
-          const fade = 0.4 * (1 - k / 13);
-          step(t0 + k * 0.17, 900, 1.5, fade, 0.05);
-          step(t0 + 0.08 + k * 0.19, 700, 1.5, fade * 0.8, 0.05);
+          const fade = 0.42 * (1 - k / 13);
+          const a1 = t0 + k * 0.17, a2 = t0 + 0.085 + k * 0.19;
+          step(a1, 380, 0.9, fade, 0.07, 0.012); step(a1 + 0.004, 1100, 1.2, fade * 0.22, 0.035, 0.008); thump(a1, 140, 90, fade * 0.35, 0.09);
+          step(a2, 330, 0.9, fade * 0.85, 0.07, 0.012); step(a2 + 0.004, 950, 1.2, fade * 0.2, 0.035, 0.008); thump(a2, 125, 85, fade * 0.3, 0.09);
         }
+      }
+    } catch (e) {}
+  }
+  // バスケットボールが床に跳ねる音。n回（1回なら「一度だけ跳ねた」、何回かならドリブル）。遠くの体育館で鳴っている
+  function bounce(n = 1) {
+    if (!P.sound || replay) return;
+    try {
+      const a = audio(), t0 = a.currentTime + 0.05, dst = out(), rv = reverb();
+      const send = a.createGain(); send.gain.value = 1.0; send.connect(rv);
+      let at = t0;
+      for (let k = 0; k < n; k++) {
+        const v = (n === 1 ? 0.6 : 0.5 * (0.8 + 0.2 * Math.sin(k * 1.7))) * (k === n - 1 && n > 1 ? 0.8 : 1);
+        // ボールの皮が床を打つ「パン」と、空気の入った球体の「ボン」（低い音程がすぐ下がる）
+        const o = a.createOscillator(), g = a.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(210, at); o.frequency.exponentialRampToValueAtTime(70, at + 0.09);
+        g.gain.setValueAtTime(0.0008, at); g.gain.linearRampToValueAtTime(v * seMul(), at + 0.004); g.gain.exponentialRampToValueAtTime(0.0008, at + 0.3);
+        o.connect(g); g.connect(dst); g.connect(send); o.start(at); o.stop(at + 0.32);
+        const s = a.createBufferSource(), f = a.createBiquadFilter(), g2 = a.createGain();
+        s.buffer = getNoise(); f.type = 'bandpass'; f.frequency.value = 520; f.Q.value = 0.8;
+        g2.gain.setValueAtTime(0.0008, at); g2.gain.linearRampToValueAtTime(v * 0.5 * seMul(), at + 0.003); g2.gain.exponentialRampToValueAtTime(0.0008, at + 0.06);
+        s.connect(f).connect(g2); g2.connect(dst); g2.connect(send); s.start(at); s.stop(at + 0.08);
+        at += 0.5 + 0.06 * Math.sin(k * 2.3);   // ドリブルの間（少し揺らす）
       }
     } catch (e) {}
   }
@@ -4768,7 +4801,7 @@
     // 探索の途中の記憶の演出（後輩との練習 → 先輩に託された日 → 扉の外の足音 → 顧問の怒鳴り声）。3段目は周回が進むほど重くなる
     async onTick() {
       await memStage('buzz', [
-        ['……どこかで、ボールをつく音がした。', 'にぎやかな声が、コートに響いている。',
+        [() => bounce(7), '……どこかで、ボールをつく音がした。', 'にぎやかな声が、コートに響いている。',
          '『部長、パス！』『ナイッシュー！』『ユウマ、今の見えてたの？ すげえ』',
          'ケイが、誰もいないコートを見て、少しだけ笑った。'],
         ['……引退していく先輩の声が、聞こえた気がした。', '『ケイ、お前が部長な。二年、お前しか残らなかったし』',
@@ -4986,7 +5019,7 @@
                                   ['ケイ', '……なんで知ってんの', 'reject'],
                                   ['ケイ', '悪いけど、もう閉めるわ。部長の仕事だから', 'reject'],
                                   ['ケイ', '……出てってくれる？', 'reject']],
-                                 ['扉を叩いた。返事はない。', '……体育館の中で、ボールが一度だけ、床に跳ねる音がした。']);
+                                 ['扉を叩いた。返事はない。', () => bounce(1), '……体育館の中で、ボールが一度だけ、床に跳ねる音がした。']);
       await say([['', 'ケイは、少しだけ目を丸くして、それから笑った。', 'surprise'],
                  ['ケイ', '……いいよ。どうせ俺しかいないし', 'smile'],
                  ['ケイ', '三年が引退して、二年は俺ひとりしか残らなかったんだ', 'normal'],
