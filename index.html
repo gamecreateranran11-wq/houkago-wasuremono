@@ -726,6 +726,17 @@
   .kb.locked .wk, .kb.locked .bk { cursor: default; }
   .name-in { font: inherit; font-family: var(--hand); font-size: 20px; letter-spacing: .1em; width: 100%; box-sizing: border-box; padding: 10px 6px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); outline: 0; }
   .name-in:focus { border-bottom: 2px solid var(--blue); padding-bottom: 9px; }
+  /* スマホの画面：暗い画面をやめ、明るい画面に（紙の地で読めるように） */
+  .phone { background: #f4f3ef; border: 1px solid #c9c2b4; color: #222; }
+  .phone-head { color: #7a7368; border-bottom-color: #ddd6c8; }
+  .phone-bar { background: rgba(0, 0, 0, .08); }
+  .phone-thumb { background: rgba(0, 0, 0, .28); }
+  .bub.them p { background: #fff; color: #222; border: 1px solid #e3ddd0; }
+  .bub.me p { background: #7cc47f; color: #10301a; }
+  .bub span { color: #8a8378; }
+  /* タイトルを出しているあいだは、裏のゲーム画面（上の欄など）を隠す。スマホで引っぱったときに裏が見えないように */
+  html { overscroll-behavior: none; }
+  body:has(.overlay.title-screen:not([hidden])) #app { visibility: hidden; }
 </style>
 
 <div id="app">
@@ -2738,7 +2749,7 @@
     spk.hidden = true; txt.textContent = ''; more.hidden = true;   // 言葉の雨に切り替わるとき、前の文を消す
     // 短い言葉は、届いた言葉（ほかの人から言われた言葉）から切り出したものだけ。どれも否定。自分で自分に向けた言葉は、もう一人の自分の台詞に取っておく
     const shorts = ['きもい', 'バカ', '邪魔', '使えない', '気持ち悪い', '役立たず', '汚い', '臭い', 'いらない', '無理', 'できない', '手遅れ', '最低',
-                    '出て行け', '甘えるな', 'ヘラヘラ', '泣くな', '通用しない', 'みんな嫌ってる', '普通でしょ', '弱虫', '情けない', '惨め', 'のろま', '出来損ない', '帰れ', '帰って'];
+                    '出て行け', '甘えるな', 'ヘラヘラ', '泣くな', '通用しない', 'みんな嫌ってる', '普通でしょ', '弱虫', '情けない', '惨め', 'のろま', '出来損ない', '帰れ', '帰って', '黙れよ', '早くして', '遅い'];
     // 同じ言葉が続かないように、全部を一巡するまで同じ言葉は出さない
     let bag = [];
     const nextShort = () => { if (!bag.length) bag = shorts.slice().sort(() => Math.random() - .5); return bag.pop(); };
@@ -2746,7 +2757,7 @@
     const longs = [['そんなんじゃ、社会で通用しない', 'neg'], ['誰も、相手にしないよ', 'neg'], ['みんな本当は、汚いって思ってるよ', 'neg'], ['きっとみんな、あなたのこと嫌ってるよ', 'neg'],
                    ['殴るよ', 'neg'], ['なんでそんなことするの', 'sei'], ['やる気、あんの？', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
                    ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['お前なんか、いらない', 'neg'],
-                   ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['普通の子になって', 'sei'], ['ハルくんの分まで、生きなきゃね', 'nag'], ['頑張って', 'nag']];
+                   ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['普通の子になって', 'sei'], ['ハルくんの分まで、生きなきゃね', 'nag'], ['頼まれてくれるよね？', 'sei'], ['お前の事なんて、どうでもいい', 'neg'], ['そういうの、めんどくさい', 'neg'], ['お前には言われたくない', 'neg'], ['頑張って', 'nag']];
     let fast = false; box.onclick = () => { fast = true; };
     const drop = (t, cls) => {
       const e = document.createElement('span'); e.className = 'rw ' + cls + (cls === 'short' ? ' neg ' + rainFont() : ''); e.textContent = t;
@@ -2847,7 +2858,7 @@
                '雨の音に混じって、言葉が降ってきた。', '今日、五人が打ち明けてくれた言葉。……それから、自分が、どこかで言われてきた言葉。']);
     await wordRain();
     await lateWords([['苦しいのは、あなただけじゃないよ', 'sei'], ['いつもヘラヘラしてるのに', 'neg'], ['簡単に泣かない方がいいよ', 'sei'], ['一時の感情に、流されないようにね', 'sei'],
-                     ['考えすぎだよ', 'nag'], ['かわいそう', 'nag'], ['もう、頑張らなくていいよ', 'nag'], ['時間が、解決してくれるんじゃないかな', 'nag'], ['昔の私に似てる。……でも大丈夫。今は、変われたから', 'nag']]);
+                     ['考えすぎだよ', 'nag'], ['私の方が辛い', 'sei'], ['かわいそう', 'nag'], ['これからも期待してるよ', 'nag'], ['もう、頑張らなくていいよ', 'nag'], ['時間が、解決してくれるんじゃないかな', 'nag'], ['昔の私に似てる。……でも大丈夫。今は、変われたから', 'nag']]);
     await say(['頭に、誰かの手が置かれる感触がした。']);
     await lateWords([['まだ若いんだから、大丈夫', 'nag'], ['人生、これからだよ', 'nag'], ['生きてれば、いいことあるよ', 'nag']]);
     // ここから先の声は、主人公がいま考えていることではなく、ずっと頭の中にいた「もう一人の自分」の声。遊ぶ人は、選択肢でそれに答える
