@@ -90,7 +90,7 @@
   .portrait { right: 1%; bottom: 0; height: 97%; width: auto; opacity: 0; transform: translateX(12px); transition: opacity .4s ease, transform .4s ease; pointer-events: none; }
   .portrait.show { opacity: 1; transform: none; }
   /* 章の子とは別に、その場にいる子（第五章のミオ）。左寄りに立つ。far は少し離れた所（二回り小さく、奥に） */
-  .guest { position: absolute; left: 4%; bottom: -7%; height: 100%; width: auto; opacity: 0; transition: opacity .45s ease; pointer-events: none; z-index: 3; }   // 大きさ・位置は動かさない（出るときにズームして見えないように）
+  .guest { position: absolute; left: 4%; bottom: -7%; height: 100%; width: auto; opacity: 0; transition: opacity .45s ease; pointer-events: none; z-index: 3; }   /* 大きさ・位置は動かさない（出るときにズームして見えないように） */
   .guest.show { opacity: 1; }
   .guest.mid { height: 80%; bottom: 6%; left: 9%; }
   .guest.far { height: 70%; bottom: -3%; left: 14%; filter: brightness(.9); }
