@@ -722,6 +722,8 @@
   .endcard .note, .endcard .ach-note, .endcard .ach-x-note { animation: rise 1s ease both 2.4s; }
   .endcard .row { justify-content: center; animation: rise 1s ease both 3.2s; }
   @media (prefers-reduced-motion: reduce) { .endcard .end-name, .endcard .end-kind, .endcard .note, .endcard .row, .roll-bg img.on { animation: none; } }
+  .kb.locked { pointer-events: none; }
+  .kb.locked .wk, .kb.locked .bk { cursor: default; }
 </style>
 
 <div id="app">
@@ -3922,6 +3924,9 @@
           pos++; prog();
           if (pos === MELODY.length) {
             done = true;
+            // 弾き終えたら鍵盤は押せない（ソウタの音だけが続くあいだも）
+            card.querySelectorAll('.kb button').forEach(k => { k.disabled = true; });
+            const kbEl = card.querySelector('.kb'); if (kbEl) kbEl.classList.add('locked');
             if (duet) {
               $('#kbMsg').textContent = 'ソウタの音だけが、そのまま続いていく。';
               $('#kbCancel').closest('.row').hidden = true;
