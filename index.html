@@ -3006,9 +3006,9 @@
     const r = replayed(); if (r) return Promise.resolve(r.v);
     return new Promise(res0 => {
       const res = v => res0(rec(v));
-      openOverlay(`<p class="eyebrow">生徒手帳</p><h2>6行目に、名前を書く</h2>
-        <p class="note">書く名前を入れてください。あとから変えられません。空のまま進むこともできます。</p>
-        <input id="myName" class="name-in" type="text" maxlength="8" autocomplete="off" spellcheck="false" placeholder="（8文字まで）" aria-label="6行目に書く名前">
+      openOverlay(`<p class="eyebrow">生徒手帳</p><h2>6行目に、自分の名前を書く</h2>
+        <p class="note">この子の名前を入れてください（8文字まで）。あとから変えられません。空のまま進むと、名前は書かれますが、画面には出しません。</p>
+        <input id="myName" class="name-in" type="text" maxlength="8" autocomplete="off" spellcheck="false" placeholder="この子の名前" aria-label="この子の名前">
         <div class="row"><button type="button" class="btn primary" id="nmOk">書く</button></div>`);
       const inp = $('#myName'); inp.focus();
       const ok = () => { const v = inp.value.replace(/[\r\n\t]/g, '').trim().slice(0, 8); closeOverlay(); res(v); };
