@@ -3016,11 +3016,8 @@
     const songs = [...new Set(OST.filter(([k]) => k !== 'sotaDuet' && P.heard[k]).map(([, t]) => t))];
     return `<div class="roll-in">
       <p class="roll-title">放課後のわすれもの</p>
-      ${sec('企画・原案', [CREDIT_AUTHOR])}
-      ${sec('シナリオ・演出', [CREDIT_AUTHOR, 'Claude'])}
-      ${sec('絵', ['ChatGPT'])}
-      ${sec('音楽・効果音', ['Claude'])}
-      ${sec('プログラム', ['Claude'])}
+      ${sec('企画・シナリオ・演出', [CREDIT_AUTHOR])}
+      ${sec('', ['絵・音楽・効果音・プログラムの制作には、', '生成AIを使用しています。'])}
       ${sec('登場人物', chars)}
       ${sec('使用楽曲', songs)}
       ${sec('', ['この作品はフィクションです。', '実在の人物・団体・学校・サービスとは関係ありません。'])}
