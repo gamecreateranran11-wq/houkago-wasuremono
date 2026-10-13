@@ -691,6 +691,37 @@
   .dawn .note { color: var(--muted); border-color: var(--line); }
   .dawn .btn { background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); }
   .dawn .btn.primary { background: none; border-bottom: 2px solid var(--blue); color: var(--blue); }
+
+  /* ===== エンドロール（NORMAL以上の結末で、結末の名前を出す前に流す） ===== */
+  .endroll { position: fixed; inset: 0; z-index: 40; background: #0b0a10; color: #e9e2d6; overflow: hidden; animation: rollfade 1.6s ease both; }
+  .endroll.out { opacity: 0; transition: opacity 1.4s ease; }
+  @keyframes rollfade { from { opacity: 0; } to { opacity: 1; } }
+  .roll-bg { position: absolute; inset: 0; }
+  .roll-bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 2.6s ease; filter: brightness(.5) saturate(.85); }
+  .roll-bg img.on { opacity: 1; animation: rollzoom 14s ease-out both; }
+  @keyframes rollzoom { from { transform: scale(1); } to { transform: scale(1.06); } }
+  .roll-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11, 10, 16, .88) 0%, rgba(11, 10, 16, .42) 28%, rgba(11, 10, 16, .42) 72%, rgba(11, 10, 16, .92) 100%); }
+  .roll-wrap { position: absolute; inset: 0; overflow: hidden; }
+  .roll-in { position: absolute; left: 0; right: 0; top: 100%; text-align: center; font-family: var(--serif); letter-spacing: .12em; line-height: 2; padding: 0 16px; text-shadow: 0 1px 8px rgba(0, 0, 0, .7); }
+  .roll-in.go { animation: rollup var(--roll-d, 70s) linear both; }
+  @keyframes rollup { from { transform: translateY(0); } to { transform: translateY(calc(-100% - 100vh)); } }
+  .roll-in section { margin: 38px 0; }
+  .roll-in h3 { font-size: 12.5px; font-weight: 400; letter-spacing: .32em; color: #b9ad99; margin: 0 0 6px; }
+  .roll-in p { margin: 0; font-size: 17px; }
+  .roll-in .sub { font-size: 12.5px; color: #b9ad99; letter-spacing: .2em; }
+  .roll-title { font-size: 30px; letter-spacing: .22em; margin: 0 0 56px; }
+  .roll-title.end { margin: 110px 0 0; }
+  .roll-thanks { margin: 70px 0 0; font-size: 15.5px; color: #d6ccba; }
+  .roll-skip { position: absolute; right: 18px; bottom: 18px; background: none; border: 0; border-bottom: 1px solid #8f887c; color: #b9ad99; font: inherit; font-size: 13px; letter-spacing: .2em; padding: 6px 4px; cursor: pointer; animation: rise .8s ease both; }
+  /* 結末の名前：板に小さく出すのをやめ、白い紙の真ん中に、題名のように */
+  .overlay.endcard .ov-card { background: none; border: 0; box-shadow: none; text-align: center; max-width: 640px; gap: 18px; }
+  .endcard .end-ttl { padding: 14px 0 22px; border-bottom: 1px solid rgba(42, 36, 32, .3); margin-bottom: 4px; }
+  .endcard .end-kind { font-family: var(--serif); font-size: 13px; letter-spacing: .5em; color: var(--akane); margin: 0 0 16px; animation: rise 1.2s ease both; }
+  .endcard .end-name { font-family: var(--serif); font-weight: 600; font-size: clamp(30px, 6vw, 46px); letter-spacing: .18em; line-height: 1.4; margin: 0; color: var(--ink); animation: nameIn 2.4s cubic-bezier(.2, .7, .2, 1) both .5s; }
+  @keyframes nameIn { from { opacity: 0; filter: blur(10px); letter-spacing: .6em; } to { opacity: 1; filter: blur(0); letter-spacing: .18em; } }
+  .endcard .note, .endcard .ach-note, .endcard .ach-x-note { animation: rise 1s ease both 2.4s; }
+  .endcard .row { justify-content: center; animation: rise 1s ease both 3.2s; }
+  @media (prefers-reduced-motion: reduce) { .endcard .end-name, .endcard .end-kind, .endcard .note, .endcard .row, .roll-bg img.on { animation: none; } }
 </style>
 
 <div id="app">
@@ -2690,12 +2721,14 @@
     const hasLeft = Object.keys(P.shelf || {}).some(k => P.shelf[k]);
     const endNote = end[0] === 'BAD9' ? 'この放課後は、ここで終わった。……握っていた手のぬくもりだけが、まだ指に残っている。'
                   : hasLeft ? 'この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。' : 'この放課後は、ここで終わった。';
-    overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
-        <p class="eyebrow">${dawnEnd ? end[0].replace('2', '') : 'BAD END'}「${end[1]}」</p></div>
+    if (dawnEnd) await endRoll(end[0]);
+    const head = dawnEnd ? `<div class="end-ttl"><p class="end-kind">${end[0].replace('2', '')} END</p><h1 class="end-name">${end[1]}</h1></div>`
+                         : `<div class="fade" style="display:flex;flex-direction:column;gap:12px"><p class="eyebrow">BAD END「${end[1]}」</p></div>`;
+    overlayWait(`${head}
       ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。${end[0] === 'GOOD' && !RELEASE ? '（屋上への道は、製品版で開きます）' : ''}</p>` : (end[0] === 'GOOD' && !RELEASE ? '<p class="note">（屋上への道は、製品版で開きます）</p>' : '')}
       <p class="note">${endNote}</p>${achNote(got)}
       `,
-      dawnEnd ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
+      dawnEnd ? 'dawn endcard' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
   /* ================================================================
      屋上（18:30）。いまは確認用のURL（?roof）でだけ入れる。台詞は「屋上_台本案」第1稿
@@ -2703,6 +2736,7 @@
      ================================================================ */
   const ROOF = /[?&]roof\b/.test(location.search);
   // 確認用：?roof のときだけ、コンソールから屋上の場面を直接始められる（__roof('split'|'awk'|'straight')）
+  if (ROOF) window.__roll = t => endRoll(t || 'GOOD');
   if (ROOF) window.__roof = k => { P.cur.mtKind = k === 'awk' ? 'awk' : 'straight'; return roofScene(k === 'split'); };
   const sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
   // 言葉の字：明朝と手書き（Yomogi・Zen Kurenaido）を混ぜる。いろいろな人から言われた言葉に見えるように
@@ -2964,13 +2998,71 @@
     await say(['朝が来た。', 'きれいだと、思えなかった。']);
     return roofEnd('BAD8', 'こわれた心');
   }
-  function roofEnd(tag, title) {
+
+  /* ---------- エンドロール：NORMAL以上の結末で、結末の名前を出す前に流す。作中の一枚絵とわすれものを後ろに映す ---------- */
+  const CREDIT_AUTHOR = '紫月ーshizukiー';   // 作者名（仮）
+  function endRollImages(tag) {
+    const seen = ALBUM.filter(a => P.album[a[0]]).map(a => a[1]);
+    const extra = [];
+    WASURE.forEach(([, k, get]) => { if (P.shelf[k]) { try { const it = get().shelfItem(!!P.saved[k]); if (it && it.thumb) extra.push(it.thumb); } catch (e) {} } });
+    if (tag === 'TRUE') extra.push('infirmary_morning', 'protag_notebook', 'true_gate');
+    else if (tag === 'GOOD') extra.push('protag_notebook_dusk', 'rooftop');
+    else extra.push('chime_sky_1830');
+    return [...new Set([...seen, ...extra])];
+  }
+  function endRollHTML(tag) {
+    const sec = (h, items) => items.length ? `<section>${h ? `<h3>${h}</h3>` : ''}${items.map(t => `<p>${t}</p>`).join('')}</section>` : '';
+    const chars = ORDER.map(id => CHAPTERS[id].name).concat(tag === 'TRUE' ? ['もう一人の自分'] : []);
+    const songs = [...new Set(OST.filter(([k]) => k !== 'sotaDuet' && P.heard[k]).map(([, t]) => t))];
+    return `<div class="roll-in">
+      <p class="roll-title">放課後のわすれもの</p>
+      ${sec('企画・シナリオ・演出', [CREDIT_AUTHOR])}
+      ${sec('絵', [CREDIT_AUTHOR])}
+      ${sec('音楽', [CREDIT_AUTHOR])}
+      ${sec('プログラム', [CREDIT_AUTHOR])}
+      ${sec('登場人物', chars)}
+      ${sec('使用楽曲', songs)}
+      ${sec('', ['この作品はフィクションです。', '実在の人物・団体・学校・サービスとは関係ありません。'])}
+      <p class="roll-thanks">最後まで、見届けてくれて、ありがとう。</p>
+      <p class="roll-title end">放課後のわすれもの</p></div>`;
+  }
+  function endRoll(tag) {
+    return new Promise(res => {
+      const imgs = endRollImages(tag);
+      const el = document.createElement('div'); el.className = 'endroll';
+      el.innerHTML = `<div class="roll-bg"><img alt=""><img alt=""></div><div class="roll-wrap">${endRollHTML(tag)}</div><button type="button" class="roll-skip" hidden>とばす ▶</button>`;
+      document.body.appendChild(el);
+      const layers = [...el.querySelectorAll('.roll-bg img')]; let cur = 0, i = 0, tm = 0, st = 0, ended = false;
+      const show = () => {
+        if (!imgs.length) return;
+        const im = layers[cur], other = layers[1 - cur]; cur = 1 - cur;
+        const pre = new Image(); pre.src = `img/${imgs[i++ % imgs.length]}.webp`;
+        pre.onload = () => { im.src = pre.src; im.classList.remove('on'); void im.offsetWidth; im.classList.add('on'); other.classList.remove('on'); };
+      };
+      const inner = el.querySelector('.roll-in');
+      const done = () => {
+        if (ended) return; ended = true; clearInterval(tm); clearTimeout(st); el.classList.add('out');
+        setTimeout(() => { el.remove(); res(); }, reduce ? 0 : 1400);
+      };
+      requestAnimationFrame(() => {
+        const dur = reduce ? 24 : Math.max(56, Math.min(110, (inner.offsetHeight + innerHeight) / 34));   // 1秒に34pxくらい
+        el.style.setProperty('--roll-d', dur + 's'); inner.classList.add('go');
+        show(); tm = setInterval(show, Math.max(6000, dur * 1000 / Math.max(1, imgs.length + 1)));
+        inner.addEventListener('animationend', () => setTimeout(done, reduce ? 0 : 900), { once: true });
+        const sk = el.querySelector('.roll-skip'); st = setTimeout(() => { sk.hidden = false; }, 3000); sk.onclick = done;
+      });
+    });
+  }
+  async function roofEnd(tag, title) {
     bgClockOverride = null; rainSE(false); windSE(false); roofTint(null); $('#scene').classList.remove('roof-dark', 'roof-wind'); $('#bells').style.visibility = '';
     P.endings[tag] = true;
     const got = achGain(tag);
     finishRun(true);
-    overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px"><p class="eyebrow">${tag === 'TRUE' ? 'TRUE END' : 'BAD END'}「${title}」</p></div>
-      <p class="note">この放課後は、ここで終わった。</p>${achNote(got)}`, tag === 'TRUE' ? 'dawn' : '', ['もう一度会いに行く', 'タイトルへ'])
+    if (tag === 'TRUE') await endRoll('TRUE');
+    const head = tag === 'TRUE' ? `<div class="end-ttl"><p class="end-kind">TRUE END</p><h1 class="end-name">${title}</h1></div>`
+                                : `<div class="fade" style="display:flex;flex-direction:column;gap:12px"><p class="eyebrow">BAD END「${title}」</p></div>`;
+    overlayWait(`${head}
+      <p class="note">この放課後は、ここで終わった。</p>${achNote(got)}`, tag === 'TRUE' ? 'dawn endcard' : '', ['もう一度会いに行く', 'タイトルへ'])
       .then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
   // エンディングの場面に切り替える。人物や調べる場所を消し、背景をフェードアウト→フェードインで差し替える
