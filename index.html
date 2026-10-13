@@ -2418,7 +2418,8 @@
   let bgClockOverride = null;   // 翌朝など、上の時刻を出さない場面で、壁の時計だけに時刻を出す（'8:30' など）
   function syncBgClock() {
     // いま映っている背景がどの部屋かで決める（BAD5 で別の部屋の背景を順に映すときも、針を出す）
-    const bg = $('#bgImg'), sv = $('#bgClock'), src = bg.getAttribute('src');
+    // endScene などは絶対URLで src を入れるので、'img/…' の形にそろえてから部屋を探す
+    const bg = $('#bgImg'), sv = $('#bgClock'), src = (bg.getAttribute('src') || '').replace(/^.*?(?=img\/[^\/]+$)/, '');
     let chs = []; try { chs = Object.values(CHAPTERS); } catch (e) {}
     const room = chs.find(ch => ch.bgClock && (src === `img/${ch.bg}.webp` || src === `img/${ch.bg}_unlit.webp` || src === `img/${ch.bg}_morning.webp`)), ck = room && room.bgClock;
     sv.style.display = ck ? '' : 'none';
