@@ -1549,8 +1549,7 @@
   // 音符の並び [音, 長さ] を、tick 秒刻みで鳴らす
   const seq = (notes, t, tick, fn) => { let x = t; notes.forEach(([n, len]) => { if (n) fn(n, x, len * tick); x += len * tick; }); };
   // 各曲：1小節ぶんの音を t から並べ、次の小節までの秒数を返す。どの曲も8小節（ソウタは16小節）でひと回りし、2周目で旋律が変化する
-  // ソウタの演奏（16小節）。夕焼けの放課後の軽やかさで、ハルとの主題をラフマニノフ風に展開する
-  // 右手：主題を歌うレガートの旋律に、シンコペーションとスタッカートを混ぜる。左手：2オクターブ以上に広がるアルペジオ（ペダルで響かせる）
+  // 『放課後』（16小節）。夕焼けの放課後の軽やかさで、ハルとの主題をラフマニノフ風に展開する。鳴らし方は duetBar
   // 和音：Cmaj9 → Dm9・G13 → Am9 …。後半は Fmaj9 → Fm6（同主短調から借りた和音）→ A7(♭9) → G13・D♭7（ドミナントの代理）で色を変えて、主題に帰る
   const SOTA_PIECE = {
     mel: [[[76, 3], [79, 1], [81, 2], [79, 2]], [[77, 3], [76, 1], [74, 2], [72, 2]],
@@ -1576,55 +1575,18 @@
           [[69, 4], [72, 4]], [[68, 4], [65, 4]], [[67, 2], [71, 2], [74, 4]], [[73, 4], [70, 4]],
           [[69, 4], [72, 4]], [[71, 4], [65, 4]], [[67, 4], [64, 4]], [[65, 2], [65, 2], [64, 4]]],
   };
-  function sotaBar(t, i, duet) {
-    const e = 0.21, bar = i % 16, cyc = (i >> 4) % 2, P_ = SOTA_PIECE;
-    // 右手：レガートは次の音に少し重ね、スタッカートは短く切る。後半は1オクターブ下を重ねて厚くする
-    seq(P_.mel[bar], t, e, (n, x, len) => {
-      piano(n, x, 0.056, Math.max(0.55, len * 1.3));
-      if (bar >= 8) piano(n - 12, x, 0.026, Math.max(0.5, len * 1.1));
-    });
-    let x = t;
-    P_.mel[bar].forEach(([n, len, art]) => { if (art === 's') piano(n, x, 0.03, 0.18); x += len * e; });
-    // 2周目の前半：内声が主題を8分音符2つ遅れて追いかける（カノン）
-    if (cyc && bar < 8) seq(P_.mel[bar], t + e * 2, e, (n, x2, len) => piano(n - 12, x2, 0.017, Math.max(0.5, len * 1.2)));
-    // 左手：和音を低い音から順にアルペジオで（ペダルで長く残す）
-    // 一人で弾くので、左手は右手（旋律・後半のオクターブ・2周目の内声のカノン）より下に収め、両手が交差しないようにする。
-    // 右手のいちばん低い音より短3度以上下に、はみ出す音は1オクターブ下げ（ほかの音と2半音以内でぶつかるなら省く）
-    const rh = P_.mel[bar].map(([n]) => n).filter(Boolean);
-    const rhLow = Math.min(...rh.map(n => (bar >= 8 || (cyc && bar < 8)) ? n - 12 : n));
-    const cap = rhLow - 3;
-    const voice_ = v => {
-      const keep = v.filter(n => n <= cap);
-      v.filter(n => n > cap).forEach(n => { const d = n - 12; if (d > keep[0] && d <= cap && keep.every(k => Math.abs(k - d) > 2)) keep.push(d); });
-      return keep.sort((a, b) => a - b);
-    };
-    // シンコペーション：3・7・11・15小節目は、2拍目の裏と3拍目の裏に、左手が和音の上の3音をスタッカートで（その2か所はアルペジオを休む）
-    const sync = bar % 4 === 2 ? [3, 5] : [];
-    let at = t, a8 = 0;
-    P_.ch[bar].forEach(([v0, len]) => {
-      const v = voice_(v0);
-      const pat = len >= 8 ? [0, 1, 2, 3, 4, 3, 2, 1] : len >= 4 ? [0, 2, 3, 4] : [0, 3];
-      pat.forEach((k, m) => {
-        const pos = a8 + m * (len / pat.length);
-        if (sync.includes(pos)) return;
-        const n = v[Math.min(k, v.length - 1)];
-        piano(n, at + m * e * (len / pat.length), m === 0 ? 0.12 : k <= 1 ? 0.051 + (v.length - k) * 0.003 : (0.022 + (v.length - k) * 0.002) * 1.3, m === 0 ? 2.6 : 1.7);
-      });
-      sync.filter(k => k >= a8 && k < a8 + len).forEach(k => v.slice(-3).forEach(n => piano(n, t + k * e, 0.024, 0.16)));
-      at += len * e; a8 += len;
-    });
-    // 連弾版：ハルのパート
-    if (duet) seq(P_.hal[bar], t, e, (n, x3, len) => { piano(n, x3, 0.034, Math.max(0.8, len * 1.2)); piano(n - 12, x3, 0.012, Math.max(0.8, len * 1.1)); });
-    return e * 8;
-  }
-  /* 『放課後』（連弾版）：ソウタとハルの4本の手で、初めて弾ける編曲。ピアノ歴12年ほどの二人が弾く難しさにする
-     ソウタ（プリモ）右手：主題をオクターブで。長い音のあとは、次の音へ駆け下りる・駆け上がる6連符のパッセージ。2周目はオクターブの内側に和音の音を足して3音で歌う
-     ソウタ左手：高い中音域で、16分音符の分散和音が絶え間なく流れる
-     ハル（セコンド）右手：対旋律を中音域の6度の重音で。2周目は裏拍に和音を刻む
-     ハル左手：低音のオクターブ。拍ごとに大きく跳び、2周目は裏拍でもう1オクターブ上へ跳ぶ
-     音域は A0 付近から C8 まで。同時に鳴る音の数も広さも、一人の両手では届かない */
-  function duetBar(t, i) {
-    const e = 0.21, s16 = e / 2, bar = i % 16, cyc = (i >> 4) % 2, P_ = SOTA_PIECE;
+  /* 『放課後』（連弾版）：ソウタとハルの4本の手で弾く編曲。ピアノ歴12年ほどの二人が弾ける難しさにする
+     4本の手の音域は、上から順に ソウタ右手 → ソウタ左手 → ハル右手 → ハル左手 で、隣どうしの手が交差しないように帯を分ける
+       ソウタ右手（プリモ）：G5（79）から上。主題を高いオクターブで歌い、長い音のあとは次の音へ駆ける6連符。2周目は内側に和音の音を足す
+       ソウタ左手：G4〜F#5（67〜78）。16分音符の分散和音が絶え間なく流れる
+       ハル右手（セコンド）：C3〜F#4（48〜66）。対旋律を6度の重音で。2周目はオクターブと、裏拍の和音
+       ハル左手：C3（48）から下。低音のオクターブと5度・10度の跳躍。2周目は低音のオクターブを交互に打つ
+     人の手で出せない音は省く：速いパッセージのオクターブ重ね、手の幅を超える10度、帯からはみ出す音
+     who：1 = ソウタの2本の手だけ（本編でソウタが一人で弾くとき）、2 = ハルだけ、3 = 4本の手（おまけの連弾版） */
+  const DUET_BAND = { sotaRH: 79, sotaLH: [67, 78], halRH: [48, 66], halLH: 48 };
+  function duetBar(t, i, who = 3) {
+    const e = 0.21, s16 = e / 2, bar = i % 16, cyc = (i >> 4) % 2, P_ = SOTA_PIECE, B = DUET_BAND;
+    const sota = !!(who & 1), hal = !!(who & 2);
     const segs = []; let a8 = 0;
     P_.ch[bar].forEach(([v, len]) => { segs.push({ v, at: a8, len }); a8 += len; });
     const segAt = k => segs.filter(g => g.at <= k + 1e-6).pop();
@@ -1634,65 +1596,76 @@
     const lite = (n, x, g, d) => { voice(nf(n), x, d, g, { type: 'triangle', attack: 0.005 }); voice(nf(n) * 2, x, d * 0.45, g * 0.35, { attack: 0.005 }); };
     const top = n => Math.min(108, n);
 
-    // ハル（セコンド）：ボーナストラックの連弾版だけのパート。低音から中音域まで2オクターブ以上を使って、曲を下から押し上げる
-    // 左手：1周目は、拍ごとに「低いオクターブ → 5度 → 1オクターブ上 → 10度」と跳ねる広いアルペジオ（2オクターブの幅）
-    //       2周目は、8分音符で低音のオクターブを交互に打ち（ブギのように前へ進む）、区切りの最後は次の根音へ半音で駆け上がる
-    //       いちばん低い音は A0。ピアノ歴12年ほどの高校生が、片手で無理なく届く幅（1オクターブ＋α）の跳躍だけにする
-    const lowest = r => { let b = r - 12; while (b - 12 >= 21 && b - 12 >= r - 24) b -= 12; return b >= 21 ? b : r; };
-    segs.forEach((g, gi) => {
-      const r = g.v[0], b = lowest(r), x = t + g.at * e;
-      const fifth = tones(g.v, b + 5, b + 8)[0] || b + 7, third = tones(g.v, b + 15, b + 17)[0] || b + 16;
-      const nextR = (segs[gi + 1] || { v: P_.ch[(bar + 1) % 16][0][0] }).v[0], nb = lowest(nextR);
-      for (let k = 0; k < g.len; k++) {
-        const at = x + k * e, beat = k % 2 === 0, down = k % 4 === 0;
-        if (!cyc) {
-          if (!beat) continue;
-          const n = [b, fifth, b + 12, third][(k / 2) % 4];
-          piano(n, at, down ? 0.11 : 0.06, down ? 2.4 : 1.4);
-          if (down && b + 12 <= 50) piano(b + 12, at, 0.06, 2.2);          // 1拍目はオクターブで厚く
-        } else {
-          const last = k === g.len - 1;
-          const n = last ? nb - 1 + (nb - 1 < 21 ? 12 : 0) : (beat ? b : b + 12);
-          piano(n, at, down ? 0.11 : beat ? 0.075 : 0.05, beat ? 1.1 : 0.5);
-          if (down) piano(fifth, at, 0.05, 0.9);                            // 強拍は5度を重ねて厚く（片手で届く幅）
+    if (hal) {
+      // ハル左手：C3から下。1周目は、拍ごとに「低いオクターブ → 5度 → 1オクターブ上 → 10度（帯に収まらなければ3度）」と跳ねる
+      //          2周目は、8分音符で低音のオクターブを交互に打ち、区切りの最後は次の根音へ半音で駆け上がる。いちばん低い音は A0
+      const lowest = r => { let b = r - 12; while (b - 12 >= 21 && b - 12 >= r - 24) b -= 12; return b >= 21 ? b : r; };
+      segs.forEach((g, gi) => {
+        const r = g.v[0], b = lowest(r), x = t + g.at * e;
+        const fifth = tones(g.v, b + 5, b + 8)[0] || b + 7;
+        const tenth = tones(g.v, b + 15, b + 17)[0] || b + 16, third = tenth <= B.halLH - 3 ? tenth : (tones(g.v, b + 3, b + 5)[0] || b + 4);
+        const nextR = (segs[gi + 1] || { v: P_.ch[(bar + 1) % 16][0][0] }).v[0], nb = lowest(nextR);
+        for (let k = 0; k < g.len; k++) {
+          const at = x + k * e, beat = k % 2 === 0, down = k % 4 === 0;
+          if (!cyc) {
+            if (!beat) continue;
+            const n = [b, fifth, b + 12, third][(k / 2) % 4];
+            piano(n, at, down ? 0.11 : 0.06, down ? 2.4 : 1.4);
+            if (down && b + 12 <= B.halLH) piano(b + 12, at, 0.06, 2.2);     // 1拍目はオクターブで厚く
+          } else {
+            const last = k === g.len - 1;
+            const n = last ? nb - 1 + (nb - 1 < 21 ? 12 : 0) : (beat ? b : b + 12);
+            piano(n, at, down ? 0.11 : beat ? 0.075 : 0.05, beat ? 1.1 : 0.5);
+            if (down) piano(fifth, at, 0.05, 0.9);                             // 強拍は5度を重ねて厚く（片手で届く幅）
+          }
         }
-      }
-    });
-    // 右手：1周目は対旋律を6度の重音で（中音域）。2周目は同じ旋律をオクターブで力強く（ソウタの左手の音域とはぶつけない）
-    seq(P_.hal[bar], t, e, (n, x, len) => {
-      const hi = n - 12, g = segAt(Math.round((x - t) / e)), lo = cyc ? hi - 12 : tones(g.v, hi - 9, hi - 3).pop();
-      piano(hi, x, 0.036, Math.max(0.8, len * 1.15));
-      if (lo) piano(lo, x, cyc ? 0.03 : 0.024, Math.max(0.8, len * 1.1));
-    });
-    if (cyc) [1, 3, 5, 7].forEach(k => tones(segAt(k).v, 50, 62).slice(-3).forEach(n => piano(n, t + k * e, 0.012, 0.2)));
-    // ソウタ左手：16分音符の分散和音（区切りごとに、和音の音を上って下りる）
-    let pos = 0, prevSeg = null;
-    for (let k = 0; k < 16; k++) {
-      const g = segAt(k / 2); if (g !== prevSeg) { pos = 0; prevSeg = g; }
-      const tn = tones(g.v, 60, 79), L = tn.length, cyc2 = 2 * (L - 1), q = pos % cyc2;
-      lite(tn[q < L ? q : cyc2 - q], t + k * s16, k % 4 === 0 ? 0.016 : 0.011, 0.45); pos++;
+      });
+      // ハル右手：C3〜F#4。1周目は対旋律を6度の重音で。2周目は同じ旋律をオクターブで力強く
+      seq(P_.hal[bar], t, e, (n, x, len) => {
+        const hi = n - 12, g = segAt(Math.round((x - t) / e)), sixth = tones(g.v, hi - 9, hi - 3).pop();
+        const lo = cyc && hi - 12 >= B.halRH[0] - 2 ? hi - 12 : sixth;   // 2周目のオクターブは、ハル左手の帯にかからないときだけ
+        piano(hi, x, 0.036, Math.max(0.8, len * 1.15));
+        if (lo && lo >= B.halRH[0] - 2) piano(lo, x, cyc ? 0.03 : 0.024, Math.max(0.8, len * 1.1));
+      });
+      if (cyc) [1, 3, 5, 7].forEach(k => tones(segAt(k).v, 50, 62).slice(-3).forEach(n => piano(n, t + k * e, 0.012, 0.2)));
     }
-    // ソウタ右手：主題をオクターブで
-    const mel = P_.mel[bar]; let x8 = 0;
-    mel.forEach(([n, len, art], j) => {
-      if (n) {
-        const at = t + x8 * e, d = art === 's' ? 0.2 : Math.max(0.6, len * e * 1.3);
-        piano(n, at, 0.05, d); piano(top(n + 12), at, 0.03, d);
-        if (cyc) { const inner = tones(segAt(x8).v, n - 9, n - 3).pop(); if (inner) piano(inner, at, 0.02, d); }
-        // 長い音の終わりで、次の音へ駆けていくパッセージ（3つ分以上の音：最後の4分音符に6連符で5音、2つ分の音：最後の8分音符に3連符で2音）
-        // 速さは1秒に12〜14音ほど。ピアノ歴12年ほどの人が、練習を重ねて弾ける速さ
-        const nx = mel[j + 1] ? mel[j + 1][0] : P_.mel[(bar + 1) % 16][0][0];
-        if (nx && len >= (cyc ? 2 : 3)) {
-          const span = len >= 3 ? 2 : 1, cnt = len >= 3 ? 5 : 2, g = segAt(Math.min(7, x8 + len - span));
-          const run = nx < n ? tones(g.v, nx + 1, nx + 16).slice(0, cnt).reverse() : tones(g.v, nx - 16, nx - 1).slice(-cnt);
-          const r0 = t + (x8 + len - span) * e, st = span * e / (cnt + 1);
-          run.forEach((m, k) => { lite(m, r0 + (k + 1) * st, 0.022, 0.3); lite(top(m + 12), r0 + (k + 1) * st, 0.01, 0.25); });
-        }
+
+    if (sota) {
+      // ソウタ左手：G4〜F#5 の帯の中で、16分音符の分散和音（区切りごとに、和音の音を上って下りる）
+      let pos = 0, prevSeg = null;
+      for (let k = 0; k < 16; k++) {
+        const g = segAt(k / 2); if (g !== prevSeg) { pos = 0; prevSeg = g; }
+        const tn = tones(g.v, B.sotaLH[0], B.sotaLH[1]), L = tn.length, cyc2 = Math.max(2, 2 * (L - 1)), q = pos % cyc2;
+        lite(tn[q < L ? q : cyc2 - q], t + k * s16, k % 4 === 0 ? 0.016 : 0.011, 0.45); pos++;
       }
-      x8 += len;
+      // ソウタ右手：主題を高いオクターブ（主題の1オクターブ上を歌い、帯に収まるときだけ下のオクターブを重ねる）
+      // 下のオクターブが帯より低い音は、代わりに内側の和音の音（3〜6度下）を添える。2周目は内側の音を常に足す
+      const mel = P_.mel[bar]; let x8 = 0;
+      mel.forEach(([n, len, art], j) => {
+        if (n) {
+          const at = t + x8 * e, d = art === 's' ? 0.2 : Math.max(0.6, len * e * 1.3), hiN = top(n + 12);
+          piano(hiN, at, 0.05, d);
+          const inner = tones(segAt(x8).v, Math.max(B.sotaRH, hiN - 9), hiN - 3).pop();
+          if (n >= B.sotaRH) piano(n, at, 0.03, d);
+          if (inner && (cyc || n < B.sotaRH)) piano(inner, at, 0.02, d);
+          // 長い音の終わりで、次の音へ駆けていくパッセージ（3つ分以上の音：最後の4分音符に6連符で5音、2つ分の音：最後の8分音符に3連符で2音）
+          // 速さは1秒に12〜14音ほど。片手の単音で（オクターブの重ねはしない）
+          const nx = mel[j + 1] ? mel[j + 1][0] : P_.mel[(bar + 1) % 16][0][0];
+          if (nx && len >= (cyc ? 2 : 3)) {
+            const span = len >= 3 ? 2 : 1, cnt = len >= 3 ? 5 : 2, g = segAt(Math.min(7, x8 + len - span)), tgt = nx + 12;
+            const run = nx < n ? tones(g.v, tgt + 1, tgt + 16).slice(0, cnt).reverse() : tones(g.v, Math.max(B.sotaRH, tgt - 16), tgt - 1).slice(-cnt);
+            const r0 = t + (x8 + len - span) * e, st = span * e / (cnt + 1);
+            run.forEach((m, k) => lite(top(m), r0 + (k + 1) * st, 0.022, 0.3));
+          }
+        }
+        x8 += len;
+      });
+    }
+    // 曲の終わり（2周目の最後の小節）：低音から高音まで、和音を一気に駆け上がる（4本の手で下から順に受け渡す）
+    if (cyc && bar === 15) tones(segs[segs.length - 1].v, 24, 100).forEach((n, k) => {
+      const mine = n >= B.sotaLH[0] ? sota : hal;
+      if (mine) lite(n, t + 4 * e + k * 0.03, 0.016, 3);
     });
-    // 曲の終わり（2周目の最後の小節）：低音から高音まで、和音を一気に駆け上がる
-    if (cyc && bar === 15) tones(segs[segs.length - 1].v, 24, 100).forEach((n, k) => lite(n, t + 4 * e + k * 0.03, 0.016, 3));
     return e * 8;
   }
   // 『放課後』のはじめの4小節：音楽室で主人公（ハルのパート）とソウタが合わせたところと同じ音・同じ速さ（1拍 S16×4 秒、2/4拍子）
@@ -1842,8 +1815,8 @@
       orgel(chord[0] - 12, t, 0.02, 4);
       return e * 8;
     },
-    // ソウタの演奏：連弾で弾いたハルのパートと同じ『放課後』の主題（ミソラソ・ファミレド、ハ長調）から始まる。くわしくは SOTA_PIECE
-    sota(t, i) { pianoMidLow = 2; try { return sotaBar(t, i, false); } finally { pianoMidLow = 1; } },
+    // ソウタの演奏：連弾版『放課後』のうち、ソウタの2本の手（プリモ）だけを弾く。ハルの対旋律と低音は鳴らない
+    sota(t, i) { pianoMidLow = 2; try { return duetBar(t, i, 1); } finally { pianoMidLow = 1; } },
     // おまけ用：『放課後』連弾版。はじめの4小節は、音楽室で主人公とソウタが合わせたフレーズ（ハルの旋律＋ソウタの伴奏、元の速さ）
     // そこからテンポを上げて、4本の手で弾く本編（duetBar 32小節）へ。最後まで行ったら、はじめの4小節に戻る
     // 2章の連弾の場面と同じ流れ：合わせた4小節 → ソウタがひとりで弾く続き4小節 → 終わりの和音 → テンポを上げて本編（duetBar 32小節）
@@ -3863,11 +3836,13 @@
   const noteF = n => { const m = /^([A-G])([#b]?)(\d)$/.exec(n); if (!m) return 0;
     const k = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
     return 440 * Math.pow(2, (k + (+m[3] + 1) * 12 - 69) / 12); };
+  // 連弾版の4本の手の帯（上から ソウタ右手 G5〜／ソウタ左手 G4〜F#5／ハル右手 C3〜F#4／ハル左手 〜C3）に合わせ、
+  // ソウタの右手は G5 から上の16分音符、左手はハルの旋律（E4〜A4）の上の G4〜F#5 で8分音符を刻む。低音はハルの左手の受け持ち
   const PRIMO = [  // [右手16分×4, 左手8分×2]
-    [['C5', 'E5', 'G5', 'C6'], ['C3', 'G3']], [['B5', 'G5', 'E5', 'G5'], ['E3', 'G3']],
-    [['A5', 'F5', 'C6', 'A5'], ['F2', 'C3']], [['G5', 'E5', 'C5', 'E5'], ['C3', 'G3']],
-    [['F5', 'D5', 'A5', 'F5'], ['D3', 'A3']], [['E5', 'C5', 'A4', 'C5'], ['A2', 'E3']],
-    [['D5', 'F5', 'B5', 'D6'], ['G2', 'F3']], [['C6', 'G5', 'E5', 'C5'], ['C3', 'G2']]];
+    [['C6', 'E6', 'G6', 'C7'], ['C5', 'G4']], [['B6', 'G6', 'E6', 'G6'], ['E5', 'G4']],
+    [['A6', 'F6', 'C7', 'A6'], ['F5', 'C5']], [['G6', 'E6', 'C6', 'E6'], ['C5', 'G4']],
+    [['F6', 'D6', 'A6', 'F6'], ['D5', 'A4']], [['E6', 'C6', 'A5', 'C6'], ['A4', 'E5']],
+    [['D6', 'F6', 'B6', 'D7'], ['G4', 'F5']], [['C7', 'G6', 'E6', 'C6'], ['C5', 'G4']]];
   const S16 = 0.14;
   function sotaBeat(i) {
     const [rh, lh] = PRIMO[i];
