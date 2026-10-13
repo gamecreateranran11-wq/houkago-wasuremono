@@ -877,7 +877,7 @@
   }
   function writeSlot(n) {
     const d = scr
-      ? { at: Date.now(), label: saveLabel(R), mid: true, run: scr.start, prog: scr.prog,
+      ? { at: Date.now(), label: onRoof() ? '屋上・18:30' : saveLabel(R), mid: true, run: scr.start, prog: scr.prog,
           resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs } }
       : { at: Date.now(), label: saveLabel(R), run: serR(R), prog: progSnap() };
     try { localStorage.setItem(SLOT_KEY(n), JSON.stringify(d)); return true; } catch (e) { return false; }
@@ -2495,7 +2495,8 @@
   /* ---------- flow ---------- */
   var busy = false;  // render() からも見るので var（宣言より前に呼ばれても undefined で済む）
   // セーブは放課後の途中ならいつでも（会話の途中でも）。ロード直後の早送り中だけは押せない
-  function syncSave() { const b = $('#btnSave'); if (b) b.disabled = !R || R.over || !C || !!replay; }
+  const onRoof = () => !!(scr && scr.key && scr.key.startsWith('roof:'));
+  function syncSave() { const b = $('#btnSave'); if (b) b.disabled = !!replay || !C || !R || (R.over && !onRoof()); }
   // key：どのストーリーかを表す名前（会話の途中セーブから再開するときに、同じストーリーを呼び直すのに使う）
   async function act(fn, key) {
     if (busy || !R || R.over) return;
@@ -2534,6 +2535,7 @@
   async function voidLines() { const t = VOID_LINES[C.id]; if (t) await voidWait(t); }
   // 黒い画面の文：文が一つずつ浮かび、全部出てから進むしるし（▼。本編の文章送りと同じ印）を出す
   function voidWait(lines) {
+    if (replay) return Promise.resolve();   // ロード直後の早送り中は出さない
     const d = reduce ? 0 : (0.8 * (lines.length - 1) + 1.6);
     const pr = uiWait(`<div class="fade void-text">${lines.map(l => `<p>${l}</p>`).join('')}</div>`, 'void', ['▼']);
     card.style.setProperty('--void-delay', d + 's');
@@ -2743,6 +2745,7 @@
     return d;
   }
   async function darkSwap(img, inMs = 1500, holdMs = 700, outMs = 1800) {
+    if (replay) { await endScene(img); return; }   // 早送り中は暗転なしで切り替えるだけ
     const wait = ms => new Promise(r => setTimeout(r, ms));
     const d = fxLayer('dark'); await wait(40); d.classList.add('on'); await wait(inMs);
     spk.hidden = true; txt.textContent = ''; chs.innerHTML = ''; more.hidden = true;   // 暗転のあいだに、前の文を消す
@@ -2752,6 +2755,7 @@
   function fxEnd(box) { box.remove(); if (!document.querySelector('.roof-fx')) document.body.classList.remove('fx-on'); }
   // 言葉の雨：短い言葉は小さく散らして重ね、長い言葉は一つずつはっきり読ませる。崩した言葉はにじませて読めなくする。画面を押すと早く進む
   async function wordRain() {
+    if (replay) return;   // 早送り中は出さない
     const box = fxLayer('rain');
     spk.hidden = true; txt.textContent = ''; more.hidden = true;   // 言葉の雨に切り替わるとき、前の文を消す
     // 短い言葉は、届いた言葉（ほかの人から言われた言葉）から切り出したものだけ。どれも否定。自分で自分に向けた言葉は、もう一人の自分の台詞に取っておく
@@ -2808,6 +2812,7 @@
   }
   // 遅れて混ざってくる、正論と慰めの言葉（小さく、一つずつ）
   async function lateWords(list) {
+    if (replay) return;   // 早送り中は出さない
     const box = fxLayer('late');
     for (const [l, k] of list) {
       const e = document.createElement('p'); e.className = `lw ${k} ${rainFont()}`; e.textContent = `「${l}」`; box.appendChild(e);
@@ -2842,7 +2847,9 @@
     talkHold = false; guest = null; guestRender();
     // 上の欄：時刻は18:30のまま。チャイムの残りとヒント・チャイムを待つ・セーブは使わない
     $('#clock').textContent = '18:30'; $('#remain').textContent = ''; $('#bells').style.visibility = 'hidden';
-    ['#btnHint', '#btnWait', '#btnSave'].forEach(q => { $(q).disabled = true; });
+    ['#btnHint', '#btnWait'].forEach(q => { $(q).disabled = true; });
+    if (!onRoof()) beginScript('roof:' + (split ? 'split' : 'straight'));   // 屋上もセーブできる（答えを記録して、ロードで早送り）
+    syncSave();
     bgm(null);
     await roofVoid(['チャイムが鳴っている。']);
     await endScene('rooftop');
@@ -3002,6 +3009,7 @@
     return roofEnd('TRUE', '6人の朝');
   }
   async function roofBad8(from) {
+    scr = null; syncSave();
     $('#scene').classList.remove('roof-wind'); roofTint(null); bgm('vanish');
     await say([...({ despair: ['今度は、指は止まらなかった。'],
                      self: ['もう一人の自分が、静かに笑った気がした。'],
@@ -3072,10 +3080,9 @@
     return `<div class="roll-in">
       <p class="roll-title">放課後のわすれもの</p>
       ${sec('企画・シナリオ・演出', [CREDIT_AUTHOR])}
-      ${sec('', ['この作品の制作には、生成AIを使用しています。'])}
+      <section><p class="sub">この作品の制作には、生成AIを使用しています。</p></section>
       ${sec('登場人物', chars)}
       ${sec('使用楽曲', songs)}
-      ${sec('', ['この作品はフィクションです。', '実在の人物・団体・学校・サービスとは関係ありません。'])}
       <p class="roll-thanks">最後まで、見届けてくれて、ありがとう。</p>
       <p class="roll-title end">放課後のわすれもの</p></div>`;
   }
@@ -3107,6 +3114,7 @@
     });
   }
   async function roofEnd(tag, title) {
+    scr = null; syncSave();
     bgClockOverride = null; rainSE(false); windSE(false); roofTint(null); $('#scene').classList.remove('roof-dark', 'roof-wind'); $('#bells').style.visibility = '';
     P.endings[tag] = true;
     const got = achGain(tag);
@@ -3124,7 +3132,8 @@
     guest = null; guestRender();   // その場にいた子（ミオなど）の立ち絵も消す
     $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = ''; $('#leftover').style.display = 'none';
     const bg = $('#bgImg');
-    if (bg.getAttribute('src') === `img/${img}.webp`) return;
+    if ((bg.getAttribute('src') || '').replace(/^.*?(?=img\/[^\/]+$)/, '') === `img/${img}.webp`) return;
+    if (replay) { bg.src = `img/${img}.webp`; bg.style.opacity = '1'; return; }   // 早送り中はすぐ切り替える
     const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
     const pre = new Image(); pre.src = `img/${img}.webp`;
     bg.style.opacity = '0'; await Promise.all([wait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);
@@ -6906,7 +6915,7 @@
       }
       const ok = writeSlot(n);
       await uiWait(`<p class="eyebrow">セーブ</p><h2>${ok ? `ファイル ${n} に記録しました` : '記録できませんでした'}</h2>
-        ${ok ? `<p>${saveLabel(R)}${scr ? '・会話の途中' : ''}</p>` : '<p class="note">ブラウザの保存領域が使えない状態です。</p>'}`, '', ['ゲームに戻る', 'セーブ画面へ', 'タイトルへ'])
+        ${ok ? `<p>${onRoof() ? '屋上・18:30' : saveLabel(R)}${scr ? '・会話の途中' : ''}</p>` : '<p class="note">ブラウザの保存領域が使えない状態です。</p>'}`, '', ['ゲームに戻る', 'セーブ画面へ', 'タイトルへ'])
         .then(v => v === 0 ? closeOverlay() : v === 1 ? showSlots(mode) : (closeOverlay(), advance = null, busy = false, showTitle(true)));
     });
     card.querySelectorAll('[data-load]').forEach(b => b.onclick = async () => {
@@ -6934,6 +6943,12 @@
     R = d; busy = false;
     if (C.id === 'infirmary' && R.taken && R.taken.dark) setDark(true);  // 明かりを消したまま中断していたら、消したまま再開する
     render();
+    if (resume && resume.key && resume.key.startsWith('roof:')) {
+      replay = { skip: Math.max(0, resume.lines - 1), inputs: [...(resume.inputs || [])] };
+      beginScript(resume.key);
+      roofScene(resume.key === 'roof:split');
+      return;
+    }
     const fn = resume && scriptFn(resume.key);
     if (fn) {
       replay = { skip: Math.max(0, resume.lines - 1), inputs: [...(resume.inputs || [])] };
