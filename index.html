@@ -2440,7 +2440,7 @@
     // endScene などは絶対URLで src を入れるので、'img/…' の形にそろえてから部屋を探す
     const bg = $('#bgImg'), sv = $('#bgClock'), src = (bg.getAttribute('src') || '').replace(/^.*?(?=img\/[^\/]+$)/, '');
     let chs = []; try { chs = Object.values(CHAPTERS); } catch (e) {}
-    const room = chs.find(ch => ch.bgClock && (src === `img/${ch.bg}.webp` || src === `img/${ch.bg}_unlit.webp` || src === `img/${ch.bg}_morning.webp`)), ck = room && room.bgClock;
+    const room = chs.find(ch => ch.bgClock && (src === `img/${ch.bg}.webp` || src === `img/${ch.bg}_unlit.webp` || src === `img/${ch.bg}_morning.webp` || src === `img/${ch.bg}_1830_dark.webp` || src === `img/${ch.bg}_1830_lit.webp`)), ck = room && room.bgClock;
     sv.style.display = ck ? '' : 'none';
     if (!ck) return;
     sv.style.opacity = bg.style.opacity;
@@ -3127,7 +3127,7 @@
       // 部屋の絵と、わすれものの重ね絵を両方読み終えてから、同時に切り替える（重ね絵だけ後から現れないように）
       const dec = im => (im.decode ? im.decode() : Promise.resolve()).catch(() => {});
       const pre = new Image(); pre.src = `img/${img}.webp`;
-      const preLo = ch && ch.leftoverImg ? new Image() : null; if (preLo) preLo.src = `img/${(img.endsWith('_unlit') && ch.leftoverDark) || ch.leftoverImg}.webp`;
+      const preLo = ch && ch.leftoverImg ? new Image() : null; if (preLo) preLo.src = `img/${((img.endsWith('_unlit') || img.endsWith('_dark')) && ch.leftoverDark) || ch.leftoverImg}.webp`;
       bg.style.opacity = '0'; lo.style.transition = 'opacity .7s ease'; lo.style.opacity = '0';
       await Promise.all([wait(750), dec(pre), preLo ? dec(preLo) : null]);
       bg.src = pre.src;
@@ -3142,7 +3142,7 @@
       bg.style.opacity = '1'; await wait(750);
     };
     for (const ch of chs) {
-      await show(`${ch.bg}_unlit`, ch);   // 消えた子の部屋は、明かりが消えたまま
+      await show(`${ch.bg}_1830_dark`, ch);   // 消えた子の部屋は、明かりが消えたまま。時刻は18:30（5章のあと）なので、18:30の暗い版
       await line(`${ch.room}。${ch.name}の座っていた場所に、${ch.lost}だけが残っている。`);
     }
     await line('机の上に、わすれものだけが並んでいた。');
