@@ -724,6 +724,8 @@
   @media (prefers-reduced-motion: reduce) { .endcard .end-name, .endcard .end-kind, .endcard .note, .endcard .row, .roll-bg img.on { animation: none; } }
   .kb.locked { pointer-events: none; }
   .kb.locked .wk, .kb.locked .bk { cursor: default; }
+  .name-in { font: inherit; font-family: var(--hand); font-size: 20px; letter-spacing: .1em; width: 100%; box-sizing: border-box; padding: 10px 6px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); outline: 0; }
+  .name-in:focus { border-bottom: 2px solid var(--blue); padding-bottom: 9px; }
 </style>
 
 <div id="app">
@@ -1163,7 +1165,7 @@
   const CUT_SWITCH = true;   // 保健室の入口の脇のスイッチのアップ（ci_inf_switch / _dark）
   function showCut(name) {
     const el = $('#cutin');
-    el.innerHTML = name === 'clock' ? clockSVG() : `<img src="img/${name}.webp" alt="">`;
+    el.innerHTML = name === 'clock' ? clockSVG() : `<img src="${imgSrc(name)}" alt="">`;
     el.classList.add('show');
     $('#scene').classList.add('cut');
   }
@@ -2917,6 +2919,7 @@
                '手帳の、白い6行目を見た。']);
     if (await choose(['（……書きたい。自分の名前を）', '（……もう、閉じよう）']) === 1) return roofBad8('close');
     // TRUE
+    { const nm = await askName(); if (nm) { P.myName = nm; saveP(); } await buildNamedNotebook(); }
     await say(['（……生かされるんじゃない）', '（知ってる場所から、出ていくんだ）',
                'うつむいているもう一人の自分に、向き直った。', '「……待たせて、ごめん」', '「あなたのことも、自分のことも。……自分で、助ける。必ず」']);
     roofTint(null);
@@ -2954,7 +2957,7 @@
                ...({ straight: ['ミオとツムギは、並んで歩いていった。'],
                     awk: ['ミオとツムギは、半歩ずれて並んでいた。', ['ミオ', '……当番の日なら、いるから']],
                     split: ['ミオとツムギは、何も言わずに、別々の方向へ歩いていった。', '二人とも、一度ずつ振り返った。……振り返る時は、少しずれていた。'] }[kind])]);
-    await roofVoid(['……それが、いつだったのかは覚えていない。', '気づいた頃には、手帳の6つ目の丸い枠に、顔が描きこまれていた。']);
+    await roofVoid(['……それが、いつだったのかは覚えていない。', P.myName ? '気づいた頃には、手帳の6つ目の丸い枠の、名前の隣に、小さく顔が描きこまれていた。' : '気づいた頃には、手帳の6つ目の丸い枠に、顔が描きこまれていた。']);
     if (!P.saved) P.saved = {};
     P.saved.me = true; P.shelf.me = true; albumSync();
     return roofEnd('TRUE', '6人の朝');
@@ -2974,6 +2977,44 @@
     return roofEnd('BAD8', 'こわれた心');
   }
 
+
+  /* ---------- 6行目の名前：TRUEで遊ぶ人が書いた名前を、寄せ書きの手帳の丸い枠に描き足す ---------- */
+  const NB_FONT = '"Zen Kurenaido"';     // 主人公の字（五人の字とは別人の筆跡）。日本語・英数字・記号に対応したペン字の書体
+  let NB_NAMED = null;                   // 名前入りの手帳（data URL）
+  const nbSrc = () => NB_NAMED || 'img/protag_notebook.webp';
+  const imgSrc = key => key === 'protag_notebook' ? nbSrc() : `img/${key}.webp`;
+  async function buildNamedNotebook() {
+    const name = (P.myName || '').trim();
+    if (!name) { NB_NAMED = null; return; }
+    try {
+      if (document.fonts && document.fonts.load) await Promise.race([document.fonts.load(`30px ${NB_FONT}`, name), new Promise(r => setTimeout(r, 4000))]);
+      const im = new Image(); im.src = 'img/protag_notebook.webp'; await (im.decode ? im.decode() : new Promise(r => { im.onload = r; }));
+      const c = document.createElement('canvas'); c.width = 1536; c.height = 1024;
+      const x = c.getContext('2d'); x.drawImage(im, 0, 0);
+      // 右ページの点線の丸（中心 945,690）。ページの傾きに合わせて少し回し、遠近で縦をつぶす
+      x.translate(945, 690); x.rotate(-5 * Math.PI / 180); x.scale(1, 0.88);
+      x.fillStyle = 'rgba(58, 63, 110, .88)'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      const lines = name.length <= 5 ? [name] : [name.slice(0, Math.ceil(name.length / 2)), name.slice(Math.ceil(name.length / 2))];
+      const size = lines.length > 1 ? 22 : name.length <= 3 ? 34 : 26;
+      x.font = `${size}px ${NB_FONT}`;
+      lines.forEach((l, i) => x.fillText(l, 0, (i - (lines.length - 1) / 2) * size * 1.15, 106));
+      NB_NAMED = c.toDataURL('image/png');
+    } catch (e) { NB_NAMED = null; }
+  }
+  // 名前を書く場面：空のまま進むこともできる（そのときは、これまでどおり名前は絵に出ない）
+  function askName() {
+    const r = replayed(); if (r) return Promise.resolve(r.v);
+    return new Promise(res0 => {
+      const res = v => res0(rec(v));
+      openOverlay(`<p class="eyebrow">生徒手帳</p><h2>6行目に、名前を書く</h2>
+        <p class="note">書く名前を入れてください。あとから変えられません。空のまま進むこともできます。</p>
+        <input id="myName" class="name-in" type="text" maxlength="8" autocomplete="off" spellcheck="false" placeholder="（8文字まで）" aria-label="6行目に書く名前">
+        <div class="row"><button type="button" class="btn primary" id="nmOk">書く</button></div>`);
+      const inp = $('#myName'); inp.focus();
+      const ok = () => { const v = inp.value.replace(/[\r\n\t]/g, '').trim().slice(0, 8); closeOverlay(); res(v); };
+      $('#nmOk').onclick = ok; inp.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); ok(); } };
+    });
+  }
   /* ---------- エンドロール：NORMAL以上の結末で、結末の名前を出す前に流す。作中の一枚絵とわすれものを後ろに映す ---------- */
   const CREDIT_AUTHOR = '紫月ーshizukiー';   // 作者名（仮）
   function endRollImages(tag) {
@@ -3009,7 +3050,7 @@
       const show = () => {
         if (!imgs.length) return;
         const im = layers[cur], other = layers[1 - cur]; cur = 1 - cur;
-        const pre = new Image(); pre.src = `img/${imgs[i++ % imgs.length]}.webp`;
+        const pre = new Image(); pre.src = imgSrc(imgs[i++ % imgs.length]);
         pre.onload = () => { im.src = pre.src; im.classList.remove('on'); void im.offsetWidth; im.classList.add('on'); other.classList.remove('on'); };
       };
       const inner = el.querySelector('.roll-in');
@@ -5570,6 +5611,7 @@
     // 通信が遅くても、いつまでも待たせない
     return Promise.race([load(), wait(12000)]);
   })();
+  if (P.myName) FONTS_READY.then(buildNamedNotebook);   // 名前を書いたあとの周回では、起動時に名前入りの手帳を用意しておく
 
   /* ---------- 章の切り替え ---------- */
 
@@ -6562,7 +6604,7 @@
   const ME = { name: '自分',
     shelfItem(saved) {
       return saved
-        ? { thumb: 'protag_notebook', title: '寄せ書きの生徒手帳', body: `<img class="cg" src="img/protag_notebook.webp" alt="昼の保健室の台の上に開かれた生徒手帳"><p>終業式のあとの保健室で、同じ生徒手帳が開かれていた。見開きいっぱいに、五人の似顔絵と、それぞれの字の一言。……右下に、顔の描かれていない丸い枠が、ひとつだけ残っていた。名前のページには、五人の名前の下に、自分の名前が書き足してあった。</p>` }
+        ? { thumb: 'protag_notebook', title: '寄せ書きの生徒手帳', body: `<img class="cg" src="${nbSrc()}" alt="昼の保健室の台の上に開かれた生徒手帳"><p>終業式のあとの保健室で、同じ生徒手帳が開かれていた。見開きいっぱいに、五人の似顔絵と、それぞれの字の一言。……右下に、顔の描かれていない丸い枠が、ひとつだけ残っていた。名前のページには、五人の名前の下に、自分の名前が書き足してあった。</p>` }
         : { thumb: 'protag_notebook_dusk', title: '生徒手帳', body: `<img class="cg" src="img/protag_notebook_dusk.webp" alt="夕焼けの屋上に落ちている生徒手帳"><p>夕焼けの屋上の足もとに落ちていた、自分の生徒手帳。書きこまれたページは、一枚だけ。……五人の名前が、並んでいた。</p>` };
     } };
   if (P.endings.GOOD && !P.shelf.me) { P.shelf.me = true; saveP(); }
@@ -6596,7 +6638,7 @@
       const label = wKnow ? (saved ? '姿を変えたもの' : '残されたもの') : who;
       if (!on) return `<div class="slot locked"><span class="thumb-empty" aria-hidden="true">？</span><span class="ttl">${label}<br>？？？</span></div>`;
       const it = ch().shelfItem(saved);
-      return `<button type="button" class="slot got${saved ? ' saved' : ''}" data-w="${i}" data-sv="${saved ? 1 : 0}"><img class="thumb" src="img/${it.thumb}.webp" alt=""><span class="ttl">${label}<br>${it.title}</span></button>`;
+      return `<button type="button" class="slot got${saved ? ' saved' : ''}" data-w="${i}" data-sv="${saved ? 1 : 0}"><img class="thumb" src="${imgSrc(it.thumb)}" alt=""><span class="ttl">${label}<br>${it.title}</span></button>`;
     };
     if (wKnow) {
       for (let k = 0; k < WASURE.length; k += 2) pages.push({ sec: 'w', head: wHead,
@@ -6943,7 +6985,7 @@
         const it = ch.shelfItem(!!P.saved[key]), state = (P.saved[key] ? 's' : 'v');
         const isNew = P.shelfSeen[key] !== state;
         return `<button type="button" class="slot got${P.saved[key] ? ' saved' : ''}${isNew ? ' new' : ''}" data-k="${key}">
-          <img class="thumb" src="img/${it.thumb}.webp" alt="">${isNew ? '<span class="tag">NEW</span>' : ''}
+          <img class="thumb" src="${imgSrc(it.thumb)}" alt="">${isNew ? '<span class="tag">NEW</span>' : ''}
           <span class="who">${who}</span><span class="ttl">${it.title}</span></button>`;
       }).join('')}</div>
       <p class="note">誰かが消えたとき、その子のわすれものがここに並びます。${savedN || albumKnowSaved() ? 'その子を救えたら、わすれものも姿を変えます。' : ''}</p>
