@@ -861,6 +861,21 @@
     } catch (e) { return null; }
   }
   function clearRun() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+  /* 屋上の途中経過（つづきから用）。文章を待つたびに、手動セーブと同じ形で自動保存し、屋上が終わったら消す */
+  const ROOF_KEY = 'houkago-wasuremono-roof-v1';
+  function saveRoof() {
+    if (!onRoof() || replay) return;
+    try { localStorage.setItem(ROOF_KEY, JSON.stringify({ at: Date.now(), label: '屋上・18:30', mid: true, run: scr.start, prog: scr.prog, resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs } })); } catch (e) {}
+  }
+  function loadRoof() {
+    try {
+      const d = JSON.parse(localStorage.getItem(ROOF_KEY) || 'null');
+      if (!d || !d.run) return null;
+      const r = d.run; r.items = new Set(r.items); r.know = new Set(r.know); r.seen = new Set(r.seen || []); r.log = r.log || []; r.over = false;
+      return d;
+    } catch (e) { return null; }
+  }
+  function clearRoof() { try { localStorage.removeItem(ROOF_KEY); } catch (e) {} }
 
   /* 手動セーブ：3つのファイル。放課後の途中経過と、そのときの進み具合（わすれもの棚・開放した章・閉ざされた扉）をまとめて記録する。
      実績（朝を迎えた記録・見たエンディング・周回数）と既読はファイルに含めず、ロードしても変わらない */
@@ -983,6 +998,7 @@
     if (pendingCore && --pendingCore === 0) bgm('core', 2.2);
     return new Promise(res => {
       const [who, t, face] = Array.isArray(l) ? l : ['', l];
+      if (onRoof()) saveRoof();   // 屋上は、文章を待つたびに「つづきから」用に保存
       $('#scene').classList.add('story');  // 文章を読んでいる間は探索用の目印を隠す
       spk.textContent = who; spk.hidden = !who;
       if (guest && who === guest.who && face && C && C.faces[face]) { guest.f = face; guestRender(); }
@@ -3018,7 +3034,7 @@
     return roofEnd('TRUE', '6人の朝');
   }
   async function roofBad8(from) {
-    scr = null; syncSave();
+    clearRoof(); scr = null; syncSave();
     $('#scene').classList.remove('roof-wind'); roofTint(null); bgm('vanish');
     await say([...({ despair: ['今度は、指は止まらなかった。'],
                      self: ['もう一人の自分が、静かに笑った気がした。'],
@@ -3121,7 +3137,7 @@
     });
   }
   async function roofEnd(tag, title) {
-    scr = null; syncSave();
+    clearRoof(); scr = null; syncSave();
     bgClockOverride = null; rainSE(false); windSE(false); roofTint(null); $('#scene').classList.remove('roof-dark', 'roof-wind'); $('#bells').style.visibility = '';
     P.endings[tag] = true;
     const got = achGain(tag);
@@ -6545,7 +6561,7 @@
 
   /* ---------- title / shelf ---------- */
   async function startRun(ch, opt = {}) {
-    closeOverlay();
+    closeOverlay(); clearRoof();
     busy = true; P.played = true; if (ch === 'infirmary') P.metTsumugi = true; saveP(); bgm(null); guest = null; guestRender();
     clearRun(); await setChapter(ch); newRun(ch); if (opt.skipPuzzle) R.skipPuzzle = true; render(); bgm('explore');
     busy = false;
@@ -6558,14 +6574,15 @@
     $('#scene').style.visibility = 'hidden';
     clearStage();
     $('#loading').hidden = true;
-    const save = loadRun();
+    const roof = loadRoof(), save = roof ? null : loadRun();
     openOverlay(`<h1 class="vtitle">放課後の<span>わすれもの</span></h1>
       <p class="tap-hint" id="tapHint"${splash ? '' : ' hidden'}>画面をタップしてください</p>
       <div class="title-side${splash ? ' later' : ''}" id="titleMenu"${splash ? ' hidden' : ''}>
         ${RELEASE ? '' : `<p class="eyebrow">試作版　第一章〜第${'一二三四五'[ORDER.length - 1]}章</p>`}
         ${Object.keys(P.cur.results).length ? `<p class="note">この周回の記録　${runRecord()}</p>` : ''}
         ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save)}</span></button>` : ''}
-        ${save ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
+        ${roof ? `<button type="button" class="btn primary" id="tRoof">前回のつづきから<span class="sub">屋上・18:30</span></button>` : ''}
+        ${(save || roof) ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
         ${extrasAny() ? '<button type="button" class="btn" id="tExtra">おまけ</button>' : ''}
@@ -6585,6 +6602,7 @@
     if ($('#tReset')) $('#tReset').onclick = () => resetAll();
     $('#tWipe').onclick = () => wipeAll();
     if (save) $('#tCont').onclick = () => continueRun(save);
+    if (roof) $('#tRoof').onclick = () => loadSlot(roof);
     if ($('#tShelf')) $('#tShelf').onclick = showShelf;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
     if ($('#tExtra')) $('#tExtra').onclick = showExtras;
     $('#tSet').onclick = showSettings;
@@ -6936,7 +6954,7 @@
     });
   }
   function loadSlot(d) {
-    if (R) R.over = true;
+    if (R) R.over = true; clearRoof();
     gen++; advance = null; scr = null; replay = null;
     P.shelf = { ...d.prog.shelf }; P.shelfRun = { ...(d.prog.shelfRun || {}) };
     if (d.prog.runNo) P.runNo = d.prog.runNo;
