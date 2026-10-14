@@ -6620,7 +6620,7 @@
     ov.style.setProperty('--title-img', `url("img/${P.endings && P.endings.TRUE ? 'title_1200' : TITLE_IMG[Math.min(Object.keys(P.cur.results).length, 5)]}.webp")`);
     // 屋上の途中なら、タイトルも屋上の時刻（18:30）の校舎。雨の途中で中断していたら、雨の差分（暗い空気と雨の筋）にして雨の音を続ける
     const rainy = !!(roof && roof.rain);
-    if (roof) ov.style.setProperty('--title-img', `url("img/${rainy ? 'title_1830_rain' : 'title_1830'}.webp")`);   // 雨の途中なら、雨空の校舎（Q122）
+    if (roof) ov.style.setProperty('--title-img', `url("img/${rainy ? 'title_1830_rain' : 'title_1830_dark'}.webp")`);   // 屋上の途中：五人の教室の明かりは消えている（保健室も）。雨の途中なら雨空の校舎
     ov.classList.toggle('rainy', rainy);
     windSE(false, 2);
     if (rainy) { if (audioReady) rainSE(true, 2); } else rainSE(false, 2);
