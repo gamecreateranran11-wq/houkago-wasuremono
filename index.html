@@ -2341,7 +2341,8 @@
       }
       if (windNodes || !P.sound) return;
       const a = audio(), dst = out(), t = a.currentTime;
-      const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(1.7 * seMul(), t + 2.5); g.connect(dst);
+      const WIND = matchMedia('(pointer: coarse)').matches ? 1.1 : 1.7;   // スマホは端末の稼働音がない分うるさく聞こえやすいので下げる
+      const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(WIND * seMul(), t + 2.5); g.connect(dst);
       // 低いうなり
       const s1 = a.createBufferSource(), f1 = a.createBiquadFilter(), g1 = a.createGain();
       s1.buffer = getNoise(); s1.loop = true; f1.type = 'lowpass'; f1.frequency.value = 260; f1.Q.value = 1.0; g1.gain.value = 1.0;
@@ -2370,7 +2371,7 @@
           f1.frequency.cancelScheduledValues(at); f1.frequency.setValueAtTime(f1.frequency.value, at); f1.frequency.linearRampToValueAtTime(420, at + d * 0.4); f1.frequency.linearRampToValueAtTime(260, at + d);
           g2.gain.cancelScheduledValues(at); g2.gain.setValueAtTime(g2.gain.value, at); g2.gain.linearRampToValueAtTime(0.8, at + d * 0.4); g2.gain.linearRampToValueAtTime(0.3, at + d); }
       } catch (e) {} }, 1500);
-      windNodes = { g, s1, s2, lfo, timer, base: 1.7 };
+      windNodes = { g, s1, s2, lfo, timer, base: WIND };
     } catch (e) {}
   }
   let rainNodes = null;
@@ -2768,7 +2769,7 @@
     const longs = [['そんなんじゃ、社会で通用しない', 'neg'], ['誰も、相手にしないよ', 'neg'], ['みんな本当は、汚いって思ってるよ', 'neg'], ['きっとみんな、あなたのこと嫌ってるよ', 'neg'],
                    ['殴るよ', 'neg'], ['なんでそんなことするの', 'sei'], ['やる気、あんの？', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
                    ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['お前なんか、いらない', 'neg'],
-                   ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['普通の子になって', 'sei'], ['ハルくんの分まで、生きなきゃね', 'nag'], ['頼まれてくれるよね？', 'sei'], ['お前の事なんて、どうでもいい', 'neg'], ['そういうの、めんどくさい', 'neg'], ['お前には言われたくない', 'neg'], ['頑張って', 'nag']];
+                   ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['普通の子になって', 'sei'], ['ハルくんの分まで、生きなきゃね', 'nag'], ['頼まれてくれるよね？', 'sei'], ['お前の事なんて、どうでもいい', 'neg'], ['そういうの、めんどくさい', 'neg'], ['お前には言われたくない', 'neg'], ['あなたなら、できるよ', 'nag'], ['頑張って', 'nag'], ['笑ってれば、大丈夫', 'nag'], ['あなたは、強い子だから', 'nag']];
     let fast = false; box.onclick = () => { fast = true; };
     const drop = (t, cls) => {
       const e = document.createElement('span'); e.className = 'rw ' + cls + (cls === 'short' ? ' neg ' + rainFont() : ''); e.textContent = t;
@@ -3076,13 +3077,11 @@
   function endRollHTML(tag) {
     const sec = (h, items) => items.length ? `<section>${h ? `<h3>${h}</h3>` : ''}${items.map(t => `<p>${t}</p>`).join('')}</section>` : '';
     const chars = ORDER.map(id => CHAPTERS[id].name).concat(tag === 'TRUE' ? ['もう一人の自分'] : []);
-    const songs = [...new Set(OST.filter(([k]) => k !== 'sotaDuet' && P.heard[k]).map(([, t]) => t))];
     return `<div class="roll-in">
       <p class="roll-title">放課後のわすれもの</p>
       ${sec('企画・シナリオ・演出', [CREDIT_AUTHOR])}
       <section><p class="sub">この作品の制作には、生成AIを使用しています。</p></section>
       ${sec('登場人物', chars)}
-      ${sec('使用楽曲', songs)}
       <p class="roll-thanks">最後まで、見届けてくれて、ありがとう。</p>
       <p class="roll-title end">放課後のわすれもの</p></div>`;
   }
@@ -7119,7 +7118,7 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menuPanel.hidden) setMenu(false); });
   ['btnMenu'].forEach(id => $('#' + id).addEventListener('click', () => setMenu(false)));
   $('#btnMenu').onclick = () => { advance = null; busy = false; showTitle(true); };
-  $('#btnSave').onclick = e => { e.stopPropagation(); if (R && !R.over && !replay) showSlots('save'); };
+  $('#btnSave').onclick = e => { e.stopPropagation(); if (R && (!R.over || onRoof()) && !replay) showSlots('save'); };
 
   setChapter('art', false); newRun('art'); R.over = true; render(); idle();
   showTitle(true);
