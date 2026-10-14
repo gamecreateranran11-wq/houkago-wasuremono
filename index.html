@@ -847,16 +847,22 @@
 
   /* 周回の途中経過（つづきから用）。操作待ちになるたびに自動で保存し、周回が終わったら消す */
   const SAVE_KEY = 'houkago-wasuremono-save-v1';
+  // 手動セーブと同じ形 { run, prog, resume? } で保存する。会話の途中なら、その会話の始まりの状態と答えの記録（resume）も入れる
   function saveRun() {
-    if (!R || R.over) return;
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...R, items: [...R.items], know: [...R.know], seen: [...R.seen] })); } catch (e) {}
+    if (!R || R.over || replay) return;
+    const d = scr && !onRoof()
+      ? { at: Date.now(), mid: true, run: scr.start, prog: scr.prog, resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs } }
+      : { at: Date.now(), run: serR(R), prog: progSnap() };
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (e) {}
   }
   function loadRun() {
     try {
-      const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+      let d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
       if (!d) return null;
-      d.items = new Set(d.items); d.know = new Set(d.know); d.seen = new Set(d.seen || []); d.log = d.log || []; d.over = false;
-      d.ch = d.ch || 'art'; d.st = d.st || d.hina || 'here';
+      if (!d.run) d = { run: d };   // 古い形（周回の状態だけ）
+      const r = d.run;
+      r.items = new Set(r.items); r.know = new Set(r.know); r.seen = new Set(r.seen || []); r.log = r.log || []; r.over = false;
+      r.ch = r.ch || 'art'; r.st = r.st || r.hina || 'here';
       return d;
     } catch (e) { return null; }
   }
@@ -998,7 +1004,7 @@
     if (pendingCore && --pendingCore === 0) bgm('core', 2.2);
     return new Promise(res => {
       const [who, t, face] = Array.isArray(l) ? l : ['', l];
-      if (onRoof()) saveRoof();   // 屋上は、文章を待つたびに「つづきから」用に保存
+      if (onRoof()) saveRoof(); else if (scr) saveRun();   // 文章を待つたびに「つづきから」用に保存（会話の途中も）
       $('#scene').classList.add('story');  // 文章を読んでいる間は探索用の目印を隠す
       spk.textContent = who; spk.hidden = !who;
       if (guest && who === guest.who && face && C && C.faces[face]) { guest.f = face; guestRender(); }
@@ -6580,13 +6586,13 @@
       <div class="title-side${splash ? ' later' : ''}" id="titleMenu"${splash ? ' hidden' : ''}>
         ${RELEASE ? '' : `<p class="eyebrow">試作版　第一章〜第${'一二三四五'[ORDER.length - 1]}章</p>`}
         ${Object.keys(P.cur.results).length ? `<p class="note">この周回の記録　${runRecord()}</p>` : ''}
-        ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save)}</span></button>` : ''}
+        ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save.run)}${save.resume ? '・会話の途中' : ''}</span></button>` : ''}
         ${roof ? `<button type="button" class="btn primary" id="tRoof">前回のつづきから<span class="sub">屋上・18:30</span></button>` : ''}
         ${(save || roof) ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
         ${extrasAny() ? '<button type="button" class="btn" id="tExtra">おまけ</button>' : ''}
-        ${redoHTML(save)}
+        ${redoHTML(save && save.run)}
         <button type="button" class="btn" id="tSet">設定<span class="sub">既読スキップ・文字の速さ・音量</span></button>
         <button type="button" class="btn-reset" id="tWipe">プレイデータをリセット</button>
         <p class="note">この作品には、自傷・自死をほのめかす描写・事故死・いじめ・罵倒や暴言・家庭や部活動での心理的虐待（体罰を含む）を示唆する表現が含まれます。</p>
@@ -6601,7 +6607,7 @@
     if ($('#tGo')) $('#tGo').onclick = () => goRoom();
     if ($('#tReset')) $('#tReset').onclick = () => resetAll();
     $('#tWipe').onclick = () => wipeAll();
-    if (save) $('#tCont').onclick = () => continueRun(save);
+    if (save) $('#tCont').onclick = () => save.prog ? loadSlot(save) : continueRun(save.run);
     if (roof) $('#tRoof').onclick = () => loadSlot(roof);
     if ($('#tShelf')) $('#tShelf').onclick = showShelf;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
     if ($('#tExtra')) $('#tExtra').onclick = showExtras;
