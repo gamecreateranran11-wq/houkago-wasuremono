@@ -998,6 +998,7 @@
       // 早送りが終わったら、その時点で流れているはずの曲をかけ直す。核心の曲を待っている途中なら、その待ちは消さない
       const rb = replay.bgm, pc = pendingCore; replay = null; syncSave();
       bgm(rb !== undefined ? rb : moodNow());
+      if (seWant.wind) windSE(true, 1.2); if (seWant.rain) rainSE(true, 1.2); seWant.wind = seWant.rain = false;   // 中断したときに鳴っていた風・雨を戻す
       if (pc) pendingCore = pc;
       noSkip = true;  // セーブしたときの文章は、既読でも止めて見せる
     }
@@ -2353,8 +2354,9 @@
     } catch (e) {}
   }
   let windNodes = null;
+  const seWant = { wind: false, rain: false };   // 早送り中に指示された風・雨の状態（早送りが終わったら、その状態にする）
   function windSE(on, fade = 2.5) {
-    if (replay) return;
+    if (replay) { seWant.wind = !!on; return; }
     try {
       if (!on) {
         if (windNodes) { const a = audio(), g = windNodes.g, t = a.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0.0001, t + fade);
@@ -2398,7 +2400,7 @@
   }
   let rainNodes = null;
   function rainSE(on, fade = 2.2) {
-    if (replay) return;
+    if (replay) { seWant.rain = !!on; return; }
     try {
       if (!on) {
         if (rainNodes) {
@@ -3112,6 +3114,8 @@
       ${sec('企画・シナリオ・演出', [CREDIT_AUTHOR])}
       <section><p class="sub">この作品の制作には、生成AIを使用しています。</p></section>
       ${sec('登場人物', chars)}
+      ${sec('フォント', ['Shippori Mincho B1', 'Klee One', 'Zen Kurenaido', 'Yomogi', 'Zen Kaku Gothic New'])}
+      <section><p class="sub">いずれも SIL Open Font License のもとで使用しています。</p></section>
       <p class="roll-thanks">最後まで、見届けてくれて、ありがとう。</p>
       <p class="roll-title end">放課後のわすれもの</p></div>`;
   }
