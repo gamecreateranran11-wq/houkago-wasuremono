@@ -744,6 +744,22 @@
   .lw.sei { color: #a9bccf; }
   .lw.neg { color: #d9605f; }
   .lw.nag { color: #ece4d6; }
+  /* タイトルの雨の差分：屋上で雨が降っている途中で中断したとき。絵を暗く青く沈めて、斜めの雨の筋を流す */
+  .title-screen.rainy::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: linear-gradient(180deg, rgba(22, 26, 40, .62), rgba(14, 16, 26, .7)); }
+  .title-screen.rainy::after { content: ""; position: fixed; inset: -30% 0 0 0; pointer-events: none; z-index: 0; opacity: .55;
+    background-image: repeating-linear-gradient(104deg, transparent 0 16px, rgba(220, 230, 245, .35) 16px 17px, transparent 17px 34px),
+                      repeating-linear-gradient(102deg, transparent 0 11px, rgba(200, 215, 235, .22) 11px 12px, transparent 12px 27px);
+    background-size: 100% 80px, 100% 52px; animation: titleRain .55s linear infinite; }
+  @keyframes titleRain { to { background-position: -22px 80px, -14px 52px; } }
+  .title-screen.rainy .ov-card, .title-screen.rainy .vtitle, .title-screen.rainy .tap-hint { position: relative; z-index: 1; }
+  .title-screen.rainy:not(.menu) .vtitle { position: fixed; }
+  .title-screen.rainy.menu { background: linear-gradient(90deg, rgba(228, 222, 210, .96) 0%, rgba(228, 222, 210, .9) 40%, rgba(228, 222, 210, .25) 78%, rgba(228, 222, 210, 0) 100%), var(--title-img) center / cover no-repeat, var(--ground); }
+  @media (prefers-reduced-motion: reduce) { .title-screen.rainy::after { animation: none; } }
+  /* 雨のタイトルでメニューを開いたら、暗さと雨の筋は絵の側（右）だけに。紙の側は読めるように */
+  .title-screen.rainy.menu::before { background: linear-gradient(90deg, rgba(14, 16, 26, 0) 0%, rgba(14, 16, 26, 0) 42%, rgba(14, 16, 26, .55) 78%, rgba(14, 16, 26, .66) 100%); }
+  .title-screen.rainy.menu::after { -webkit-mask-image: linear-gradient(90deg, transparent 0%, transparent 38%, #000 72%); mask-image: linear-gradient(90deg, transparent 0%, transparent 38%, #000 72%); }
+  .title-screen.rainy.menu { background: linear-gradient(90deg, rgba(236, 230, 216, .97) 0%, rgba(236, 230, 216, .93) 40%, rgba(236, 230, 216, .3) 78%, rgba(236, 230, 216, 0) 100%), var(--title-img) center / cover no-repeat, var(--ground); }
 </style>
 
 <div id="app">
@@ -871,7 +887,7 @@
   const ROOF_KEY = 'houkago-wasuremono-roof-v1';
   function saveRoof() {
     if (!onRoof() || replay) return;
-    try { localStorage.setItem(ROOF_KEY, JSON.stringify({ at: Date.now(), label: '屋上・18:30', mid: true, run: scr.start, prog: scr.prog, resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs } })); } catch (e) {}
+    try { localStorage.setItem(ROOF_KEY, JSON.stringify({ at: Date.now(), label: '屋上・18:30', mid: true, rain: !!rainNodes, wind: !!windNodes, run: scr.start, prog: scr.prog, resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs } })); } catch (e) {}
   }
   function loadRoof() {
     try {
@@ -6607,6 +6623,12 @@
     const TITLE_IMG = ['title', 'title_1630', 'title_1700', 'title_1730', 'title_1800', 'title_1830'];
     // TRUE を見たあとは、終業式の日の昼（12:00）の校舎
     ov.style.setProperty('--title-img', `url("img/${P.endings && P.endings.TRUE ? 'title_1200' : TITLE_IMG[Math.min(Object.keys(P.cur.results).length, 5)]}.webp")`);
+    // 屋上の途中なら、タイトルも屋上の時刻（18:30）の校舎。雨の途中で中断していたら、雨の差分（暗い空気と雨の筋）にして雨の音を続ける
+    const rainy = !!(roof && roof.rain);
+    if (roof) ov.style.setProperty('--title-img', 'url("img/title_1830.webp")');
+    ov.classList.toggle('rainy', rainy);
+    windSE(false, 2);
+    if (rainy) { if (audioReady) rainSE(true, 2); } else rainSE(false, 2);
     bgm('title');
     if ($('#tGo')) $('#tGo').onclick = () => goRoom();
     if ($('#tReset')) $('#tReset').onclick = () => resetAll();
@@ -6624,6 +6646,7 @@
         if (e) { e.preventDefault(); e.stopPropagation(); }
         if (!$('#tapHint') || !$('#titleMenu')) return;
         $('#tapHint').hidden = true; $('#titleMenu').hidden = false; ov.classList.add('menu');
+        if (ov.classList.contains('rainy')) rainSE(true, 2);   // 雨の差分のタイトルは、最初のタップで雨の音を始める
         const f = $('#titleMenu .primary'); if (f) f.focus({ preventScroll: true });
       };
       ov.addEventListener('click', reveal); document.addEventListener('keydown', reveal);
