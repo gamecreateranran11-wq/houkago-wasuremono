@@ -3929,7 +3929,8 @@
                    'ヒナの肩から、ふっと力が抜けた。……けれど、袖の中の指は、さっきよりきつく握りこまれていた。',
                    '（……その言葉に、うなずいていいのか、わからなかった）']);
       } else {
-        await say([['ヒナ', '……うん', 'sad'],
+        await say([['', 'ヒナの指が、袖の中で、少しだけゆるんだ。', 'sleeve'],
+                   ['ヒナ', '……うん', 'sad'],
                    ['ヒナ', '……お母さんね、ちゃんとしてる人なの。毎朝お弁当つくって、画材も塾も、言えば全部そろえてくれた', 'down'],
                    ['ヒナ', '『環境は全部用意したでしょ。サクラは、同じ部屋の、同じ机で、ちゃんとやったのよ』って', 'sad'],
                    ['ヒナ', '……ほんとに、そうなの。同じ机なのに、私だけ、途中で手が止まっちゃう', 'down'],
@@ -4568,7 +4569,8 @@
                  'ソウタは、長いピアノ椅子の右端に座っている。左半分だけが、ぽっかり空いていた。']);
       await line(['ソウタ', '……もう弾けない。ハルがいないから', 'sad'], false);
       let a = await ask([['ハルくんって、どんなふうに弾く人だったの？', 'yori'], ['一人で弾く練習は、しないの？', 'seiron'], ['……少し、ピアノから離れてみたら、楽になるかもしれないよ', 'oitsu']], 1);
-      if (a === 'seiron') { await say([['ソウタ', '……連弾だよ。一人で弾いたら、意味ないんだ', 'angry']]); return closeHeart(); }
+      if (a === 'seiron') { await say([['ソウタ', '……連弾だよ。一人で弾いたら、意味ないんだ', 'angry'],
+                                       '（……弾けるかどうか、じゃなかった。この人がなくしたのは、隣で弾く相手だった）']); return closeHeart(); }
       if (a === 'oitsu') return shutOut([['ソウタ', '……離れる？', 'surprise'],
                                    ['', 'ソウタの顔から、すっと表情が消えた。', 'blank'],
                                    ['ソウタ', '……お前に、何がわかるんだよ', 'blank'],
@@ -4620,7 +4622,8 @@
       await line(['ソウタ', '……ハルが最後に読んだ俺の言葉は、『もうどうでもいい』なんだよ', 'sad'], false);
       a = await ask([['返事が来なかったのは、ハルくんが怒ってたからじゃないと思う', 'seiron'], ['あの言葉、取り消したかった？', 'yori'],
                      ['……ソウタのせいじゃないよ', 'nagu'], ['ハルくんの分まで、ソウタが前を向いていかなきゃね', 'oitsu']], 2);
-      if (a === 'seiron') { await say([['ソウタ', '……知ってるよ', 'angry'], ['ソウタ', '怒ってたからじゃないのなんて、わかってる。……そういう話じゃないんだよ', 'angrySad'], R.seen.has('lid') ? 'ソウタは開いたままの鍵盤の蓋をそっと閉じて、その上に拳を置いた。' : 'ソウタの拳が、鍵盤の蓋の上で小さく震えた。']); R.seen.delete('lid'); return closeHeart(); }
+      if (a === 'seiron') { await say([['ソウタ', '……知ってるよ', 'angry'], ['ソウタ', '怒ってたからじゃないのなんて、わかってる。……そういう話じゃないんだよ', 'angrySad'], R.seen.has('lid') ? 'ソウタは開いたままの鍵盤の蓋をそっと閉じて、その上に拳を置いた。' : 'ソウタの拳が、鍵盤の蓋の上で小さく震えた。',
+                                       '（……許されていたかどうか、じゃなかった。この人が苦しいのは、最後の言葉を、もう取り消せないことだった）']); R.seen.delete('lid'); return closeHeart(); }
       if (a === 'oitsu' && await hurt([['ソウタ', '……ハルの分まで？', 'surprise'], ['ソウタ', '俺が、あいつの代わりに生きてるってこと？', 'shadow'], ['ソウタ', '……無理だよ、そんなの', 'despair']])) return;
       if (a === 'nagu') {
         R.cons++;
@@ -4863,7 +4866,7 @@
     sit: { src: 'mio_sit', style: 'left:12.2%;top:42.0%;height:46.5%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
-    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap', clench: 'mio_clench', clenchDown: 'mio_clenchdown', frown: 'mio_frown' },   // clenchDown：本を握りしめて伏せ目／frown：眉をひそめてうつむく   // lap：本を膝の上に下ろして小さく決意した顔／clench：本を強く握りしめ、目をぎゅっとつむった悲痛な顔
+    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap', clench: 'mio_clench', clenchDown: 'mio_clenchdown', frown: 'mio_frown', look: 'mio_look' },   // clenchDown：本を握りしめて伏せ目／frown：眉をひそめてうつむく   // lap：本を膝の上に下ろして小さく決意した顔／clench：本を強く握りしめ、目をぎゅっとつむった悲痛な顔
     lost: '返却期限の過ぎた一冊',
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う。背景 infirmary の壁の時計は bgClock: { cx: 829, cy: 202, rx: 49, ry: 48 }
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
@@ -5189,14 +5192,16 @@
       await say(['「……ここで、いつもひとりで読んでるの？」', ['ミオ', '……当番のない日も、来てる。教室には、いたくないから', 'down']]);
       await line(['ミオ', '……ここは、静かだから好き。誰も、私のこと見ないから', 'down'], false);
       let a = await ask([['その本、大事にしてるんだ', 'yori'], ['でも、ずっとひとりでいたら、つらくなっちゃうよ', 'seiron'], ['黒板のあれ、書いたのはミオさん？', 'oitsu']], 1);
-      if (a === 'seiron') { await say([['ミオ', '……わかってる。そんなの', 'angry'], 'ミオは、本で顔を隠すようにうつむいた。']); return closeHeart(); }
+      if (a === 'seiron') { await say([['ミオ', '……わかってる。そんなの', 'angry'], 'ミオは、本で顔を隠すようにうつむいた。',
+                                       '（……ひとりがつらいことくらい、この子はとっくに知っている。だから、誰にも見られないこの部屋を選んだんだ）']); return closeHeart(); }
       if (a === 'oitsu') return shutOut([['ミオ', '……え', 'surprise'],
                                   ['', 'ミオの顔から、すっと血の気が引いた。', 'pale'],
                                   ['ミオ', '……なんで。誰から聞いたの', 'pale'],
                                   ['ミオ', '……やっぱり、みんな知ってるんだ', 'pale'],
                                   ['ミオ', '……出てって。お願いだから、出てって', 'pale']],
                                  ['扉を叩いた。返事はない。', '……扉の向こうで、本が床に落ちる音が、一度だけ聞こえた。']);
-      await say([['ミオ', '……うん', 'down'],
+      await say([['', 'ミオは、少しだけ目を見開いた。……黒板のことを聞かれると思っていたのかもしれない。本を抱く腕から、ほんの少し力が抜けた。', 'surprise'],
+                 ['ミオ', '……うん', 'down'],
                  ['ミオ', '一年のとき、図書委員の当番で、ずっと一緒だった子がいたの', 'down'],
                  ['ミオ', 'その子が教えてくれたの、この本。……ひとりぶんの椅子しかない部屋に、毎日、誰かがひとつずつ椅子を運んでくる話', 'softSmile'],
                  ['ミオ', '読み終わったら、『ね、泣けるでしょ』って。……ほんとに泣いた', 'softSmile'],
@@ -5239,7 +5244,8 @@
       await line(['ミオ', '……私のせいだ。全部', 'sad'], false);
       a = await ask([['ツムギさんに、ちゃんと謝ろう。今なら、まだ間に合うよ', 'seiron'], ['チョークを渡されたとき、怖かったんだ', 'yori'],
                      ['ミオさんは悪くないよ。仕方なかったんだから', 'nagu'], ['ツムギさん、今もきっと、教室に戻れなくて苦しんでるよ', 'oitsu']], 2);
-      if (a === 'seiron') { await say([['ミオ', '……わかってる。わかってるの', 'angry'], ['ミオ', '謝って済むなら、とっくにそうしてる', 'angry'], 'ミオは、本をきつく抱きしめた。']); return closeHeart(); }
+      if (a === 'seiron') { await say([['ミオ', '……わかってる。わかってるの', 'angry'], ['ミオ', '謝って済むなら、とっくにそうしてる', 'angry'], 'ミオは、本をきつく抱きしめた。',
+                                       '（……「今なら間に合う」。この子がいちばん聞きたくなかった言葉だったのかもしれない。間に合わなかったらと、ずっと考えていたはずだから）']); return closeHeart(); }
       if (a === 'oitsu' && await hurt([['ミオ', '……うん。知ってる', 'despair'], ['ミオ', '戻れないし、戻っちゃいけないんだよ。私のいる教室になんか', 'shadow'], ['ミオ', '私、最低だよね', 'despair'], ['ミオ', '……いてもいなくても同じなのは、私のほうだったね', 'despair']])) return;
       if (a === 'nagu') {
         R.cons++;
@@ -5251,11 +5257,12 @@
                    '（……味方、という言葉が、ひどく重たく聞こえた）']);
       } else {
         await say([['ミオ', '……うん', 'sad'], ['ミオ', '怖かった。……でも、怖かったなんて言ったら、ツムギのほうが、ずっと怖かったはずなのに', 'sad'],
-                   ['ミオ', '自分が助かるほうを選んで、それでまだ、怖かったなんて。……私、最低だよね', 'sad']]);
+                   ['ミオ', '自分が助かるほうを選んで、それでまだ、怖かったなんて。……私、最低だよね', 'sad'],
+                   ['', '『最低』と言いながら、ミオは、初めてこちらの目を見た。', 'look']]);
       }
 
       // 3段目
-      await say(['ミオは、本に挟んだしおりの端を、指でなぞった。',
+      await say([['', 'ミオは、本に挟んだしおりの端を、指でなぞった。', 'strokeDown'],
                  ['ミオ', '……謝りたい。ずっと、謝りたかった', 'sad']]);
       if (hasKey('mio')) {
         await say([['ミオ', 'でも、謝ったら、許してもらうのを待つことになる。……私に、そんな資格ない', 'frown']]);
