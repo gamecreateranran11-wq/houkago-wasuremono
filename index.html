@@ -869,6 +869,9 @@
   P.runNo = P.runNo || 1; P.shelfRun = P.shelfRun || {};
   // mem：章ごとの「調べた・話した」記憶（R.know）。BAD・閉め出し・周回の終わりのあとも、次にその章を始めるとき引き継ぐ
   P.mem = P.mem || {};
+  // 謎解きの難しさ：normal（むずかしい）／easy（やさしい）。やさしいは、3〜5章の手順だけの謎（本の並べ替え・マグネット・方向の錠・照らし合わせ）を自動で解く。
+  // 物語や背景がわかる手がかり（貸出記録・部誌・来室カード・窓の跡など）は、どちらでも自分で調べる
+  P.diff = P.diff === 'easy' ? 'easy' : 'normal';
   // heard：一度でも流れた曲（サウンドトラックで「？？？」を外すのに使う）。記録を始める前に遊んだ分は、見た結末などから推し量る
   P.heard = P.heard || {};
   if (!P.heardV1) {
@@ -987,6 +990,7 @@
   }
 
   // その子のわすれものが棚にある＝前の周回の記憶を引き継いでいる。この場合は、その子の手がかり集めと組み合わせを飛ばして対話に入れる
+  const EASY = () => P.diff === 'easy';
   const hasKey = who => !!P.shelf[who] && (P.shelfRun[who] || 0) < P.runNo;
   // 手がかり集めを飛ばせるか：わすれものを持っている周回か、BAD1からのやり直し
   const remembered = who => hasKey(who) || !!(R && R.skipPuzzle);
@@ -5019,7 +5023,8 @@
         if (R.over || R.loop !== lp) return;
         const c = await choose(['本を並べ直す', 'やめる']);
         if (c !== 0) return;
-        const v = await sortShelf();
+        const v = EASY() ? { go: true, b: SHELF_ANSWER.slice() } : await sortShelf();
+        if (EASY()) await say(['背のラベルを見ながら、本を請求記号の順に並べ直した。']);
         R.taken.shelf = v.b;
         if (!v.go) return;
         if (v.b.join() !== SHELF_ANSWER.join()) {
@@ -5589,7 +5594,9 @@
         if (R.over || R.loop !== lp) return;
         const c = await choose(['マグネットを動かす', 'やめる']);
         if (c !== 0) return;
-        const v = await lineupBoard();
+        if (EASY() && !(R.know.has('logbook') && R.know.has('bag'))) { await say(['（部員のことが、まだよくわからない。顧問の机の部誌と、ケイの荷物を見てから並べよう）']); return; }
+        const v = EASY() ? { go: true, b: { ...LINEUP_ANSWER } } : await lineupBoard();
+        if (EASY()) await say(['部誌の部員名簿と、荷物のメモを思い出しながら、マグネットを動かした。', 'けがをしたハヤトはベンチ。アシストの多いユウマが司令塔。外から決めたミナトがシューター。背の高いダイチがゴール下。足の速いシュンは、速攻で走りこむ中のフォワード。']);
         R.taken.board = v.b;
         if (!v.go) return;
         const ok = Object.keys(LINEUP_ANSWER).every(k => v.b[k] === LINEUP_ANSWER[k]);
@@ -6083,7 +6090,7 @@
     });
   }
   async function useRoster() {
-    const v = await viewRoster();
+    const v = EASY() ? ROSTER_ANSWER : await viewRoster();
     if (v === null) return;
     if (v === '') { await say(['来室カードと当番表を見比べた。……まだ、何も選んでいない。']); return; }
     if (v !== ROSTER_ANSWER) { nmMark('puz'); await say(['来室カードと当番表を見比べた。……どこか、合わない気がする。']); return; }
@@ -6342,7 +6349,8 @@
         if (!R.know.has('chart')) { await say(['どの向きに、どんな順で動かせばいいのか。……手がかりが、まだ見つからない。']); return; }
         const c = await choose(['つまみを動かす', 'やめる']);
         if (c !== 0) return;
-        const v = await dirLock();
+        const v = EASY() ? DIR_ANSWER : await dirLock();
+        if (EASY()) await say(['視力検査表の、鉛筆の線を引いた段のとおりに、つまみを動かした。左、上、上、右。']);
         if (v === null) return;
         if (v !== DIR_ANSWER) { nmMark('puz'); await say(['ガチ。……錠は開かない。']); await tick(); return; }
         lockClick();
@@ -6824,7 +6832,15 @@
 
   /* ---------- title / shelf ---------- */
   function keepMem() { if (R && R.ch && R.know && R.know.size) { P.mem[R.ch] = [...R.know]; saveP(); } }
+  async function chooseDiff() {
+    const v = await uiWait(`<p class="eyebrow">放課後をはじめる前に</p><h2>謎解きの難しさ</h2>
+      <p><b>やさしい</b>　物語を読むことを大切にしたい人・さくさく進めたい人に。3〜5章の、手順だけの謎解き（本の並べ替え・マグネット・錠・照らし合わせ）を、自動で解きます。物語に必要な手がかりは、自分で調べます。</p>
+      <p><b>むずかしい</b>　すべての謎を、自分で解きます。</p>
+      <p class="note">あとから、タイトルの「設定」で変えられます。</p>`, '', ['やさしい', 'むずかしい']);
+    P.diff = v === 0 ? 'easy' : 'normal'; saveP();
+  }
   async function startRun(ch, opt = {}) {
+    if (ch === ORDER[0] && !opt.skipPuzzle && !Object.keys((P.cur && P.cur.results) || {}).length) await chooseDiff();
     closeOverlay(); clearRoof();
     busy = true; P.played = true; if (ch === 'infirmary') P.metTsumugi = true; saveP(); bgm(null); guest = null; guestRender();
     if (R && R.ch) keepMem();
@@ -7335,6 +7351,8 @@
         <div class="set-row"><span class="set-label">既読スキップ</span><div class="seg" id="setSkip">
           <button type="button" data-skip="1" aria-pressed="${!!P.skip}">ON</button><button type="button" data-skip="0" aria-pressed="${!P.skip}">OFF</button></div></div>
         <div class="set-row"><span class="set-label">文字の速さ</span><div class="seg" id="setSpeed"></div></div>
+        <div class="set-row"><span class="set-label">謎解き</span><div class="seg" id="setDiff">
+          <button type="button" data-diff="easy" aria-pressed="${P.diff === 'easy'}">やさしい</button><button type="button" data-diff="normal" aria-pressed="${P.diff !== 'easy'}">むずかしい</button></div></div>
         <div class="set-row"><span class="set-label">音量</span>
           <label class="vol">BGM<input id="sVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
           <label class="vol">効果音<input id="sVolSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label></div>
@@ -7346,6 +7364,10 @@
       card.querySelectorAll('#setSkip [data-skip]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.skip === '1') === P.skip ? 'true' : 'false'));
     });
     wireSpeed($('#setSpeed'));
+    card.querySelectorAll('#setDiff [data-diff]').forEach(b => b.onclick = () => {
+      P.diff = b.dataset.diff; saveP();
+      card.querySelectorAll('#setDiff [data-diff]').forEach(x => x.setAttribute('aria-pressed', x.dataset.diff === P.diff ? 'true' : 'false'));
+    });
     wireVol($('#sVolBgm'), $('#sVolSe'));
     $('#setBack').onclick = () => showTitle();
   }
