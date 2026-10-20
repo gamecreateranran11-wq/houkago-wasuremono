@@ -3547,7 +3547,7 @@
     return `<div class="painting" role="img" aria-label="${mode === 'blue' ? '青い空の絵' : '破られた、色の抜けた空の絵'}">
       <img src="img/sky.webp" alt=""><img id="greyLayer" class="grey" src="img/sky.webp" alt=""><span class="sign">7.14 Hina</span></div>`;
   }
-  const SKETCH_FACE = `<img class="sketch" src="img/sketchbook_face.webp" alt="スケッチブックの最後のページ。自画像に、震える線で泣きそうな笑顔が描き込まれている">`;
+  const SKETCH_FACE = `<img class="sketch" src="img/sketchbook_face.webp" alt="スケッチブックの最後のページ。自画像の真っ白だった顔に、震える細い線で、泣きそうで少しだけ笑った目元が描かれている">`;
   const SKETCH = `<img class="sketch" src="img/sketchbook.webp" alt="破り取られたページの残るスケッチブック。最後のページの自画像は、顔だけが消されている">`;
   async function combinePainting() {
     ['pieceA', 'pieceB', 'pieceC'].forEach(p => R.items.delete(p));
@@ -3802,7 +3802,7 @@
       async easel() {
         if (!R.taken.cloth) {
           showCut('ci_easel');
-          await say(['イーゼルの布をめくる。', '画板の紙は破り取られて、クリップの下に、端が一片だけ残っていた。', 'はがして手に取る。隅にサインのような文字が見える。']);
+          await say(['イーゼルの布をめくる。', '画板の紙は破り取られて、マスキングテープの下に、端が一片だけ残っていた。', 'はがして手に取る。隅にサインのような文字が見える。']);
           R.taken.cloth = true; await gotItem('pieceC'); await tick();
         } else if (!R.know.has('recipe')) {
           // 2回目：画板の裏の、ヒナの色の配合メモ（比べられる苦しさだけでは説明できない、描くことそのものの楽しさ）
@@ -3843,7 +3843,7 @@
     },
     shelfItem(saved) {
       return saved
-        ? { thumb: 'sketchbook_face', title: '顔のあるスケッチブック', body: `${SKETCH_FACE}<p>真っ白だった顔に、ヒナが自分で線を引いた。震えていて、泣きそうで、少しだけ笑っている。</p>` }
+        ? { thumb: 'sketchbook_face', title: '顔のあるスケッチブック', body: `${SKETCH_FACE}<p>真っ白だった顔に、ヒナが自分で線を引いた。まだ、目元だけ。震えていて、泣きそうで、少しだけ笑っている。</p>` }
         : { thumb: 'sketchbook', title: '顔のないスケッチブック', body: `${SKETCH}<p>最後のページの自画像。顔だけが、何度も消されて真っ白になっている。</p>` };
     },
     async talk() {
@@ -4035,7 +4035,7 @@
                  ? ['パレットに青を出して、白を足す。それから、ほんの少しだけ、黄色。', '「……セルリアンに白。ほんの少しだけ黄色、だっけ」',
                     ['ヒナ', '……なんで知ってんの、それ', 'surprise'], ['ヒナ', '画板の裏、見たんでしょ。……恥ずかしいんだけど', 'pout'], 'そう言いながら、ヒナの筆は止まらなかった。']
                  : []),
-               '筆が走る。迷いのない線だった。']);
+               '筆が走る。空の青を、紙いっぱいに広げていく。']);
     const pre = new Image(); pre.src = 'img/sky.webp';
     await (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {});
     albumSee('sky');
@@ -4053,11 +4053,11 @@
                '最後のページを開く。何度も消されて、白く毛羽立った顔の部分。',
                '鉛筆の先が、ためらうように紙に触れて、離れて、もう一度触れた。',
                '……一本、線が引かれた。']);
-    await overlayWait(`<p class="eyebrow">ヒナの自画像</p><h2>顔を、描いた</h2>${SKETCH_FACE}
-      <p>震えた線で描かれた、泣きそうで、少しだけ笑っている顔。</p>`, '', ['続ける']);
+    await overlayWait(`<p class="eyebrow">ヒナの自画像</p><h2>顔を、描きはじめた</h2>${SKETCH_FACE}
+      <p>震えた線で、目元だけが描かれていた。泣きそうで、少しだけ笑っている目。</p>`, '', ['続ける']);
     closeOverlay();
     await say([['ヒナ', '……へたくそ', 'pout'],
-               ['ヒナ', 'でも、これが今の私の顔なんだと思う。……もっと、ちゃんと描けるようになりたいな', 'smile']]);
+               ['ヒナ', 'でも、これが一枚目。……何枚も描いたら、ちゃんと私の顔になる気がする', 'smile']]);
     lockClick();
     await say(['美術室の扉の向こうで、カチリと鍵の外れる音がした。']);
     await line('……あれほど開かなかった扉が、開いている。', false);
