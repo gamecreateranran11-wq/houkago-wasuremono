@@ -2849,10 +2849,12 @@
   function fxEnd(box) { box.remove(); if (!document.querySelector('.roof-fx')) document.body.classList.remove('fx-on'); }
   // 言葉の雨：短い言葉は小さく散らして重ね、長い言葉は一つずつはっきり読ませる。崩した言葉はにじませて読めなくする。画面を押すと早く進む
   // 一度見た演出（言葉の雨・遅れて混ざる言葉）は、既読スキップがONなら早回しする
+  // 言葉の演出の速さ：文字の速さの設定に合わせる（「遅い」が元の速さ）
+  const fxRate = () => ({ slow: 1, normal: .72, fast: .5, instant: .32 })[P.textSpeed] || .72;
   function fxSkip(key) { const k = 'fx|' + key, seen = READ.has(k); markRead(k); return !!(P.skip && seen && !(R && R.forceRead)); }
   async function wordRain() {
     if (replay) return;   // 早送り中は出さない
-    const quick = fxSkip('wordRain');
+    const quick = fxSkip('wordRain'), r = fxRate();
     const box = fxLayer('rain');
     spk.hidden = true; txt.textContent = ''; more.hidden = true;   // 言葉の雨に切り替わるとき、前の文を消す
     // 短い言葉は、届いた言葉（ほかの人から言われた言葉）から切り出したものだけ。どれも否定。自分で自分に向けた言葉は、もう一人の自分の台詞に取っておく
@@ -2888,36 +2890,39 @@
         else e.textContent = t;
         e.style.top = (14 + Math.random() * 62) + '%'; e.style.left = (6 + Math.random() * 40) + '%';
         box.appendChild(e);
-        const hold = 1700 + Math.random() * 1600;
+        const hold = (1700 + Math.random() * 1600) * r;
         setTimeout(() => e.classList.add(pick(['out-fade', 'out-blur', 'out-sink', 'out-drift'])), hold);
         setTimeout(() => e.remove(), hold + 1500);
-        await sleep(fast ? 90 : 800 + Math.random() * 900);
+        await sleep(fast ? 90 : (800 + Math.random() * 900) * r);
       }
-      await sleep(fast ? 100 : 900);
+      await sleep(fast ? 100 : 900 * r);
       clearInterval(rainT);
     }
     // 最後の一つ。そのあと、すべての言葉が止まる
     box.querySelectorAll('.rw, .rw-list').forEach(e => e.classList.add('gone'));
-    const last = document.createElement('p'); last.className = 'rw final'; last.textContent = '「あなたは、人間じゃない」'; box.appendChild(last);
+    const last = document.createElement('p'); last.className = 'rw final'; last.textContent = '「あなたは、人間じゃない」';
+    const fr = quick ? Math.min(r, .6) : r;   // 既読の早回しは、遅くとも「速い」くらいに
+    last.style.animation = `finalin ${2.6 * fr}s cubic-bezier(.2, .7, .2, 1) both, tremble .14s steps(2) infinite ${2.6 * fr}s`;
+    box.appendChild(last);
     rumbleSE();
-    await sleep(quick ? 2800 : 4200);
-    last.classList.add('gone'); await sleep(quick ? 1400 : 2400);
+    await sleep(4200 * fr);
+    last.classList.add('gone'); last.style.animation = `finalout ${2.6 * fr}s ease-in forwards`; await sleep(2400 * fr);
     // 黒く底のない水に、沈んでいく音
     box.classList.add('sink');
-    await sleep(3200);
+    await sleep(3200 * Math.max(r, .6));
     box.classList.add('out'); await sleep(900); fxEnd(box);
   }
   // 遅れて混ざってくる、正論と慰めの言葉（小さく、一つずつ）
   async function lateWords(list) {
     if (replay) return;   // 早送り中は出さない
-    const quick = fxSkip('late|' + list[0][0]);
+    const quick = fxSkip('late|' + list[0][0]), r = fxRate();
     const box = fxLayer('late');
     for (const [l, k] of list) {
       const e = document.createElement('p'); e.className = `lw ${k} ${rainFont()}`; e.textContent = `「${l}」`; box.appendChild(e);
-      await sleep(quick ? 220 : 1700);
+      await sleep(quick ? 220 : 1700 * r);
       e.classList.add('dim');
     }
-    await sleep(quick ? 500 : 1200);
+    await sleep(quick ? 500 : 1200 * r);
     box.classList.add('out'); await sleep(900); fxEnd(box);
   }
   // 景色がひび割れて崩れる（思い返しの放課後から、現実の屋上へ）
