@@ -2954,6 +2954,8 @@
     if (!onRoof()) beginScript('roof:' + (split ? 'split' : 'straight'));   // 屋上もセーブできる（答えを記録して、ロードで早送り）
     syncSave();
     bgm(null);
+    // 屋上のはじまりは、雨も風もやんでいる（タイトルや中断から持ちこした雨の音・演出を消す）。雨は、このあと雲が出てから降り出す
+    rainSE(false, 0.8); document.querySelectorAll('.roof-fx').forEach(fxEnd); roofTint(null); $('#scene').classList.remove('roof-wind', 'roof-dark');
     await roofVoid(['チャイムが鳴っている。']);
     await endScene('rooftop');
     await say([() => windSE(true), '……風が、強い。', '気がつくと、フェンスの前に立っていた。', '夕日が、山の稜線にかかっている。', '（……ここは）',
@@ -6898,7 +6900,9 @@
     if ($('#tRoofRedo')) $('#tRoofRedo').onclick = async () => {
       const v = await overlayWait(`<p class="eyebrow">屋上</p><h2>屋上を、はじめからやり直しますか？</h2><p>屋上の途中の続きは消えます。</p>`, '', ['やり直す', 'やめる']);
       if (v !== 0) return showTitle();
-      loadSlot({ ...roof, resume: { key: roof.resume.key, lines: 0, inputs: [] } });
+      // はじめからなので、雨・風の途中だった記録は持ちこさない（タイトルで鳴らした雨の音も止める）
+      rainSE(false, 0.8); windSE(false, 0.8); ov.classList.remove('rainy');
+      loadSlot({ ...roof, rain: false, wind: false, resume: { key: roof.resume.key, lines: 0, inputs: [] } });
     };
     if ($('#tShelf')) $('#tShelf').onclick = showShelf;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
     if ($('#tExtra')) $('#tExtra').onclick = showExtras;
