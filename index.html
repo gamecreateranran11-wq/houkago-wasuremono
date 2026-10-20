@@ -2851,10 +2851,12 @@
   // 一度見た演出（言葉の雨・遅れて混ざる言葉）は、既読スキップがONなら早回しする
   // 言葉の演出の速さ：文字の速さの設定に合わせる（「遅い」が元の速さ）
   const fxRate = () => ({ slow: 1, normal: .72, fast: .5, instant: .32 })[P.textSpeed] || .72;
+  // 言葉の雨だけは、ほかより一段階ゆっくり（遅い→さらに遅く、普通→遅い、早い→普通、一括→早い）
+  const rainRate = () => ({ slow: 1.3, normal: 1, fast: .72, instant: .5 })[P.textSpeed] || 1;
   function fxSkip(key) { const k = 'fx|' + key, seen = READ.has(k); markRead(k); return !!(P.skip && seen && !(R && R.forceRead)); }
   async function wordRain() {
     if (replay) return;   // 早送り中は出さない
-    const quick = fxSkip('wordRain'), r = fxRate();
+    const quick = fxSkip('wordRain'), r = quick ? fxRate() : rainRate();   // 既読スキップの早回しは、これまでどおり
     const box = fxLayer('rain');
     spk.hidden = true; txt.textContent = ''; more.hidden = true;   // 言葉の雨に切り替わるとき、前の文を消す
     // 短い言葉は、届いた言葉（ほかの人から言われた言葉）から切り出したものだけ。どれも否定。自分で自分に向けた言葉は、もう一人の自分の台詞に取っておく
