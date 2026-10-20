@@ -2452,7 +2452,7 @@
       if (!on) {
         if (rainNodes) {
           const a = audio(), g = rainNodes.g, t = a.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0.0001, t + fade);
-          const r = rainNodes; rainNodes = null; clearInterval(r.timer); setTimeout(() => { try { r.s1.stop(); r.s2.stop(); r.lfo.stop(); } catch (e) {} }, fade * 1000 + 300);
+          const r = rainNodes; rainNodes = null; clearInterval(r.timer); setTimeout(() => { try { r.s1.stop(); r.s2.stop(); r.s3.stop(); r.lfo.stop(); } catch (e) {} }, fade * 1000 + 300);
         }
         return;
       }
@@ -2465,28 +2465,24 @@
       s1.connect(f1).connect(g1).connect(g);
       // 低い「ゴー」（雨と風）
       const s2 = a.createBufferSource(), f2 = a.createBiquadFilter(), g2 = a.createGain();
-      s2.buffer = getNoise(); s2.loop = true; f2.type = 'lowpass'; f2.frequency.value = 380; g2.gain.value = 0.6;
+      s2.buffer = getNoise(); s2.loop = true; f2.type = 'lowpass'; f2.frequency.value = 380; g2.gain.value = 0.75;
       s2.connect(f2).connect(g2).connect(g);
       const lfo = a.createOscillator(); lfo.frequency.value = 0.001; lfo.start(t);
       s1.start(t); s2.start(t + 0.01);
-      // 大粒の雨粒が屋上の床や鉄柵をたたく音。1秒に十数粒、ばらばらの大きさと高さで
-      let next = t + 0.2;
-      const drop = at => {
-        const big = Math.random() < 0.3, v = (big ? 0.9 : 0.4) * (0.6 + Math.random() * 0.6);
-        const s = a.createBufferSource(), f = a.createBiquadFilter(), gg = a.createGain();
-        s.buffer = getNoise(); f.type = 'bandpass'; f.frequency.value = big ? 500 + Math.random() * 400 : 900 + Math.random() * 1200; f.Q.value = big ? 2.5 : 1.5;
-        gg.gain.setValueAtTime(0.0001, at); gg.gain.linearRampToValueAtTime(v, at + 0.003); gg.gain.exponentialRampToValueAtTime(0.0001, at + (big ? 0.07 : 0.035));
-        s.connect(f).connect(gg).connect(g); s.start(at); s.stop(at + 0.1);
-        if (big) {  // 水たまりに落ちる「ポッ」
-          const o = a.createOscillator(), og = a.createGain(); o.type = 'sine';
-          o.frequency.setValueAtTime(600 + Math.random() * 500, at); o.frequency.exponentialRampToValueAtTime(180, at + 0.05);
-          og.gain.setValueAtTime(0.0001, at); og.gain.linearRampToValueAtTime(v * 0.35, at + 0.004); og.gain.exponentialRampToValueAtTime(0.0001, at + 0.06);
-          o.connect(og).connect(g); o.start(at); o.stop(at + 0.08);
-        }
-      };
-      const timer = setInterval(() => { try { while (next < a.currentTime + 0.6) { drop(next); next += 0.03 + Math.random() * 0.09; } } catch (e) {} }, 250);
-      rainNodes = { g, s1, s2, lfo, timer, base: 0.42 };
+      // 屋上のコンクリートと鉄柵に、雨が打ちつける音（粒ごとの音は出さず、重い雨の厚みとゆっくりした強弱で）
+      const s3 = a.createBufferSource(), f3 = a.createBiquadFilter(), g3 = a.createGain();
+      s3.buffer = getNoise(); s3.loop = true; f3.type = 'bandpass'; f3.frequency.value = 520; f3.Q.value = 0.6; g3.gain.value = 0.55;
+      s3.connect(f3).connect(g3).connect(g); s3.start(t + 0.02);
+      const swell = () => { try { const n = a.currentTime; g3.gain.setTargetAtTime(0.45 + Math.random() * 0.3, n, 0.35); } catch (e) {} };
+      const timer = setInterval(swell, 700);
+      rainNodes = { g, s1, s2, s3, lfo, timer, base: 0.42 };
     } catch (e) {}
+  }
+  // 雨が強くなる（もう一人の自分の独白の途中）
+  function rainHeavier(k = 1.45, sec = 3) {
+    if (replay || !rainNodes) return;
+    try { const a = audio(), t = a.currentTime, g = rainNodes.g; rainNodes.base *= k;
+      g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(rainNodes.base * seMul(), t + sec); } catch (e) {}
   }
   function bounce(n = 1) {
     if (!P.sound || replay) return;
@@ -2978,12 +2974,11 @@
     await say(['どれが誰に向けられた言葉だったのか、もう、わからなかった。', '雨が、手帳の上で跳ねていた。',
                '雨の中で、声がした。……自分の声だった。', 'ずっと頭の中にいた、もう一人の自分の声。',
                [O, '言われたときは、傷ついたなんて、思わなかったよね'], [O, 'でも、ずっと、残ってた'],
-               [O, '「大丈夫」って、言うしかなかった'], [O, '励まされるたびに、ひとりになった'],
+               [O, '励まされるたびに、ひとりになった'],
                [O, '泣くなと言われてから、泣き方を忘れた'], [O, '笑っていれば、誰も何も聞かなかった'],
                [O, '誰かの役に立っているあいだだけ、ここにいていい気がしてた'], [O, 'それが終わると、また、いらない人間に戻る'],
-               [O, '幸せになりそうになると、足もとが崩れる'], [O, '……慣れているのは、こっちのほう'],
-               '雨は、まだ、強くなっていく。', [O, 'こんな心なんて、いらない'], [O, '心と身体を分けて、身体だけ、誰かにあげられたらいいのに'],
-               [O, '今日を生きるだけで精一杯な人たちの、代わりになれたらいいのに'], [O, 'そうしたら、少しは、役に立つのに'],
+               () => rainHeavier(), '雨は、まだ、強くなっていく。', [O, 'こんな心なんて、いらない'], [O, '心と身体を分けて、身体だけ、誰かにあげられたらいいのに'],
+               [O, '今日を生きるだけで精一杯な人たちの、代わりになれたらいいのに'],
                '……声は、自分の口からは、出ていなかった。', '（……この声に、何て答えればいい）']);
     // close：声を自分の声として受け入れた（同調、または覚えがあると答えた）。そうでない人には、あとで「言えても届かない」流れを出す
     let close = false;
@@ -3019,8 +3014,6 @@
                [O, 'あの子たちの話は、最後まで聞けたのに。自分の話は、いつも途中でやめる'],
                [O, '聞いたら、認めなきゃいけなくなるから'], '（……何を）', [O, 'ずっと、苦しかったってこと'],
                '風が、フェンスを鳴らした。', '何も、言い返せなかった。',
-               [O, '……ねえ。あの子たちの前では、ちゃんと息ができてたよね'], [O, 'ひとりに戻ったとたん、これだ'],
-               [O, 'いつまで経っても、変わらないね'],
                [O, 'この世で生きていける未来なんて、全く見えない。……そうでしょ']]);
     const t = await choose(['「……ずっと、苦しかったんだね」', '「……普通の人に、ならなきゃ」', '「大丈夫。まだ、これからだよ」', '「……わからない。でも、聞いてる」', '「……生きてる価値なんて、ないよね」']);
     if (t === 4) return roofBad8('self');
@@ -3068,7 +3061,7 @@
     if (await choose(['「……うん」', '「……ごめん。今は」']) === 0) await say(['小さくうなずくと、ツムギが、そっと手をつないだ。']);
     else await say([['ツムギ', '……うん'], 'ツムギは手を引っこめて、そのまま、隣に立った。']);
     await say(['もう一人の自分は、まだそこにいる気がした。', 'うつむいたまま。', [O, '……それでも、そっちへ行くの？'], [O, 'また、生かされるの？'],
-               [O, '……幸せになったら、今までの自分は、何だったの？'], [O, 'ずっとこうだった。……こうでいるほうが、知ってる場所だよ'], [O, 'あなたは幸せにはなれない。仮に幸せを感じられたとしても、長くは続かない。……どうせあの子たちも、いずれ離れていくんだから'], [O, '期待しなければ痛みも感じずに済む。そうでしょう？'],
+               [O, '……幸せになったら、今までの自分は、何だったの？'], [O, 'ずっとこうだった。……こうでいるほうが、知ってる場所だよ'], [O, '幸せになりそうになると、足もとが崩れる。……慣れているのは、こっちのほう'], [O, 'どうせあの子たちも、いずれ離れていくんだから'], [O, '期待しなければ痛みも感じずに済む。そうでしょう？'],
                '手帳の、白い6行目を見た。']);
     if (await choose(['（……書きたい。自分の名前を）', '（……もう、閉じよう）']) === 1) return roofBad8('close');
     // TRUE
