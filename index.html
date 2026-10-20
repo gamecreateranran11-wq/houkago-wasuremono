@@ -465,7 +465,7 @@
   @keyframes rwsway { 0% { transform: translate(0, 0); } 25% { transform: translate(14px, 21vh); } 50% { transform: translate(-10px, 42vh); } 75% { transform: translate(12px, 63vh); } 100% { transform: translate(0, 85vh); } }
   @keyframes rwvanish { 0% { transform: translateY(0); opacity: .6; } 55% { opacity: .6; } 100% { transform: translateY(46vh); opacity: 0; } }
   body.fx-on .clock { visibility: hidden; }
-  .rw.final { left: 0; right: 0; top: 40%; text-align: center; font-family: 'Shippori Mincho B1', serif; font-weight: 800; font-size: clamp(22px, 4.2vw, 34px); color: #8a1a1c;
+  .rw.final { left: 0; right: 0; top: 40%; text-align: center; letter-spacing: .16em; font-family: 'Shippori Mincho B1', serif; font-weight: 800; font-size: clamp(22px, 4.2vw, 34px); color: #8a1a1c;
               text-shadow: 0 0 22px rgba(120, 0, 0, .9), 0 0 3px #000, 0 2px 0 #1a0608; animation: finalin 2.6s cubic-bezier(.2, .7, .2, 1) both, tremble .14s steps(2) infinite 2.6s; }
   .rw.final.gone { opacity: 1; animation: finalout 2.6s ease-in forwards; }
   @keyframes finalin { from { opacity: 0; filter: blur(14px); transform: scale(1.4); letter-spacing: .6em; } 55% { opacity: 1; filter: blur(0); } to { opacity: 1; transform: none; letter-spacing: .16em; } }
@@ -2848,8 +2848,11 @@
   }
   function fxEnd(box) { box.remove(); if (!document.querySelector('.roof-fx')) document.body.classList.remove('fx-on'); }
   // 言葉の雨：短い言葉は小さく散らして重ね、長い言葉は一つずつはっきり読ませる。崩した言葉はにじませて読めなくする。画面を押すと早く進む
+  // 一度見た演出（言葉の雨・遅れて混ざる言葉）は、既読スキップがONなら早回しする
+  function fxSkip(key) { const k = 'fx|' + key, seen = READ.has(k); markRead(k); return !!(P.skip && seen && !(R && R.forceRead)); }
   async function wordRain() {
     if (replay) return;   // 早送り中は出さない
+    const quick = fxSkip('wordRain');
     const box = fxLayer('rain');
     spk.hidden = true; txt.textContent = ''; more.hidden = true;   // 言葉の雨に切り替わるとき、前の文を消す
     // 短い言葉は、届いた言葉（ほかの人から言われた言葉）から切り出したものだけ。どれも否定。自分で自分に向けた言葉は、もう一人の自分の台詞に取っておく
@@ -2863,7 +2866,7 @@
                    ['殴るよ', 'neg'], ['なんでそんなことするの', 'sei'], ['やる気、あんの？', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
                    ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['お前なんか、いらない', 'neg'],
                    ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['お姉ちゃんは、できたのに', 'sei'], ['ハルくんの分まで、生きなきゃね', 'nag'], ['頼まれてくれるよね？', 'sei'], ['お前の事なんて、どうでもいい', 'neg'], ['そういうの、めんどくさい', 'neg'], ['お前には言われたくない', 'neg'], ['あなたなら、できるよ', 'nag'], ['頑張って', 'nag'], ['笑ってれば、大丈夫', 'nag'], ['あなたは、強い子だから', 'nag']];
-    let fast = false; box.onclick = () => { fast = true; };
+    let fast = quick; box.onclick = () => { fast = true; };
     const drop = (t, cls) => {
       const e = document.createElement('span'); e.className = 'rw ' + cls + (cls === 'short' ? ' neg ' + rainFont() : ''); e.textContent = t;
       if (cls === 'short') { e.style.fontSize = (11 + Math.random() * 6) + 'px'; e.style.rotate = (Math.random() * 10 - 5).toFixed(1) + 'deg'; }
@@ -2897,8 +2900,8 @@
     box.querySelectorAll('.rw, .rw-list').forEach(e => e.classList.add('gone'));
     const last = document.createElement('p'); last.className = 'rw final'; last.textContent = '「あなたは、人間じゃない」'; box.appendChild(last);
     rumbleSE();
-    await sleep(4200);
-    last.classList.add('gone'); await sleep(2400);
+    await sleep(quick ? 2800 : 4200);
+    last.classList.add('gone'); await sleep(quick ? 1400 : 2400);
     // 黒く底のない水に、沈んでいく音
     box.classList.add('sink');
     await sleep(3200);
@@ -2907,13 +2910,14 @@
   // 遅れて混ざってくる、正論と慰めの言葉（小さく、一つずつ）
   async function lateWords(list) {
     if (replay) return;   // 早送り中は出さない
+    const quick = fxSkip('late|' + list[0][0]);
     const box = fxLayer('late');
     for (const [l, k] of list) {
       const e = document.createElement('p'); e.className = `lw ${k} ${rainFont()}`; e.textContent = `「${l}」`; box.appendChild(e);
-      await sleep(1700);
+      await sleep(quick ? 220 : 1700);
       e.classList.add('dim');
     }
-    await sleep(1200);
+    await sleep(quick ? 500 : 1200);
     box.classList.add('out'); await sleep(900); fxEnd(box);
   }
   // 景色がひび割れて崩れる（思い返しの放課後から、現実の屋上へ）
