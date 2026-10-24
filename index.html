@@ -6877,6 +6877,7 @@
     busy = true; P.played = true; if (ch === 'infirmary') P.metTsumugi = true; saveP(); bgm(null); guest = null; guestRender();
     if (R && R.ch) keepMem();
     clearRun(); await setChapter(ch); newRun(ch); if (opt.skipPuzzle) R.skipPuzzle = true;
+    if (P.diff === 'easy') nmMark('easy');   // 章を「やさしい」で遊んだら、この周回は隠しの演出の対象から外す
     if (P.mem[ch] && P.mem[ch].length) { P.mem[ch].forEach(k => R.know.add(k)); R.memIn = true; }
     render(); bgm('explore');
     busy = false;
@@ -7222,8 +7223,8 @@
   // この仕組みより前に条件を満たしていた分は、黙って記録しておく（ノーミスのTRUEは後から判定できないので除く）
   ACH.forEach(([id, , , test]) => { if (id !== 'perfect' && !P.ach[id] && test()) P.ach[id] = Date.now(); }); saveP();
   const achAny = () => Object.keys(P.ach).length > 0;
-  /* ノーミスの記録：この周回（P.cur）でチャイム・ヒント・選択ミス・謎解きミス・わすれもので謎解きを飛ばしたか。
-     わすれもので飛ばすのはノーミスのままでよい。飛ばさずにノーミスでTRUEまで来たときだけ、隠しの演出（P.achX）を出す */
+  /* ノーミスの記録：この周回（P.cur）でチャイム・ヒント・選択ミス・謎解きミス・わすれもので謎解きを飛ばしたか・難しさを「やさしい」にしていたか。
+     わすれもので飛ばすのはノーミスのままでよい。飛ばさず、ずっと「普通」のまま、ノーミスでTRUEまで来たときだけ、隠しの演出（P.achX）を出す */
   function nmMark(k) { if (!P.cur) return; const n = P.cur.nm = P.cur.nm || {}; if (!n[k]) { n[k] = true; saveP(); } }
   // エンディングを見たときに呼ぶ（P.cur を消す前）。新しく取ったアチーブメントを返す
   function achGain(tag) {
@@ -7233,7 +7234,7 @@
       if (P.ach[id]) return;
       if (id === 'perfect' ? (tag === 'TRUE' && clean) : test()) { P.ach[id] = Date.now(); got.push(id); }
     });
-    if (tag === 'TRUE' && clean && !n.skip && !P.achX) { P.achX = true; got.push('X'); }
+    if (tag === 'TRUE' && clean && !n.skip && !n.easy && P.diff !== 'easy' && !P.achX) { P.achX = true; got.push('X'); }
     // 条件を見せる状態に一度でもなったら、アチーブメント画面を開く前でも記録しておく（あとでわすれものを置いていっても消さない）
     if (perfectShown()) P.achShown = { ...(P.achShown || {}), perfect: true };
     saveP();
@@ -7311,7 +7312,7 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.achPending = []; P.metTsumugi = false; P.album = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.achPending = []; P.metTsumugi = false; P.album = {}; P.diffSet = false; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
@@ -7399,7 +7400,7 @@
     });
     wireSpeed($('#setSpeed'));
     card.querySelectorAll('#setDiff [data-diff]').forEach(b => b.onclick = () => {
-      P.diff = b.dataset.diff; P.diffSet = true; saveP();
+      P.diff = b.dataset.diff; P.diffSet = true; saveP(); if (P.diff === 'easy' && R && R.ch && !R.over) nmMark('easy');
       card.querySelectorAll('#setDiff [data-diff]').forEach(x => x.setAttribute('aria-pressed', x.dataset.diff === P.diff ? 'true' : 'false'));
     });
     wireVol($('#sVolBgm'), $('#sVolSe'));
