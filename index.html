@@ -2963,7 +2963,7 @@
     await roofVoid(['チャイムが鳴っている。']);
     await endScene('rooftop');
     await say([() => windSE(true), '……風が、強い。', '気がつくと、フェンスの前に立っていた。', '夕日が、山の稜線にかかっている。', '（……ここは）',
-               '足もとで、紙が風にあおられていた。', () => showCut('protag_notebook_dusk'), '生徒手帳だった。開いたまま、落ちている。']);
+               '足もとで、紙が風にあおられていた。', () => showCut('protag_notebook_dusk'), '生徒手帳だった。開いたまま、落ちている。', '風に、ページがめくれていく。']);
     const pick = await choose(['（……拾わなきゃ）', '（……見たくない）']);
     hideCut();
     if (pick === 1) {
