@@ -869,9 +869,11 @@
   P.runNo = P.runNo || 1; P.shelfRun = P.shelfRun || {};
   // mem：章ごとの「調べた・話した」記憶（R.know）。BAD・閉め出し・周回の終わりのあとも、次にその章を始めるとき引き継ぐ
   P.mem = P.mem || {};
-  // 謎解きの難しさ：normal（むずかしい）／easy（やさしい）。やさしいは、3〜5章の手順だけの謎（本の並べ替え・マグネット・方向の錠・照らし合わせ）を自動で解く。
+  // 謎解きの難しさ：normal（普通）／easy（やさしい）。やさしいは、3〜5章の手順だけの謎（本の並べ替え・マグネット・方向の錠・照らし合わせ）を自動で解く。
   // 物語や背景がわかる手がかり（貸出記録・部誌・来室カード・窓の跡など）は、どちらでも自分で調べる
   P.diff = P.diff === 'easy' ? 'easy' : 'normal';
+  // diffSet：難しさを一度でも選んだ（初回の選択・設定での変更）。選ぶ画面は、まだ選んでいない初回プレイのときだけ出す。前に遊んだ人は選んだことがある
+  if (P.played) P.diffSet = true;
   // heard：一度でも流れた曲（サウンドトラックで「？？？」を外すのに使う）。記録を始める前に遊んだ分は、見た結末などから推し量る
   P.heard = P.heard || {};
   if (!P.heardV1) {
@@ -6865,12 +6867,12 @@
   async function chooseDiff() {
     const v = await uiWait(`<p class="eyebrow">放課後をはじめる前に</p><h2>謎解きの難しさ</h2>
       <p><b>やさしい</b>　物語を読むことを大切にしたい人・さくさく進めたい人に。3〜5章の、手順だけの謎解き（本の並べ替え・マグネット・錠・照らし合わせ）を、自動で解きます。物語に必要な手がかりは、自分で調べます。</p>
-      <p><b>むずかしい</b>　すべての謎を、自分で解きます。</p>
-      <p class="note">あとから、タイトルの「設定」で変えられます。</p>`, '', ['やさしい', 'むずかしい']);
-    P.diff = v === 0 ? 'easy' : 'normal'; saveP();
+      <p><b>普通</b>　すべての謎を、自分で解きます。</p>
+      <p class="note">あとから、タイトルの「設定」で変えられます。</p>`, '', ['やさしい', '普通']);
+    P.diff = v === 0 ? 'easy' : 'normal'; P.diffSet = true; saveP();
   }
   async function startRun(ch, opt = {}) {
-    if (ch === ORDER[0] && !opt.skipPuzzle && !Object.keys((P.cur && P.cur.results) || {}).length) await chooseDiff();
+    if (!P.diffSet && ch === ORDER[0] && !opt.skipPuzzle) await chooseDiff();
     closeOverlay(); clearRoof();
     busy = true; P.played = true; if (ch === 'infirmary') P.metTsumugi = true; saveP(); bgm(null); guest = null; guestRender();
     if (R && R.ch) keepMem();
@@ -7384,7 +7386,7 @@
           <button type="button" data-skip="1" aria-pressed="${!!P.skip}">ON</button><button type="button" data-skip="0" aria-pressed="${!P.skip}">OFF</button></div></div>
         <div class="set-row"><span class="set-label">文字の速さ</span><div class="seg" id="setSpeed"></div></div>
         <div class="set-row"><span class="set-label">謎解き</span><div class="seg" id="setDiff">
-          <button type="button" data-diff="easy" aria-pressed="${P.diff === 'easy'}">やさしい</button><button type="button" data-diff="normal" aria-pressed="${P.diff !== 'easy'}">むずかしい</button></div></div>
+          <button type="button" data-diff="easy" aria-pressed="${P.diff === 'easy'}">やさしい</button><button type="button" data-diff="normal" aria-pressed="${P.diff !== 'easy'}">普通</button></div></div>
         <div class="set-row"><span class="set-label">音量</span>
           <label class="vol">BGM<input id="sVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
           <label class="vol">効果音<input id="sVolSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label></div>
@@ -7397,7 +7399,7 @@
     });
     wireSpeed($('#setSpeed'));
     card.querySelectorAll('#setDiff [data-diff]').forEach(b => b.onclick = () => {
-      P.diff = b.dataset.diff; saveP();
+      P.diff = b.dataset.diff; P.diffSet = true; saveP();
       card.querySelectorAll('#setDiff [data-diff]').forEach(x => x.setAttribute('aria-pressed', x.dataset.diff === P.diff ? 'true' : 'false'));
     });
     wireVol($('#sVolBgm'), $('#sVolSe'));
