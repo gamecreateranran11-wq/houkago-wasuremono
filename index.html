@@ -2887,13 +2887,15 @@
   // 一度見た演出（言葉の雨・遅れて混ざる言葉）は、既読スキップがONなら早回しする
   // 言葉の演出の速さ：文字の速さの設定に合わせる（「遅い」が元の速さ）
   const fxRate = () => ({ slow: 1, normal: .72, fast: .5, instant: .32 })[P.textSpeed] || .72;
-  // 言葉の雨と、遅れて混ざる言葉の速さ。文字の速さが遅いときだけ、さらにゆっくり。それ以外は同じ（読める速さ）
-  const rainRate = () => P.textSpeed === 'slow' ? 1.4 : 1.15;
+  // 言葉の雨と、遅れて混ざる言葉の速さ。文字の速さの設定に合わせて4段階で変わるが、基準は一段階ゆっくり。
+  // 設定の名前ごとに、雨ではどの速さで流すかを書いておく（一括→早い、早い→普通、普通→遅い、遅い→もっと遅い）
+  const RAIN_SPEED = { instant: 'fast', fast: 'normal', normal: 'slow', slow: 'slower' };
+  const RAIN_RATE = { fast: .5, normal: .72, slow: 1, slower: 1.3 };
+  const rainRate = () => RAIN_RATE[RAIN_SPEED[P.textSpeed] || 'slow'];
   function fxSkip(key) { const k = 'fx|' + key, seen = READ.has(k); markRead(k); return !!(P.skip && seen && !(R && R.forceRead)); }
   async function wordRain() {
     if (replay) return;   // 早送り中は出さない
-    // 初めて見るときは、既読スキップがONでも早回しにせず、ゆっくり流す（文字の速さが「早い」「一括」でも、言葉を読める速さより速くしない）。
-    // 2回目以降で既読スキップがONなら、早回し
+    // 初めて見るときは、既読スキップがONでも早回しにせず、雨の速さ（文字の速さより一段階ゆっくり）で流す。2回目以降で既読スキップがONなら、早回し
     const quick = fxSkip('wordRain'), r = rainRate();
     const box = fxLayer('rain');
     spk.hidden = true; txt.textContent = ''; more.hidden = true;   // 言葉の雨に切り替わるとき、前の文を消す
