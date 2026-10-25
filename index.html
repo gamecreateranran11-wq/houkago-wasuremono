@@ -6864,12 +6864,21 @@
 
   /* ---------- title / shelf ---------- */
   function keepMem() { if (R && R.ch && R.know && R.know.size) { P.mem[R.ch] = [...R.know]; saveP(); } }
+  // 選んだあとに確認を出す。「選び直す」なら、もう一度選ぶ画面へ
   async function chooseDiff() {
-    const v = await uiWait(`<p class="eyebrow">放課後をはじめる前に</p><h2>謎解きの難しさ</h2>
-      <p><b>やさしい</b>　物語を読むことを大切にしたい人・さくさく進めたい人に。手順をこなすだけの謎解きは、自動で解きます。物語に必要な手がかりは、自分で調べます。</p>
-      <p><b>普通</b>　すべての謎を、自分で解きます。</p>
-      <p class="note">あとから、タイトルの「設定」で変えられます。</p>`, '', ['やさしい', '普通']);
-    P.diff = v === 0 ? 'easy' : 'normal'; P.diffSet = true; saveP();
+    for (;;) {
+      const v = await uiWait(`<p class="eyebrow">放課後をはじめる前に</p><h2>謎解きの難しさ</h2>
+        <p><b>やさしい</b>　物語を読むことを大切にしたい人・さくさく進めたい人に。手順をこなすだけの謎解きは、自動で解きます。物語に必要な手がかりは、自分で調べます。</p>
+        <p><b>普通</b>　すべての謎を、自分で解きます。</p>
+        <p class="note">あとから、タイトルの「設定」で変えられます。</p>`, '', ['やさしい', '普通']);
+      const name = v === 0 ? 'やさしい' : '普通';
+      const ok = await uiWait(`<p class="eyebrow">放課後をはじめる前に</p><h2>謎解きの難しさ</h2>
+        <p>「${name}」ではじめます。よろしいですか？</p>
+        <p class="note">あとから、タイトルの「設定」で変えられます。</p>`, '', ['はい', '選び直す']);
+      if (ok !== 0) continue;
+      P.diff = v === 0 ? 'easy' : 'normal'; P.diffSet = true; saveP();
+      return;
+    }
   }
   async function startRun(ch, opt = {}) {
     if (!P.diffSet && ch === ORDER[0] && !opt.skipPuzzle) await chooseDiff();
