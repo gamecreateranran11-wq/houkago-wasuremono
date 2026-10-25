@@ -2759,7 +2759,7 @@
   const touchNote = () => (R && R.touched) ? `<p class="note">${C.name}の心に、少しだけ触れた。</p>` : '';
   async function touchRecall() {
     if (!R || !R.touched || replay) return;
-    const m = C.memory && C.memory[1];
+    const m = C.touchMemory || (C.memory && C.memory[1]);
     if (!m || P.touchMem[C.key]) return;
     P.touchMem[C.key] = true; saveP();
     await uiWait(`<p class="eyebrow">${C.label}</p>
@@ -3353,7 +3353,8 @@
     bgm('endless');  // BAD1 専用の曲『終わらない放課後』
     hideCut(); setTalk(false);
     if (C.id === 'infirmary' && !R.touched && mioRes() === 'saved') await say(['扉の窓の向こうに、本を抱えた影が何度か見えた気がした。……どのチャイムのあとも、ノックの音はしなかった。']);
-    await say(['チャイムを数えるのを、いつのまにかやめていた。', '誰の心にも、手が届かないまま。夕焼けは少しも動かない。',
+    // 「何もしてあげられない」を選んだとき（心には触れていた）は、届かなかったのではなく、届きかけた手を自分で下ろした形にする
+    await say(['チャイムを数えるのを、いつのまにかやめていた。', R.touched ? '届きかけた手を、自分から下ろしてしまった。夕焼けは少しも動かない。' : '誰の心にも、手が届かないまま。夕焼けは少しも動かない。',
                '自分の名前を、思い出せなくなっていた。……それでも、放課後は終わらなかった。']);
     keepMem();
     R.over = true; clearRun(); P.endings.BAD1 = true; saveP(); render(); idle();
@@ -4335,7 +4336,9 @@
   const MUSIC = {
     window2: ['窓際の机にソウタの鞄が置いてある。開いた口から、CDのケースが一枚のぞいていた。', 'ジャズのピアノのアルバムだ。ケースに付箋。右上がりの字で「だまされたと思って聴け。返さなくていい」。', '……ケースのフィルムは、まだはがされていない。'],
     clock2: ['時計の下に、音楽室の使用予約の表が貼ってある。', '「火曜 16:30〜17:30　有志練習　井上・ハル」。4月から毎週同じ欄に、同じ二人の名前。', '今日、7/15の欄にも二人の名前が書いてあった。'],
-    id: 'music', key: 'sota', memory: ['（……丸めた楽譜を脇にはさんで、ソウタは手帳に名前を書いてくれた。一画ずつ、ていねいに）'], name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room', bgClock: { cx: 756, cy: 245, rx: 36, ry: 37 },
+    id: 'music', key: 'sota', memory: ['（……丸めた楽譜を脇にはさんで、ソウタは手帳に名前を書いてくれた。一画ずつ、ていねいに）'],
+    // 心に触れたときの記憶のかけら（2つ目）。連弾のあとの心の声と同じ記憶
+    touchMemory: '（火曜の放課後。階段に座って、少し開いた扉のすき間から二人の音を聴いていた。……二人とも、こっちには気づかなかった）', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room', bgClock: { cx: 756, cy: 245, rx: 36, ry: 37 },
     sit: { src: 'sota_sit', style: 'left:54.2%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
     faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
