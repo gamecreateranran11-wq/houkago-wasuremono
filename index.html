@@ -3316,7 +3316,7 @@
       await show(`${ch.bg}_1830_dark`, ch);   // 消えた子の部屋は、明かりが消えたまま。時刻は18:30（5章のあと）なので、18:30の暗い版
       await line(`${ch.room}。${ch.name}の座っていた場所に、${ch.lost}だけが残っている。`);
     }
-    await line('机の上に、わすれものだけが並んでいた。');
+    await line('どの教室にも、わすれものだけが残っていた。');
     await show('chime_sky_1830', null);   // 5章のあと（18:30）の空
     await say(['夕焼けの空の下で、ひとり立ち尽くしていた。', '……チャイムは、もう鳴らない。', '夕焼けだけが、音もなく校舎を染めている。', '返事をする人は、もう誰もいなかった。']);
     bg.style.opacity = '';
@@ -3376,12 +3376,15 @@
     keepMem();
     R.over = true; clearRun(); P.endings[tag] = true; saveP(); render(); idle();
     const got = achGain(tag);
-    finishRun(true);
     await touchRecall();
+    // BAD1と同じく、その章のはじめから（謎解きは飛ばして）やり直せる。「放課後をやり直す」を選んだときだけ、周回を締めくくって美術室から
     const v = await overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
         <p class="eyebrow">BAD END「${title}」</p></div>${touchNote()}
-      <p class="note">この放課後は、ここで終わった。</p>${achNote(got)}`, '', ['放課後をやり直す', 'タイトルへ']);
-    if (v === 0) startRun(ORDER[0]); else showTitle(true);
+      <p class="note">この放課後は、ここで終わった。</p>
+      <p class="note">${C.room}のはじめから、やり直せます。調べたこと・話したことは覚えているので、謎解きは飛ばせます。</p>${achNote(got)}`, '', [`${C.room}のはじめから`, '放課後をやり直す', 'タイトルへ']);
+    if (v === 0) startRun(C.id, { skipPuzzle: true });
+    else if (v === 1) { finishRun(true); startRun(ORDER[0]); }
+    else showTitle(true);
   }
 
   /* 選択肢：[文, 種類] の並び。種類＝yori（寄り添う）/ seiron（正論）/ nagu（慰める）/ oitsu（追い詰める）/ key（わすれもので出る最後の言葉）
@@ -5843,7 +5846,7 @@
                                   ['ケイ', '……なんで知ってんの', 'reject'],
                                   ['ケイ', '悪いけど、もう閉めるわ。部長の仕事だから', 'reject'],
                                   ['ケイ', '……出てってくれる？', 'reject']],
-                                 ['扉を叩いた。返事はない。', () => bounce(1), '……体育館の中で、ボールが一度だけ床に跳ねる音がした。']);
+                                 ['扉を叩いた。返事はない。']);
       await say([['', 'ケイは少しだけ目を丸くして、それから笑った。', 'surprise'],
                  ['ケイ', '……いいよ。どうせ俺しかいないし', 'smile'],
                  ['ケイ', '三年が引退して、二年は俺ひとりしか残らなかったんだ', 'normal'],
