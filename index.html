@@ -252,7 +252,16 @@
   .sh-book.gap { background: rgba(0,0,0,.35); box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
   .sh-book.gap .t { color: rgba(255,255,255,.55); }
   .sh-book.sel { outline: 3px solid var(--gold); outline-offset: 1px; }
-  .sh-sign { font-size: 12px; color: #e8dcc6; text-align: center; margin: 2px 0 6px; }
+  .sh-sign { font-size: 14px; color: var(--ink); text-align: center; margin: 2px 0 6px; }
+  /* PC：番号と札を読みやすく。棚の画面だけ少し広くして、本とラベルを大きくする */
+  @media (min-width: 700px) {
+    .ov-card:has(.sh-row) { max-width: 660px; }
+    .sh-book { width: 56px; height: 250px; }
+    .sh-book .t { font-size: 15px; }
+    .sh-book .lb { width: 48px; font-size: 15px; font-weight: 600; line-height: 1.3; padding: 4px 0; color: #111; }
+    .sh-row { gap: 5px; }
+    .sh-sign { font-size: 15px; }
+  }
   @media (max-width: 400px) { .sh-book { width: 30px; height: 168px; } .sh-book .lb { width: 26px; font-size: 9px; } .sh-row { gap: 2px; } }
   /* 作戦ボード：コートの図にマグネットを置く。押したマグネットと、次に押した場所が入れ替わる */
   .lu-court { position: relative; aspect-ratio: 10 / 7; background: #f3f0e8; border-radius: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.4); margin: 4px 0 8px; touch-action: manipulation; }
@@ -266,6 +275,10 @@
   .lu-slot.sel b { outline: 3px solid var(--gold); outline-offset: 2px; }
   .lu-bench { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 6px; }
   .lu-bench .label { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+  /* ボードの横に書き添えた役目（ケイの字）。コートの図の下に一覧で出す */
+  .lu-legend { list-style: none; margin: 0; padding: 8px 10px; background: #f3f0e8; border-radius: 4px; color: #3c4a63; font-size: 13px; line-height: 1.7; }
+  .lu-legend b { color: #b8423c; font-weight: 600; }
+  .lu-slot small { white-space: nowrap; }
   .lu-slot.bench { position: static; transform: none; }
   .lu-slot.bench b { background: #5d6f8c; }
   .align-pad div { display: flex; gap: 56px; }
@@ -2369,7 +2382,7 @@
       } else {
         // 子ども二人が上履きで駆けていく。ゴム底が床をはたく「パタパタ」（やわらかい立ち上がり・低めの音・短い余韻）
         for (let k = 0; k < 12; k++) {
-          const fade = 0.42 * (1 - k / 13);
+          const fade = 0.42 * Math.pow(Math.sin(Math.PI * (k + 0.5) / 12), 1.3);   // 遠くから近づいて、また遠ざかる（フェードイン→フェードアウト）
           const a1 = t0 + k * 0.17, a2 = t0 + 0.085 + k * 0.19;
           step(a1, 380, 0.9, fade, 0.07, 0.012); step(a1 + 0.004, 1100, 1.2, fade * 0.22, 0.035, 0.008); thump(a1, 140, 90, fade * 0.35, 0.09);
           step(a2, 330, 0.9, fade * 0.85, 0.07, 0.012); step(a2 + 0.004, 950, 1.2, fade * 0.2, 0.035, 0.008); thump(a2, 125, 85, fade * 0.3, 0.09);
@@ -3308,7 +3321,7 @@
       bg.style.opacity = '1'; await wait(750);
     };
     const halls = ORDER.map(id => CHAPTERS[id]).filter(ch => ch.hall);
-    await show(halls[0].hall);
+    await show(`${halls[0].hall}_1830_lit`);   // BAD4 は5章のあと（18:30）なので、はじめの廊下も18:30の絵
     await line('廊下に立って、並んだ扉を見渡した。');
     for (const ch of halls) {
       // 息を引き取った子の部屋だけは、明かりが消えている（閉め出した子の部屋は、ほかの教室と同じく明かりがついたまま）
@@ -5061,7 +5074,7 @@
       async notice() {
         showCut('lci_notice');
         await say(['掲示板に、図書だより7月号が貼られている。']);
-        const canUse = R.items.has('draft');
+        const lp = R.loop, canUse = R.items.has('draft');
         const v = await noticeView(canUse);
         const first = !R.know.has('dayori');
         if (first) {
@@ -5070,7 +5083,9 @@
                      '掲示板の隅に、委員会の決まりが貼ってある。「今月のおすすめは、当番の委員が名前を入れて書くこと」']);
           await tick();
         }
-        if (canUse && v === 'use') {
+        // 調べたことでチャイムが鳴ったら、持ち物（下書き）はもうないので、重ね合わせには進まない
+        if (R.over || R.loop !== lp) return;
+        if (canUse && v === 'use' && R.items.has('draft')) {
           const ok = await alignDraft();
           if (!ok) return;
           if (!R.know.has('acrostic')) {
@@ -5355,13 +5370,14 @@
   /* ================================================================
      第四章　体育館（ケイ）
      ================================================================ */
-  // 作戦ボード：5つのポジションとベンチに、6人のマグネットを置く。はじめは顧問の並び（けがを知らない顧問は、外から打てるハヤトをシューターに、ケイを司令塔に置いている）
+  // 作戦ボード：5つのポジションとベンチに、6人のマグネットを置く。はじめは顧問の並び（けがを知らない顧問は、外から打てるハヤトをシューティングガードに、ケイをポイントガードに置いている）
   // [位置, 名前, 横, 縦, 役目]。役目はボードにケイの字で書き添えてある（一年が覚えられるように）（バスケを知らなくても、手がかりと結びつけられるように）
-  const LINEUP_POS = [['pg', '司令塔', 50, 82, 'ボールを運ぶ'], ['sg', 'シューター', 85, 62, '外から打つ'], ['sf', '外のフォワード', 15, 64, '最後まで走り続ける'],
-                      ['pf', '中のフォワード', 32, 31, '速攻で一番に走りこむ'], ['c', 'ゴール下', 58, 15, '体をぶつけて守る']];
+  const LINEUP_POS = [['pg', 'ポイントガード', 50, 82, 'ボールを運び、パスで攻めを組み立てる'], ['sg', 'シューティングガード', 79, 60, '外からシュートを決める'],
+                      ['sf', 'スモールフォワード', 20, 62, '外も中も動き、最後まで走り続ける'],
+                      ['pf', 'パワーフォワード', 32, 31, 'ゴール近くで戦い、速攻では先頭を走る'], ['c', 'センター', 60, 15, 'ゴールのいちばん近くで、体を張って守る']];
   const ROLE_LINE = LINEUP_POS.map(([, l, , , r]) => `「${l}：${r}」`).join('');
   const LINEUP_COACH = { pg: 'ケイ', sg: 'ハヤト', sf: 'シュン', pf: 'ミナト', c: 'ダイチ', bench: 'ユウマ' };
-  // ケイが本当に組みたかった並び：試合の最後まで走り続ける外のフォワードに自分が入り、けがのハヤトをベンチで休ませる
+  // ケイが本当に組みたかった並び：試合の最後まで走り続けるスモールフォワードに自分が入り、けがのハヤトをベンチで休ませる
   // 手がかりは名前ではなく特徴で書く。部誌の部員名簿（背番号・身長・50m走）と、得点板の裏の練習試合の記録（背番号ごと）を照らし合わせて、はじめて誰のことかわかる
   const KEI_ROSTER = [['三浦ケイ', '2年', 4, 176, '6.9'], ['ユウマ', '1年', 5, 168, '7.1'], ['ハヤト', '1年', 7, 165, '6.8'],
                       ['シュン', '1年', 9, 170, '6.4'], ['ミナト', '1年', 11, 172, '7.0'], ['ダイチ', '1年', 15, 186, '7.6']];
@@ -5418,8 +5434,9 @@
         <p class="lu-head">ボードの上に、顧問の赤い字：「土曜のスタメン　負けたら部長交代」</p>
         <div class="lu-court">${court}
           ${R.know.has('self') ? '<span class="lu-note">自分の場所は、<br>最後に決める</span>' : ''}
-          ${LINEUP_POS.map(([k, l, x, y, r]) => `<button type="button" class="lu-slot" data-k="${k}" style="left:${x}%;top:${y}%"><b></b><small>${l}<span class="lu-role">${r}</span></small></button>`).join('')}</div>
+          ${LINEUP_POS.map(([k, l, x, y, r]) => `<button type="button" class="lu-slot" data-k="${k}" style="left:${x}%;top:${y}%"><b></b><small>${l}</small></button>`).join('')}</div>
         <div class="lu-bench"><span class="label">ベンチ</span><button type="button" class="lu-slot bench" data-k="bench"><b></b></button></div>
+        <ul class="lu-legend">${LINEUP_POS.map(([, l, , , r]) => `<li><b>${l}</b>　${r}</li>`).join('')}</ul>
         <div class="row"><button type="button" class="btn primary" id="luOk">この並びにする</button><button type="button" class="btn" id="luNo">やめる</button></div>`);
       const draw = () => card.querySelectorAll('.lu-slot').forEach(b => {
         b.querySelector('b').textContent = cur[b.dataset.k]; b.classList.toggle('sel', sel === b.dataset.k);
@@ -5591,13 +5608,13 @@
         showCut('gci_board');
         if (R.know.has('lineup')) {
           const placed = !!R.taken.board && Object.keys(LINEUP_ANSWER).every(k => R.taken.board[k] === LINEUP_ANSWER[k]);
-          if (placed) { await say(['作戦ボード。ケイが組みたかった並びのまま、マグネットが置かれている。', '外のフォワードに「ケイ」。ベンチに「ハヤト」。']); return; }
+          if (placed) { await say(['作戦ボード。ケイが組みたかった並びのまま、マグネットが置かれている。', 'スモールフォワードに「ケイ」。ベンチに「ハヤト」。']); return; }
           // チャイムで時間が戻ると、マグネットは顧問の並びに戻っている。並べ方は覚えているので、すぐに並べ直せる
           await say(['作戦ボード。マグネットは、顧問の並びに戻っていた。', '……ケイが本当に組みたかった並びは、もう覚えている。']);
           if (R.over) return;
           if (await choose(['ケイの並びに直す', 'やめる']) !== 0) return;
           R.taken.board = { ...LINEUP_ANSWER }; R.seen.add('lineup');
-          await say(['外のフォワードに「ケイ」。ベンチに「ハヤト」。……マグネットを、ケイの並びに置き直した。']);
+          await say(['スモールフォワードに「ケイ」。ベンチに「ハヤト」。……マグネットを、ケイの並びに置き直した。']);
           return;
         }
         const lp = R.loop;
@@ -5620,7 +5637,7 @@
         if (c !== 0) return;
         if (EASY() && !(R.know.has('logbook') && R.know.has('bag'))) { await say(['（部員のことが、まだよくわからない。顧問の机の部誌と、ケイの荷物を見てから並べよう）']); return; }
         const v = EASY() ? { go: true, b: { ...LINEUP_ANSWER } } : await lineupBoard();
-        if (EASY()) await say(['部誌の部員名簿と、荷物のメモを思い出しながら、マグネットを動かした。', 'けがをしたハヤトはベンチ。アシストの多いユウマが司令塔。外から決めたミナトがシューター。背の高いダイチがゴール下。足の速いシュンは、速攻で走りこむ中のフォワード。']);
+        if (EASY()) await say(['部誌の部員名簿と、荷物のメモを思い出しながら、マグネットを動かした。', 'けがをしたハヤトはベンチ。アシストの多いユウマがポイントガード。外から決めたミナトがシューティングガード。背の高いダイチがセンター。足の速いシュンは、速攻で先頭を走るパワーフォワード。']);
         R.taken.board = v.b;
         if (!v.go) return;
         const ok = Object.keys(LINEUP_ANSWER).every(k => v.b[k] === LINEUP_ANSWER[k]);
@@ -5629,7 +5646,7 @@
           await say(['マグネットを並べ終えて、ボードを眺めた。', '……何かが違う気がする。']);
           await tick(); return;
         }
-        await say(['最後に、「ケイ」のマグネットを、外のフォワードの位置に置いた。', '並べ終えたボードを、少し離れて眺めた。']);
+        await say(['最後に、「ケイ」のマグネットを、スモールフォワードの位置に置いた。', '並べ終えたボードを、少し離れて眺めた。']);
         R.know.add('lineup'); R.seen.add('lineup');
         await say(['……ケイが本当に組みたかったのは、この並びなんだ。', 'けがをしたハヤトは、ベンチで休ませる。試合の最後まで走り続ける場所には、自分が入る。',
                    '後輩のことは、こんなに考えているのに。……自分の場所だけは、いちばんきついところだった。']);
@@ -5639,7 +5656,7 @@
         showCut('gci_desk');
         if (!R.know.has('logbook')) {
           await say(['ステージ前の長机。顧問の机らしい。', 'クリップボードに、顧問の字のスタメン表が挟まっている。',
-                     '「土曜のスタメン　司令塔：ケイ　シューター：ハヤト　外のフォワード：シュン　中のフォワード：ミナト　ゴール下：ダイチ　ベンチ：ユウマ」',
+                     '「土曜のスタメン　ポイントガード：ケイ　シューティングガード：ハヤト　スモールフォワード：シュン　パワーフォワード：ミナト　センター：ダイチ　ベンチ：ユウマ」',
                      'その横に、部誌が開いたまま置いてあった。']);
           R.know.add('logbook'); await gotItem('logbook'); await tick();
         } else if (!R.items.has('logbook') && !R.taken.desk) {
@@ -5655,8 +5672,8 @@
           await tick();
         } else if (again('desk')) await say(['部誌のケイの字。「ハヤト、左足首をかばってる。本人は、大丈夫って笑ってたけど」',
                                              '机に残っていた受診メモ。「1年　ハヤト　今週の試合・練習は控えること」']);
-        else await say(['顧問のスタメン表。「司令塔：ケイ　シューター：ハヤト　外のフォワード：シュン　中のフォワード：ミナト　ゴール下：ダイチ　ベンチ：ユウマ」',
-                        '足首をけがしたハヤトの名前が、外を走り回るシューターの位置に書かれている。']);
+        else await say(['顧問のスタメン表。「ポイントガード：ケイ　シューティングガード：ハヤト　スモールフォワード：シュン　パワーフォワード：ミナト　センター：ダイチ　ベンチ：ユウマ」',
+                        '足首をけがしたハヤトの名前が、外を走り回るシューティングガードの位置に書かれている。']);
       },
       async bag() {
         showCut('gci_bag');
@@ -5752,9 +5769,9 @@
                    '手がかりが多いので、覚えきれないときは、紙やスマホのメモに書き出しながら考えるのがおすすめです。部員の名前・背番号・得意なこと・ボードの役目を、表にしてみましょう。読んだ文章は「ログ」で、部誌は「持ち物」から、もう一度見られます。',
                    miss.length ? `並べ方の手がかりは、部屋のあちこちにあります。まだ見ていない場所：${miss.join('、')}。` : 'メモには名前が書いていないものがあります。「誰のことか」は、部誌の部員名簿で確かめられます（持ち物から読み返せます）。',
                    '練習試合の記録は背番号だけです。部員名簿の背番号と見くらべると、誰の記録かわかります。けがでベンチになるのは誰か、から決めていきましょう。',
-                   'ボードの役目の「最後まで走り続ける」は、試合の終わりまで走る力のこと。「速攻で一番に走りこむ」は、足の速さのことです。'];
+                   'ボードの役目の「最後まで走り続ける」は、試合の終わりまで走る力のこと。「速攻では先頭を走る」は、足の速さのことです。'];
         // 答えに近いヒントは、2回並べ間違えてから出す
-        if (!miss.length && (R.taken.miss || 0) >= 2) t.push('ハヤトはけがでベンチ。外から決めた7番と11番のうち、残るのは11番のミナトでシューター。アシスト最多の5番ユウマが司令塔。いちばん背の高いダイチがゴール下。いちばん足の速いシュンは、最後まで走りきれないので中のフォワード。ケイの場所は、最後に残ったところです。');
+        if (!miss.length && (R.taken.miss || 0) >= 2) t.push('ハヤトはけがでベンチ。外から決めた7番と11番のうち、残るのは11番のミナトでシューティングガード。アシスト最多の5番ユウマがポイントガード。いちばん背の高いダイチがセンター。いちばん足の速いシュンは、最後まで走りきれないのでパワーフォワード。ケイの場所は、最後に残ったところです。');
         return t;
       }
       if (!R.know.has('logbook') || !R.know.has('bag')) return 'まだ調べていない場所がありそうです。';
@@ -6014,7 +6031,7 @@
     [['7/7', '佐藤・中村'], ['7/8', '水野・吉田（白石の代わり）'], ['7/9', '吉田・小林'], ['7/10', '加藤・伊藤'], ['7/11', '中村（水野の代わり）・山本']],
     [['7/14', '佐藤・中村'], ['7/15', '水野・伊藤（白石の代わり）'], null, null, null]];
   const ROSTER_ANSWER = TRACE_DAYS.slice().sort().join(',');
-  // 視力検査表：段ごとの輪の切れ目の向き。0.7の段の下にだけ、鉛筆の線（先生の覚え書き）
+  // 視力検査表：段ごとの輪の切れ目の向き。0.7の段の下にだけ、赤ペンの線（先生の覚え書き）
   const CHART = [['0.1', ['R']], ['0.2', ['U', 'L']], ['0.3', ['D', 'R', 'U']], ['0.4', ['L', 'D', 'R', 'U']], ['0.5', ['U', 'R', 'D', 'L']],
                  ['0.7', ['L', 'U', 'U', 'R']], ['1.0', ['D', 'L', 'R', 'D', 'U']]];
   const DIR_ANSWER = 'LUUR';
@@ -6031,7 +6048,9 @@
         const a = Math.asin(gap / 2 / r), x1 = cx + r * Math.cos(a), y1 = y - r * Math.sin(a), x2 = cx + r * Math.cos(a), y2 = y + r * Math.sin(a);
         out += `<path d="M${x1} ${y1} A${r} ${r} 0 1 0 ${x2} ${y2}" fill="none" stroke="#111" stroke-width="${sw}" transform="rotate(${rot} ${cx} ${y})"/>`;
       });
-      if (lab === '0.7') out += `<line x1="${x0 - r * 2}" y1="${y + r + 5}" x2="${x0 + (dirs.length - 1) * r * 3.2 + r * 2}" y2="${y + r + 6}" stroke="#9a948a" stroke-width="0.9" opacity=".7"/>`;
+      // 0.7の段の下に、赤ペンで手書きの下線（少しだけ波打たせる）
+      if (lab === '0.7') { const xa = x0 - r * 2, xb = x0 + (dirs.length - 1) * r * 3.2 + r * 2, yl = y + r + 5;
+        out += `<path d="M${xa} ${yl} Q${(xa * 3 + xb) / 4} ${yl - 1.2} ${(xa + xb) / 2} ${yl + 0.6} T${xb} ${yl + 1.4}" fill="none" stroke="#c8322a" stroke-width="1.8" stroke-linecap="round" opacity=".92"/>`; }
       y += r * 2 + 16;
     });
     return `<svg viewBox="0 0 300 ${y}" role="img" aria-label="視力検査表。大きさの違う輪が段ごとに並んでいる">${out}</svg>`;
@@ -6378,7 +6397,7 @@
         const c = await choose(['つまみを動かす', 'やめる']);
         if (c !== 0) return;
         const v = EASY() ? DIR_ANSWER : await dirLock();
-        if (EASY()) await say(['視力検査表の、鉛筆の線を引いた段のとおりに、つまみを動かした。左、上、上、右。']);
+        if (EASY()) await say(['視力検査表の、赤ペンの線を引いた段のとおりに、つまみを動かした。左、上、上、右。']);
         if (v === null) return;
         if (v !== DIR_ANSWER) { nmMark('puz'); await say(['ガチ。……錠は開かない。']); await tick(); return; }
         lockClick();
@@ -6472,8 +6491,8 @@
         if (!R.seen.has('desk1')) return ['部屋の中で、気になる場所を調べてみましょう。', 'ツムギの来室カードが、箱にないようです。どこかにしまわれていないでしょうか。'];
         return ['先生の机の引き出しには、上下左右にしか動かない錠がかかっています。錠のシールの絵は、何に似ていますか。',
                 'シールの「C」の形の輪は、視力検査で使う記号です。この部屋の掲示板を見てみましょう。',
-                '掲示板の視力検査表を、近くで見てみましょう。ひとつの段にだけ、鉛筆の線が引いてあります。',
-                '鉛筆の線のある段の輪の、切れ目の向きを、左から順に、つまみで入れます。',
+                '掲示板の視力検査表を、近くで見てみましょう。ひとつの段にだけ、赤ペンの線が引いてあります。',
+                '赤ペンの線のある段の輪の、切れ目の向きを、左から順に、つまみで入れます。',
                 '「0.7」の段。切れ目の向きは、左・上・上・右です。'];
       }
       if (!R.taken.key && !R.know.has('roster')) return ['引き出しの先生のメモ「いつもの赤十字の箱、二段目」。赤い十字の箱は、どこにありましたか。', '薬品棚のガラス戸の中を、もう一度見てみましょう。'];
@@ -7556,7 +7575,16 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menuPanel.hidden) setMenu(false); });
   ['btnMenu', 'btnWait', 'btnHowto'].forEach(id => $('#' + id).addEventListener('click', () => setMenu(false)));
   $('#btnHowto').onclick = () => { if (!busy) showHowto(false); };
-  $('#btnMenu').onclick = () => { advance = null; busy = false; showTitle(true); };
+  // タイトルへ戻る前に確認する（ほかの画面を開いているときは、そのまま戻る）
+  $('#btnMenu').onclick = async () => {
+    if (ov.hidden) {
+      const v = await uiWait(`<p class="eyebrow">メニュー</p><h2>タイトルに戻りますか？</h2>
+        <p class="note">ここまでの進み具合は、自動で記録されています。タイトルの「前回のつづきから」で再開できます。</p>`, '', ['タイトルに戻る', 'ゲームに戻る']);
+      closeOverlay();
+      if (v !== 0) return;
+    }
+    advance = null; busy = false; showTitle(true);
+  };
   $('#btnSave').onclick = e => { e.stopPropagation(); if (R && (!R.over || onRoof()) && !replay) showSlots('save'); };
 
   setChapter('art', false); newRun('art'); R.over = true; render(); idle();
