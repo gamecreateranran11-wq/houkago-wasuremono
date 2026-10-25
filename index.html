@@ -803,6 +803,7 @@
   .recall-row:hover { color: var(--blue); border-bottom-color: var(--blue); }
   .recall-row.off { color: var(--muted); cursor: default; }
   .recall-row .rc-res { font-size: 13px; color: var(--muted); }
+  .slot .not-yet { display: block; font-size: 11px; color: var(--akane); margin-top: 2px; }
   /* 読んでいるあいだ、枠の大きさを変えない（絵のあるページも、文の長さが違うページも同じ大きさ。長いときは文だけ動かせる） */
   .overlay.another-read .ov-card { max-width: 640px; height: min(88vh, 780px); }
   .overlay.another-read .ov-card > * { flex-shrink: 0; }
@@ -7147,6 +7148,9 @@
      その章から先の結果はなかったことになる。この周回で手に入れたわすれものは、この周回のうちは使えない（今までと同じ決まり）。
      調べたこと・話したことは覚えている。思い返した周回は、ノーミスに数えない ---------- */
   const RES_LABEL = { saved: 'ほどけた', vanished: '消えた', shut: '閉ざされた扉', died: '灯が消えた' };
+  // この周回で手に入れたわすれもの（棚には残るが、この周回のうちは心に届く言葉の手がかりにならない。思い返しで前の章に戻っても同じ）
+  const notYet = k => k !== 'me' && !!P.shelf[k] && !P.saved[k] && (P.shelfRun[k] || 0) >= (P.runNo || 1);
+  const NOT_YET_NOTE = 'この放課後で手に入れたわすれものです。「放課後を思い返す」で前の章に戻っても、この放課後のうちは使えません。次の放課後から、心に届く言葉の手がかりになります。';
   function recallSrc() {
     const live = Object.keys(P.cur.results).length || loadRun() || loadRoof();
     if (live) return { live: true, runNo: P.runNo || 1, cur: P.cur };
@@ -7164,7 +7168,7 @@
     });
     if (roofD) rows.push(`<button type="button" class="recall-row" data-i="${ORDER.length}"><span class="rc-ch">屋上　18:30</span><span class="rc-res"></span></button>`);
     openOverlay(`<p class="eyebrow">タイトル</p><h2>放課後を思い返す</h2>
-      <p class="note">${src.live ? '今の放課後' : 'さっきの放課後'}の、好きなところから思い返せます。</p>
+      <p class="note">${src.live ? '今の放課後' : 'さっきの放課後'}の、好きなところから思い返せます。この放課後で手に入れたわすれものは、戻っても、この放課後のうちは使えません。</p>
       <div class="recall-list">${rows.join('')}</div>
       <div class="row"><button type="button" class="btn" id="rcBack">戻る</button></div>`);
     card.querySelectorAll('.recall-row[data-i]').forEach(b => b.onclick = () => askRecall(src, +b.dataset.i, roofD));
@@ -7173,10 +7177,12 @@
   async function askRecall(src, i, roofD) {
     const roof = i >= ORDER.length, ch = roof ? null : CHAPTERS[ORDER[i]];
     const later = ORDER.slice(i).map(id => CHAPTERS[id]).filter(c => src.cur.results[c.key]).map(c => c.room);
+    const heldNow = ORDER.map(id => CHAPTERS[id]).filter(c => P.shelf[c.key] && !P.saved[c.key] && (P.shelfRun[c.key] || 0) >= src.runNo).map(c => `${c.name}の「${c.lost}」`);
     const v = await overlayWait(`<p class="eyebrow">放課後を思い返す</p><h2>${roof ? '屋上' : ch.label}から、思い返しますか？</h2>
       ${later.length ? `<p>${later.join('・')}の結果は、なかったことになります。</p>` : ''}
       ${src.live && (loadRun() || loadRoof()) ? '<p>今の放課後の続きは消えます。</p>' : ''}
-      <p class="note">調べたこと・話したことは、覚えています。この放課後で手に入れたわすれものは、この放課後のうちは使えません。</p>`, '', ['思い返す', 'やめる']);
+      ${heldNow.length ? `<p>この放課後で手に入れたわすれもの（${heldNow.join('・')}）は、わすれもの棚に残りますが、戻っても、この放課後のうちは使えません。次の放課後から使えます。</p>` : '<p class="note">この放課後で手に入れたわすれものは、戻っても、この放課後のうちは使えません。</p>'}
+      <p class="note">調べたこと・話したことは、覚えています。</p>`, '', ['思い返す', 'やめる']);
     if (v !== 0) return showRecall();
     const keys = ORDER.map(id => CHAPTERS[id].key), nm = { ...(src.cur.nm || {}), rewind: true };
     P.runNo = src.runNo;
@@ -7652,7 +7658,7 @@
         const isNew = P.shelfSeen[key] !== state;
         return `<button type="button" class="slot got${P.saved[key] ? ' saved' : ''}${isNew ? ' new' : ''}" data-k="${key}">
           <img class="thumb" src="${imgSrc(it.thumb)}" alt="">${isNew ? '<span class="tag">NEW</span>' : ''}
-          <span class="who">${who}</span><span class="ttl">${it.title}</span></button>`;
+          <span class="who">${who}</span><span class="ttl">${it.title}</span>${notYet(key) ? '<span class="not-yet">この放課後では使えない</span>' : ''}</button>`;
       }).join('')}</div>
       <p class="note">誰かが消えたとき、その子のわすれものがここに並びます。${savedN || albumKnowSaved() ? 'その子を救えたら、わすれものも姿を変えます。' : ''}</p>
       <div class="row"><button type="button" class="btn primary" id="sBack">戻る</button></div>`);
@@ -7664,7 +7670,7 @@
       const b = card.querySelector(`[data-k="${k}"]`);
       if (b) b.onclick = async () => {
         const it = ch.shelfItem(!!P.saved[k]);
-        await overlayWait(`<p class="eyebrow">${ch.name}のわすれもの</p><h2>${it.title}</h2>${it.body}`, '', ['戻る']);
+        await overlayWait(`<p class="eyebrow">${ch.name}のわすれもの</p><h2>${it.title}</h2>${it.body}${notYet(k) ? `<p class="note">${NOT_YET_NOTE}</p>` : ''}`, '', ['戻る']);
         showShelf();
       };
     });
