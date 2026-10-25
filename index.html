@@ -2908,7 +2908,8 @@
                    ['殴るよ', 'neg'], ['なんでそんなことするの', 'sei'], ['やる気、あんの？', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
                    ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['お前なんか、いらない', 'neg'],
                    ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['お姉ちゃんは、できたのに', 'sei'], ['ハルくんの分まで、生きなきゃね', 'nag'], ['頼まれてくれるよね？', 'sei'], ['お前の事なんて、どうでもいい', 'neg'], ['そういうの、めんどくさい', 'neg'], ['お前には言われたくない', 'neg'], ['あなたなら、できるよ', 'nag'], ['頑張って', 'nag'], ['笑ってれば、大丈夫', 'nag'], ['あなたは、強い子だから', 'nag']];
-    let fast = quick; box.onclick = () => { fast = true; };
+    // 押すと早回しにできるのは、2回目以降だけ（初めて見るときは、文章を進めるつもりで押しても速くしない）
+    let fast = quick; box.onclick = () => { if (quick) fast = true; };
     const drop = (t, cls) => {
       const e = document.createElement('span'); e.className = 'rw ' + cls + (cls === 'short' ? ' neg ' + rainFont() : ''); e.textContent = t;
       if (cls === 'short') { e.style.fontSize = (11 + Math.random() * 6) + 'px'; e.style.rotate = (Math.random() * 10 - 5).toFixed(1) + 'deg'; }
