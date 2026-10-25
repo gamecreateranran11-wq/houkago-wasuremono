@@ -797,6 +797,12 @@
   .title-screen.menu .title-side .note, .title-screen.menu .title-side .btn .sub { color: #5e5246; }
   .another-text { display: flex; flex-direction: column; gap: 10px; line-height: 1.95; }
   .another-text p { margin: 0; }
+  /* 放課後を思い返す：章の一覧 */
+  .recall-list { display: flex; flex-direction: column; gap: 2px; }
+  .recall-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 12px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+  .recall-row:hover { color: var(--blue); border-bottom-color: var(--blue); }
+  .recall-row.off { color: var(--muted); cursor: default; }
+  .recall-row .rc-res { font-size: 13px; color: var(--muted); }
   /* 読んでいるあいだ、枠の大きさを変えない（絵のあるページも、文の長さが違うページも同じ大きさ。長いときは文だけ動かせる） */
   .overlay.another-read .ov-card { max-width: 640px; height: min(88vh, 780px); }
   .overlay.another-read .ov-card > * { flex-shrink: 0; }
@@ -937,8 +943,26 @@
   function clearRun() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
   /* 屋上の途中経過（つづきから用）。文章を待つたびに、手動セーブと同じ形で自動保存し、屋上が終わったら消す */
   const ROOF_KEY = 'houkago-wasuremono-roof-v1';
+  // 屋上のはじまり（その周回で屋上に着いたときの状態）。屋上の結末のあとも残し、「放課後を思い返す」で屋上に戻るときに使う
+  const ROOF_START_KEY = 'houkago-wasuremono-roofstart-v1';
+  function saveRoofStart() {
+    try {
+      const o = JSON.parse(localStorage.getItem(ROOF_START_KEY) || 'null');
+      if (o && o.runNo === P.runNo) return;
+      localStorage.setItem(ROOF_START_KEY, JSON.stringify({ runNo: P.runNo, label: '屋上・18:30', run: scr.start, prog: scr.prog, resume: { key: scr.key, lines: 0, inputs: [] } }));
+    } catch (e) {}
+  }
+  function loadRoofStart() {
+    try {
+      const d = JSON.parse(localStorage.getItem(ROOF_START_KEY) || 'null');
+      if (!d || !d.run) return null;
+      const r = d.run; r.items = new Set(r.items); r.know = new Set(r.know); r.seen = new Set(r.seen || []); r.log = r.log || []; r.over = false;
+      return d;
+    } catch (e) { return null; }
+  }
   function saveRoof() {
     if (!onRoof() || replay) return;
+    saveRoofStart();
     try { localStorage.setItem(ROOF_KEY, JSON.stringify({ at: Date.now(), label: '屋上・18:30', mid: true, rain: !!rainNodes, wind: !!windNodes, run: scr.start, prog: scr.prog, resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs } })); } catch (e) {}
   }
   function loadRoof() {
@@ -2798,6 +2822,7 @@
   // 周回数はタイトルには出さず、内部の記録にとどめる
   function finishRun(count) {
     if (count) P.runs = (P.runs || 0) + 1;
+    P.lastRun = { runNo: P.runNo || 1, cur: JSON.parse(JSON.stringify(P.cur || { results: {} })) };   // 「放課後を思い返す」で、終えた周回の章に戻るため
     P.runNo = (P.runNo || 1) + 1; P.cur = { results: {} }; saveP(); clearRun();
   }
   // 本実装版に切り替えるときは RELEASE を true にする：タイトルの「試作版　第一章〜」をやめて「ver 〇〇」を小さく出し、
@@ -6961,6 +6986,9 @@
   }
   async function startRun(ch, opt = {}) {
     if (!P.diffSet && ch === ORDER[0] && !opt.skipPuzzle) await chooseDiff();
+    // 2周目以降の放課後に入るとき：黒い画面に、主人公の決意を短く出す（前の周回の終わり方と、持っていくわすれもので変える）
+    if (ch === ORDER[0] && !opt.skipPuzzle && !opt.recall && (P.runNo || 1) > 1 && !Object.keys(P.cur.results).length && !P.cur.resolved) { P.cur.resolved = true; saveP(); await voidWait(resolveLines()); }
+    if (opt.recall) await voidWait(opt.recall);
     closeOverlay(); clearRoof();
     busy = true; P.played = true; if (ch === 'infirmary') P.metTsumugi = true; saveP(); bgm(null); guest = null; guestRender();
     if (R && R.ch) keepMem();
@@ -6990,6 +7018,7 @@
         ${(save || roof) ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
+        ${recallSrc() ? '<button type="button" class="btn" id="tRecall">放課後を思い返す<span class="sub">好きな章から、やり直せます</span></button>' : ''}
         ${extrasAny() ? '<button type="button" class="btn" id="tExtra">おまけ</button>' : ''}
         ${redoHTML(save && save.run)}
         <button type="button" class="btn" id="tSet">設定<span class="sub">既読スキップ・文字の速さ・音量</span></button>
@@ -7021,7 +7050,8 @@
       rainSE(false, 0.8); windSE(false, 0.8); ov.classList.remove('rainy');
       loadSlot({ ...roof, rain: false, wind: false, resume: { key: roof.resume.key, lines: 0, inputs: [] } });
     };
-    if ($('#tShelf')) $('#tShelf').onclick = showShelf;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
+    if ($('#tShelf')) $('#tShelf').onclick = showShelf;
+    if ($('#tRecall')) $('#tRecall').onclick = showRecall;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
     if ($('#tExtra')) $('#tExtra').onclick = showExtras;
     $('#tSet').onclick = showSettings;
     if ($('#tLoad')) $('#tLoad').onclick = () => showSlots('load');
@@ -7101,6 +7131,67 @@
   }
   // タイトルの「やり直す」枠：ふだん押す大きなボタン（つづきから／〇〇へ向かう）と分けて、小さく控えめに出す
   // 押しても「つづきから」と同じ結果になるもの（消えるものがないもの）は出さない
+  // 2周目以降の決意の文
+  function resolveLines() {
+    const last = Object.values((P.lastRun && P.lastRun.cur && P.lastRun.cur.results) || {});
+    const carry = Object.keys(P.shelf || {}).some(k => k !== 'me' && P.shelf[k] && (P.shelfRun[k] || 0) < (P.runNo || 1));
+    const L = ['（……また、この放課後の入り口に立っている）'];
+    if (last.includes('vanished') || last.includes('died')) L.push('（届かなかった言葉を、まだ覚えている）');
+    else if (last.includes('shut')) L.push('（閉ざされた扉の向こうの顔を、まだ覚えている）');
+    else if (last.length) L.push('（見送った背中を、まだ覚えている）');
+    if (carry) L.push('（手の中に、あの子たちが残していったものがある）');
+    L.push('（……もう一度。今度は、最後まで聞く）');
+    return L;
+  }
+  /* ---------- 放課後を思い返す：今の周回（なければ、いちばん最近に終えた周回）の好きな章、または着いていれば屋上から、やり直す。
+     その章から先の結果はなかったことになる。この周回で手に入れたわすれものは、この周回のうちは使えない（今までと同じ決まり）。
+     調べたこと・話したことは覚えている。思い返した周回は、ノーミスに数えない ---------- */
+  const RES_LABEL = { saved: 'ほどけた', vanished: '消えた', shut: '閉ざされた扉', died: '灯が消えた' };
+  function recallSrc() {
+    const live = Object.keys(P.cur.results).length || loadRun() || loadRoof();
+    if (live) return { live: true, runNo: P.runNo || 1, cur: P.cur };
+    if (P.lastRun && Object.keys(P.lastRun.cur.results || {}).length) return { live: false, runNo: P.lastRun.runNo, cur: P.lastRun.cur };
+    return null;
+  }
+  const recallRoof = src => { const d = loadRoofStart(); return d && src && d.runNo === src.runNo ? d : null; };
+  function showRecall() {
+    const src = recallSrc(); if (!src) return showTitle();
+    const res = src.cur.results || {}, n = Object.keys(res).length, roofD = recallRoof(src);
+    const rows = ORDER.map((id, i) => {
+      const ch = CHAPTERS[id], r = res[ch.key], can = i <= Math.min(n, ORDER.length - 1);
+      if (!can) return `<div class="recall-row off"><span class="rc-ch">？？？</span></div>`;
+      return `<button type="button" class="recall-row" data-i="${i}"><span class="rc-ch">${ch.label}</span><span class="rc-res">${r ? RES_LABEL[r] || '' : (src.live ? '今の章' : '')}</span></button>`;
+    });
+    if (roofD) rows.push(`<button type="button" class="recall-row" data-i="${ORDER.length}"><span class="rc-ch">屋上　18:30</span><span class="rc-res"></span></button>`);
+    openOverlay(`<p class="eyebrow">タイトル</p><h2>放課後を思い返す</h2>
+      <p class="note">${src.live ? '今の放課後' : 'さっきの放課後'}の、好きなところから思い返せます。</p>
+      <div class="recall-list">${rows.join('')}</div>
+      <div class="row"><button type="button" class="btn" id="rcBack">戻る</button></div>`);
+    card.querySelectorAll('.recall-row[data-i]').forEach(b => b.onclick = () => askRecall(src, +b.dataset.i, roofD));
+    $('#rcBack').onclick = () => showTitle();
+  }
+  async function askRecall(src, i, roofD) {
+    const roof = i >= ORDER.length, ch = roof ? null : CHAPTERS[ORDER[i]];
+    const later = ORDER.slice(i).map(id => CHAPTERS[id]).filter(c => src.cur.results[c.key]).map(c => c.room);
+    const v = await overlayWait(`<p class="eyebrow">放課後を思い返す</p><h2>${roof ? '屋上' : ch.label}から、思い返しますか？</h2>
+      ${later.length ? `<p>${later.join('・')}の結果は、なかったことになります。</p>` : ''}
+      ${src.live && (loadRun() || loadRoof()) ? '<p>今の放課後の続きは消えます。</p>' : ''}
+      <p class="note">調べたこと・話したことは、覚えています。この放課後で手に入れたわすれものは、この放課後のうちは使えません。</p>`, '', ['思い返す', 'やめる']);
+    if (v !== 0) return showRecall();
+    const keys = ORDER.map(id => CHAPTERS[id].key), nm = { ...(src.cur.nm || {}), rewind: true };
+    P.runNo = src.runNo;
+    if (roof) P.cur = { ...JSON.parse(JSON.stringify(src.cur)), nm };
+    else { const r = {}; keys.slice(0, i).forEach(k => { if (src.cur.results[k]) r[k] = src.cur.results[k]; }); P.cur = { results: r, nm }; }
+    saveP(); clearRun(); clearRoof();
+    const lines = ['（……目を閉じて、あの放課後を、もう一度思い返す）'];
+    if (roof) {
+      await voidWait(lines);
+      rainSE(false, 0.8); windSE(false, 0.8);
+      loadSlot({ ...roofD, rain: false, wind: false, prog: { ...roofD.prog, shelf: { ...P.shelf }, shelfRun: { ...P.shelfRun }, runNo: P.runNo, cur: JSON.parse(JSON.stringify(P.cur)) } });
+      return;
+    }
+    startRun(ORDER[i], { recall: lines });
+  }
   function redoHTML(save) {
     const ch = nextCh(), first = CHAPTERS[ORDER[0]];
     const fresh = !save || (save.loop === 0 && save.ticks === 0 && !(save.know || []).length && !(save.items || []).length);
@@ -7321,7 +7412,7 @@
   // エンディングを見たときに呼ぶ（P.cur を消す前）。新しく取ったアチーブメントを返す
   function achGain(tag) {
     const n = (P.cur && P.cur.nm) || {}, got = [];
-    const clean = !n.chime && !n.hint && !n.miss && !n.puz;
+    const clean = !n.chime && !n.hint && !n.miss && !n.puz && !n.rewind;   // 思い返した（章に戻った）周回は、ノーミスに数えない
     ACH.forEach(([id, , , test]) => {
       if (P.ach[id]) return;
       if (id === 'perfect' ? (tag === 'TRUE' && clean) : test()) { P.ach[id] = Date.now(); got.push(id); }
@@ -7404,7 +7495,7 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.achPending = []; P.metTsumugi = false; P.album = {}; P.diffSet = false; P.touchMem = {}; saveP(); clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.achPending = []; P.metTsumugi = false; P.album = {}; P.diffSet = false; P.touchMem = {}; P.lastRun = null; saveP(); try { localStorage.removeItem(ROOF_START_KEY); } catch (e) {} clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
