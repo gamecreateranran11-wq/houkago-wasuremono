@@ -131,6 +131,7 @@
   .more { position: absolute; right: 14px; bottom: 6px; font-size: 11px; color: var(--akane); animation: blink 1.2s infinite; }
   @keyframes blink { 50% { opacity: .2; } }
   .choices { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .msg.lifted { z-index: 6; box-shadow: 0 -8px 18px rgba(40, 30, 20, .22); }
   .choice { text-align: left; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 10px 14px; line-height: 1.6; cursor: pointer; }
   .choice:hover { border-color: var(--akane); }
 
@@ -1028,6 +1029,20 @@
 
   /* ---------- message engine ---------- */
   const msg = $('#msg'), spk = $('#speaker'), txt = $('#text'), chs = $('#choices'), more = $('#more');
+  // 選択肢が文章欄に入りきらないとき（屋上の5択など）：文字は小さくせず、選んでいるあいだだけ文章欄を上へ広げて、
+  // 背景の絵の下の部分に重ねる（広げるのは絵の高さの6割まで）。選択肢が消えたら元に戻す
+  function fitChoices() {
+    msg.style.maxHeight = ''; msg.style.marginTop = ''; msg.classList.remove('lifted');
+    if (!chs.children.length) return;
+    const over = msg.scrollHeight - msg.clientHeight;
+    if (over <= 0) return;
+    const sc = $('#scene'), room = sc ? sc.getBoundingClientRect().height * 0.6 : 0, lift = Math.ceil(Math.min(over + 2, room));
+    if (lift <= 0) return;
+    msg.style.maxHeight = (msg.clientHeight + lift) + 'px'; msg.style.marginTop = (-lift) + 'px'; msg.classList.add('lifted');
+    msg.scrollTop = msg.scrollHeight;
+  }
+  new MutationObserver(fitChoices).observe(chs, { childList: true });
+  addEventListener('resize', () => { if (chs.children.length) fitChoices(); });
   let advance = null;
   /* 会話の途中セーブ：ストーリー（調べる・持ち物・ヒント・導入など）を始めた時点の状態と、
      そこから出した文章の数・選んだ答えを記録しておく。ロードすると、始めた時点から同じ答えで
