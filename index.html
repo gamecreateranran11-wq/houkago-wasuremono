@@ -2887,11 +2887,14 @@
   // 一度見た演出（言葉の雨・遅れて混ざる言葉）は、既読スキップがONなら早回しする
   // 言葉の演出の速さ：文字の速さの設定に合わせる（「遅い」が元の速さ）
   const fxRate = () => ({ slow: 1, normal: .72, fast: .5, instant: .32 })[P.textSpeed] || .72;
+  // 言葉の雨と、遅れて混ざる言葉の速さ。文字の速さが遅いときだけ、さらにゆっくり。それ以外は同じ（読める速さ）
+  const rainRate = () => P.textSpeed === 'slow' ? 1.4 : 1.15;
   function fxSkip(key) { const k = 'fx|' + key, seen = READ.has(k); markRead(k); return !!(P.skip && seen && !(R && R.forceRead)); }
   async function wordRain() {
     if (replay) return;   // 早送り中は出さない
-    // 初めて見るときは、既読スキップがONでも、文字の速さ（設定）に合わせて流す。2回目以降で既読スキップがONなら、早回し
-    const quick = fxSkip('wordRain'), r = fxRate();
+    // 初めて見るときは、既読スキップがONでも早回しにせず、ゆっくり流す（文字の速さが「早い」「一括」でも、言葉を読める速さより速くしない）。
+    // 2回目以降で既読スキップがONなら、早回し
+    const quick = fxSkip('wordRain'), r = rainRate();
     const box = fxLayer('rain');
     spk.hidden = true; txt.textContent = ''; more.hidden = true;   // 言葉の雨に切り替わるとき、前の文を消す
     // 短い言葉は、届いた言葉（ほかの人から言われた言葉）から切り出したものだけ。どれも否定。自分で自分に向けた言葉は、もう一人の自分の台詞に取っておく
@@ -2952,7 +2955,7 @@
   // 遅れて混ざってくる、正論と慰めの言葉（小さく、一つずつ）
   async function lateWords(list) {
     if (replay) return;   // 早送り中は出さない
-    const quick = fxSkip('late|' + list[0][0]), r = fxRate();
+    const quick = fxSkip('late|' + list[0][0]), r = rainRate();
     const box = fxLayer('late');
     for (const [l, k] of list) {
       const e = document.createElement('p'); e.className = `lw ${k} ${rainFont()}`; e.textContent = `「${l}」`; box.appendChild(e);
