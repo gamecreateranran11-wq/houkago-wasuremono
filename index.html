@@ -2542,10 +2542,10 @@
       s1.start(t); s2.start(t + 0.01);
       // 屋上のコンクリートと鉄柵に、雨が打ちつける音（粒ごとの音は出さず、重い雨の厚みとゆっくりした強弱で）
       const s3 = a.createBufferSource(), f3 = a.createBiquadFilter(), g3 = a.createGain();
-      s3.buffer = getNoise(); s3.loop = true; f3.type = 'bandpass'; f3.frequency.value = 520; f3.Q.value = 0.6; g3.gain.value = MOB ? 0.35 : 0.55;
+      s3.buffer = getNoise(); s3.loop = true; f3.type = 'bandpass'; f3.frequency.value = MOB ? 1100 : 520; f3.Q.value = MOB ? 0.9 : 0.6; g3.gain.value = MOB ? 0.22 : 0.55;   // スマホは中低音の「ガー」が割れて聞こえるので、高めの細い音に
       s3.connect(f3).connect(g3).connect(g); s3.start(t + 0.02);
       // スマホは、ときどき雨足が弱まるすき間をつくる
-      const swell = () => { try { const n = a.currentTime; g3.gain.setTargetAtTime(MOB ? (Math.random() < 0.3 ? 0.08 : 0.25 + Math.random() * 0.2) : 0.45 + Math.random() * 0.3, n, MOB ? 0.5 : 0.35); } catch (e) {} };
+      const swell = () => { try { const n = a.currentTime; g3.gain.setTargetAtTime(MOB ? (Math.random() < 0.3 ? 0.05 : 0.16 + Math.random() * 0.12) : 0.45 + Math.random() * 0.3, n, MOB ? 0.5 : 0.35); } catch (e) {} };
       const timer = setInterval(swell, 700);
       // 水の跳ねる音（スマホだけ）：短く高い「ぴちゃ」を、ばらばらの間隔で
       const splash = at => { const b = a.createBufferSource(), f = a.createBiquadFilter(), sg = a.createGain();
