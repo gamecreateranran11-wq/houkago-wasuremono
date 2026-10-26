@@ -747,6 +747,7 @@
   .roll-title { font-size: 30px; letter-spacing: .22em; margin: 0 0 56px; }
   .roll-title.end { margin: 110px 0 0; }
   .roll-thanks { margin: 70px 0 0; font-size: 15.5px; color: #d6ccba; }
+  .roll-in .roll-care { margin: 90px auto 0; max-width: 34em; font-size: 12px; line-height: 2; letter-spacing: .06em; color: #a89f8f; }
   .roll-ff { position: absolute; right: 118px; bottom: 18px; background: none; border: 0; border-bottom: 1px solid #8f887c; color: #b9ad99; font: inherit; font-size: 13px; letter-spacing: .2em; padding: 6px 4px; cursor: pointer; animation: rise .8s ease both; }
   .roll-ff[aria-pressed="true"] { color: #e9e2d6; border-bottom-color: #e9e2d6; }
   .roll-skip { position: absolute; right: 18px; bottom: 18px; background: none; border: 0; border-bottom: 1px solid #8f887c; color: #b9ad99; font: inherit; font-size: 13px; letter-spacing: .2em; padding: 6px 4px; cursor: pointer; animation: rise .8s ease both; }
@@ -3070,9 +3071,28 @@
     }
     await endScene('rooftop');
     await say(['（……いつも、誰かを見ていた）', '（声をかけないまま。誰にも、見つけてもらえないまま）']);
-    // 7/15の現実の主人公（その日の行動だけ。理由と過去の出来事は書かない）。「なぜ手帳か」「なぜ屋上か」の筋を通し、最後の「鍵が挿さったまま」につなげる
+    // 小さな場面（名前のつく出来事ではなく、誰にでも重ねられる形）。もう一人の自分の「途中でやめる」「笑っていれば」「役に立っているあいだだけ」と対応
+    await say(['……ほかにも、思い出すことがあった。',
+               '「……最近、夜あんまり眠れなくて」と言いかけたら、「わかる！私も最近徹夜しててさ」と、話は相手のことになった。',
+               '最後まで聞いて、相づちを打った。自分の話の続きを、聞く人はいなかった。……それから、話しかけるのをやめた。']);
+    await say(['朝、身体が重くて、支度にいつもの倍かかった。学校までの道も、足がなかなか前に出なかった。',
+               '遅れて教室に入ると、「寝坊？」と笑われた。「うん、寝坊」と笑って返した。',
+               '……どう言えばいいのか、わからなかった。言っても、わかってもらえる気がしなかった。それでも、誰かに気づいてほしかった。']);
+    await say(['「二人組になって」と言われたとき、声をかけてもらえると、ほっとした。',
+               '相談されると、ほっとした。頼まれ事は、全部引き受けた。夜中のメッセージにも、すぐ返した。',
+               '……誰からも声がかからない日は、自分がここにいる意味が、わからなかった。']);
+    // 7/15の現実の主人公（その日の行動と、三者面談）。「なぜ手帳か」「なぜ屋上か」の筋を通し、最後の「鍵が挿さったまま」につなげる。
+    // 三者面談の母は悪者にしない：この子は大丈夫だと信じきっていて、本人に聞かない（残る理由も聞かない）。「助かってる」は本心
     await say(['……それから、今日のことを思い出した。',
-               '（三者面談で、職員室にはほとんど人がいなかった）', '（入口のキーボックスから、屋上の鍵を取った。貸出簿には、名前を書かなかった）',
+               '（三者面談の週で、職員室にはほとんど人がいなかった）', '（入口のキーボックスから、屋上の鍵を取った。貸出簿には、名前を書かなかった）',
+               '（それから、自分の面談があった）',
+               ['先生', 'ご家庭では、どうですか'], ['母', 'この子は、本当に手がかからなくて。……何も心配してないんです'],
+               ['先生', 'そうですよね。学校でも、いつも落ち着いてますし'],
+               '二人とも笑っていた。こちらを見て、こちらのことを話していた。', ['母', 'ね？'], '「……うん」',
+               '（誰も聞かなかった。今、どうなのかを）',
+               '教室を出ると、母が言った。', ['母', '……一緒に帰ろうか'], '「……少し、残ってく」', ['母', 'そう'],
+               '母はそれ以上聞かずに、少しだけ疲れた顔で笑った。', ['母', 'あなたが大丈夫だから、ほんとに助かってる'],
+               '（大丈夫じゃないって、言える場所は家にもなかった）',
                '（最後の放課後のつもりで、校舎を歩いた）', '（五つの部屋で、五人に会った）',
                '（別れぎわに、生徒手帳へ名前を書いてもらった。……自分の名前は、一度も言わなかった）',
                '（最終下校のチャイムの少し前。西の階段を上がって、屋上の扉に鍵を挿した）',
@@ -3317,7 +3337,8 @@
       ${sec('フォント', ['Shippori Mincho B1', 'Klee One', 'Zen Kurenaido', 'Yomogi', 'Zen Kaku Gothic New'])}
       <section><p class="sub">いずれも SIL Open Font License のもとで使用しています。</p></section>
       <p class="roll-thanks">最後まで、見届けてくれて、ありがとう。</p>
-      <p class="roll-title end">放課後のわすれもの</p></div>`;
+      <p class="roll-title end">放課後のわすれもの</p>
+      <p class="roll-care">話したくないことは、話さなくてもかまいません。話す力が残っていないときは、ただ休むだけでもいい。<br>それでも、もし誰かに聞いてほしくなったときは、身近な人や、相談できる場所があります。<br>声に出さなくても、文字で相談できるところもあります。</p></div>`;
   }
   function endRoll(tag) {
     return new Promise(res => {
