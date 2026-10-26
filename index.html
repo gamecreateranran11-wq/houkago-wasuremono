@@ -2536,7 +2536,7 @@
       s1.connect(f1).connect(g1).connect(g);
       // 低い「ゴー」（雨と風）
       const s2 = a.createBufferSource(), f2 = a.createBiquadFilter(), g2 = a.createGain();
-      s2.buffer = getNoise(); s2.loop = true; f2.type = 'lowpass'; f2.frequency.value = MOB ? 320 : 380; g2.gain.value = MOB ? 0.38 : 0.75;
+      s2.buffer = getNoise(); s2.loop = true; f2.type = 'lowpass'; f2.frequency.value = MOB ? 300 : 380; g2.gain.value = MOB ? 0.14 : 0.75;
       s2.connect(f2).connect(g2).connect(g);
       const lfo = a.createOscillator(); lfo.frequency.value = 0.001; lfo.start(t);
       s1.start(t); s2.start(t + 0.01);
@@ -2555,14 +2555,16 @@
         b.connect(f).connect(sg).connect(g); b.start(at, Math.random() * 0.8); b.stop(at + d + 0.02); };
       const timer2 = MOB ? setInterval(() => { try { const n = a.currentTime; const k = Math.random() < 0.5 ? 1 : 2 + Math.floor(Math.random() * 2);
         for (let i = 0; i < k; i++) splash(n + 0.03 + Math.random() * 0.3); } catch (e) {} }, 320) : 0;
-      rainNodes = { g, s1, s2, s3, lfo, timer, timer2, base: 0.42 };
+      rainNodes = { g, g2, mob: MOB, s1, s2, s3, lfo, timer, timer2, base: 0.42 };
     } catch (e) {}
   }
   // 雨が強くなる（もう一人の自分の独白の途中）
   function rainHeavier(k = 1.45, sec = 3) {
     if (replay || !rainNodes) return;
     try { const a = audio(), t = a.currentTime, g = rainNodes.g; rainNodes.base *= k;
-      g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(rainNodes.base * seMul(), t + sec); } catch (e) {}
+      g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(rainNodes.base * seMul(), t + sec);
+      // スマホは低い「ゴー」を強めない（全体を上げた分だけ下げて、もとの大きさのまま）
+      if (rainNodes.mob) { const g2 = rainNodes.g2; g2.gain.cancelScheduledValues(t); g2.gain.setValueAtTime(g2.gain.value, t); g2.gain.linearRampToValueAtTime(g2.gain.value / k, t + sec); } } catch (e) {}
   }
   function bounce(n = 1) {
     if (!P.sound || replay) return;
