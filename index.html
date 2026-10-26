@@ -887,7 +887,7 @@
     return { shelf: {}, runs: 0, endings: {}, sound: true };
   })();
   P.shelf = P.shelf || {}; P.endings = P.endings || {}; P.saved = P.saved || {};
-  // cleared：今回のプレイで朝を迎えた子（章の開放に使う。「美術室からやり直す」で消える）／saved：実績（それでも残る）
+  // cleared：今回のプレイで朝を迎えた子（章の開放に使う。周回の終わり・「放課後を思い返す」で消える）／saved：実績（それでも残る）
   P.cleared = P.cleared || { ...P.saved };
   // shut：今回のプレイで部屋から閉め出された子。最後の放課後のエンディングを迎えるまで、その章には戻れない
   P.shut = P.shut || {};
@@ -7087,7 +7087,6 @@
         ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
         ${recallSrc() ? '<button type="button" class="btn" id="tRecall">放課後を思い返す<span class="sub">好きな章から、やり直せます</span></button>' : ''}
         ${extrasAny() ? '<button type="button" class="btn" id="tExtra">おまけ</button>' : ''}
-        ${redoHTML(save && save.run)}
         <button type="button" class="btn" id="tSet">設定<span class="sub">既読スキップ・文字の速さ・音量</span></button>
         <button type="button" class="btn-reset" id="tWipe">プレイデータをリセット</button>
         <p class="note">この作品には、自傷・自死をほのめかす描写・事故死・いじめ・罵倒や暴言・家庭や部活動での心理的虐待（体罰を含む）を示唆する表現が含まれます。</p>
@@ -7106,7 +7105,6 @@
     if (rainy) { if (audioReady) rainSE(true, 2); } else rainSE(false, 2);
     bgm('title');
     if ($('#tGo')) $('#tGo').onclick = () => goRoom();
-    if ($('#tReset')) $('#tReset').onclick = () => resetAll();
     $('#tWipe').onclick = () => wipeAll();
     if (save) $('#tCont').onclick = () => save.prog ? loadSlot(save) : continueRun(save.run);
     if (roof) $('#tRoof').onclick = () => loadSlot(roof);
@@ -7264,23 +7262,6 @@
     }
     startRun(ORDER[i], { recall: lines });
   }
-  function redoHTML(save) {
-    const ch = nextCh(), first = CHAPTERS[ORDER[0]];
-    const fresh = !save || (save.loop === 0 && save.ticks === 0 && !(save.know || []).length && !(save.items || []).length);
-    const shelfN = Object.keys(P.shelf).length, doneN = Object.keys(P.cur.results).length;
-    const rows = [];
-    if (save && !fresh) rows.push(`<button type="button" class="btn-sub" id="tGo">${ch.room}を${hm(ch.startMin || 0)}からやり直す<span class="sub">今の放課後の続きは消えます（わすれもの棚は残ります）</span></button>`);
-    if (shelfN || doneN || (save && !fresh && ch.id !== first.id)) {
-      // わすれものを持っていて、周回を一度でも終えたあとなら、引き継ぐかどうかを押したあとで選ぶ。1周目はこれまでどおり棚も空にする
-      const pick = shelfN && runEnded();
-      const lost = [shelfN && !pick ? 'わすれもの棚' : '', doneN ? 'この周回の記録' : '', save && !fresh ? '今の続き' : ''].filter(Boolean).join('・');
-      const sub = [lost ? `${lost}が消えます` : '', pick ? 'わすれものを持っていくか選べます' : ''].filter(Boolean).join('。');
-      rows.push(`<button type="button" class="btn-sub" id="tReset">${first.room}からやり直す<span class="sub">${sub}</span></button>`);
-    }
-    return rows.length ? `<div class="title-redo"><span class="label">やり直す</span>${rows.join('')}</div>` : '';
-  }
-  // 周回を一度でも終えたか（5章を終えてエンディングを迎えた、または章の途中のBADで放課後が終わった）。BAD1は章のやり直しなので数えない
-  const runEnded = () => !!(P.runs || Object.keys(P.endings || {}).some(t => t !== 'BAD1'));
   /* ---------- アルバム（おまけ）：ストーリーの中で見た一枚絵と、わすれもの（姿を変える前と後を並べて）を、あとから見返せる。
      調べるときのカットインは入れない。見ていないものは「？？？」。1つ見るまで、タイトルにボタンを出さない ---------- */
   // [id, 画像, 章, 題]（章の順。ミオとツムギの校門・仲直り・TRUEなどは、絵ができたらここに足す）
@@ -7519,9 +7500,6 @@
       <div class="row"><button type="button" class="btn primary" id="achBack">戻る</button></div>`);
     $('#achBack').onclick = () => showExtras();
   }
-  // 一度でも遊んだことがあるか（初めてのときは「美術室からやり直す」を出さない）
-  const played = () => !!(P.played || P.runs || loadRun() || SLOTS.some(n => readSlot(n))
-    || Object.keys(P.shelf).length || Object.keys(P.cur.results).length);
   function saveLabel(d) {
     const sm = (CHAPTERS[d.ch] || ART).startMin || 0;
     const time = d.st === 'unraveled' ? `${hm(sm + SPAN)}過ぎ` : hm(sm + d.ticks * MIN_PER_TICK);
@@ -7534,7 +7512,7 @@
     const RES = { saved: 'ほどけた', shut: '閉ざされた扉', vanished: '消えた', died: '明かりが消えた' };
     return ORDER.map(id => CHAPTERS[id]).filter(ch => P.cur.results[ch.key]).map(ch => `${ch.room}：${RES[P.cur.results[ch.key]]}`).join('　');
   }
-  // 「〇〇へ向かう」／「〇〇の放課後をやり直す」：わすれもの棚や記録は引き継いだまま、次の教室を17:00（その章のはじめ）から始める
+  // 「〇〇へ向かう」：わすれもの棚や記録は引き継いだまま、次の教室を17:00（その章のはじめ）から始める
   async function goRoom() {
     const ch = nextCh();
     if (loadRun()) {
@@ -7543,24 +7521,6 @@
       if (v !== 0) return showTitle();
     }
     startRun(ch.id);
-  }
-  // 美術室からやり直す：わすれもの棚と途中の放課後を消して、最初の教室から始める（朝を迎えた記録などの実績は残す）
-  async function resetAll() {
-    const room = CHAPTERS[ORDER[0]].room;
-    const has = Object.keys(P.shelf || {}).some(k => P.shelf[k]);
-    // わすれものを持っていないとき・まだ一度も周回を終えていないときは、引き継ぐかどうかの選択は出さない（棚も空にする）
-    const v = has && runEnded()
-      ? await uiWait(`<p class="eyebrow">${room}からやり直す</p><h2>わすれものを、持っていきますか？</h2>
-      <p>途中の放課後と、この周回で終えた教室の記録は消えます。${room}から順番に始まります。</p>
-      <p>わすれものを持っていくと、その子の手がかりを覚えたまま始められます。置いていくと、わすれもの棚も空になります。</p>
-      <p class="note">救えた実績・見たエンディング・周回数は残ります。</p>`, '', ['持っていく', '置いていく（棚を空にする）', 'やめる'])
-      : await uiWait(`<p class="eyebrow">${room}からやり直す</p><h2>${room}から、もう一度始めますか？</h2>
-      <p>${has ? 'わすれもの棚と、' : ''}途中の放課後と、この周回で終えた教室の記録が消えます。${room}から順番に始まります。</p>
-      <p class="note">救えた実績・見たエンディング・周回数は残ります。</p>`, '', ['やり直す', 'やめる']).then(i => i === 0 ? 1 : 2);
-    if (v !== 0 && v !== 1) return showTitle();
-    if (v === 1) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.mem = {}; }
-    P.cur = { results: {} }; P.runNo = (P.runNo || 1) + 1; saveP(); clearRun();
-    startRun('art');
   }
   // プレイデータをリセット：実績も含めたすべてのプレイデータを消す
   async function wipeAll() {
