@@ -525,6 +525,8 @@
   .fade p { animation: rise .9s ease both; }
   .fade p:nth-child(2) { animation-delay: .8s; } .fade p:nth-child(3) { animation-delay: 1.6s; }
   .fade p:nth-child(4) { animation-delay: 2.4s; } .fade p:nth-child(5) { animation-delay: 3.2s; }
+  .fade p:nth-child(6) { animation-delay: 4s; } .fade p:nth-child(7) { animation-delay: 4.8s; } .fade p:nth-child(8) { animation-delay: 5.6s; }
+  .fade p:nth-child(9) { animation-delay: 6.4s; } .fade p:nth-child(10) { animation-delay: 7.2s; }
   @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
 
   .log { list-style: none; margin: 0; padding: 0 4px 0 0; max-height: 58vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
@@ -2674,7 +2676,7 @@
   function voidWait(lines) {
     if (replay) return Promise.resolve();   // ロード直後の早送り中は出さない
     const d = reduce ? 0 : (0.8 * (lines.length - 1) + 1.6);
-    const pr = uiWait(`<div class="fade void-text">${lines.map(l => `<p>${l}</p>`).join('')}</div>`, 'void', ['▼']);
+    const pr = uiWait(`<div class="fade void-text">${lines.map((l, i) => `<p style="animation-delay:${(0.8 * i).toFixed(1)}s">${l}</p>`).join('')}</div>`, 'void', ['▼']);   // 何行あっても1行ずつ出す（CSSの nth-child は10行目まで）
     card.style.setProperty('--void-delay', d + 's');
     // 文が全部出てからは、▼だけでなく画面のどこを押しても進める
     const tm = setTimeout(() => { ov.onclick = () => { const b = card.querySelector('[data-v]'); if (b) b.click(); }; }, d * 1000 + 600);
