@@ -2521,12 +2521,14 @@
       if (!on) {
         if (rainNodes) {
           const a = audio(), g = rainNodes.g, t = a.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0.0001, t + fade);
-          const r = rainNodes; rainNodes = null; clearInterval(r.timer); setTimeout(() => { try { r.s1.stop(); r.s2.stop(); r.s3.stop(); r.lfo.stop(); } catch (e) {} }, fade * 1000 + 300);
+          const r = rainNodes; rainNodes = null; clearInterval(r.timer); clearInterval(r.timer2); setTimeout(() => { try { r.s1.stop(); r.s2.stop(); r.s3.stop(); r.lfo.stop(); } catch (e) {} }, fade * 1000 + 300);
         }
         return;
       }
       if (rainNodes || !P.sound) return;
       const a = audio(), dst = out(), t = a.currentTime;
+      // スマホ：小さなスピーカーで曲と重なると、切れ目のない雨の音が音割れのように聞こえるので、低い音と厚みを減らし、強弱に間をあけて、水の跳ねる音を足す
+      const MOB = matchMedia('(pointer: coarse)').matches;
       const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.42 * seMul(), t + 1.8); g.connect(dst);
       // 遠くの雨の「サー」（弱め。砂嵐に聞こえないように高い成分を落とす）
       const s1 = a.createBufferSource(), f1 = a.createBiquadFilter(), g1 = a.createGain();
@@ -2534,17 +2536,26 @@
       s1.connect(f1).connect(g1).connect(g);
       // 低い「ゴー」（雨と風）
       const s2 = a.createBufferSource(), f2 = a.createBiquadFilter(), g2 = a.createGain();
-      s2.buffer = getNoise(); s2.loop = true; f2.type = 'lowpass'; f2.frequency.value = 380; g2.gain.value = 0.75;
+      s2.buffer = getNoise(); s2.loop = true; f2.type = 'lowpass'; f2.frequency.value = MOB ? 320 : 380; g2.gain.value = MOB ? 0.38 : 0.75;
       s2.connect(f2).connect(g2).connect(g);
       const lfo = a.createOscillator(); lfo.frequency.value = 0.001; lfo.start(t);
       s1.start(t); s2.start(t + 0.01);
       // 屋上のコンクリートと鉄柵に、雨が打ちつける音（粒ごとの音は出さず、重い雨の厚みとゆっくりした強弱で）
       const s3 = a.createBufferSource(), f3 = a.createBiquadFilter(), g3 = a.createGain();
-      s3.buffer = getNoise(); s3.loop = true; f3.type = 'bandpass'; f3.frequency.value = 520; f3.Q.value = 0.6; g3.gain.value = 0.55;
+      s3.buffer = getNoise(); s3.loop = true; f3.type = 'bandpass'; f3.frequency.value = 520; f3.Q.value = 0.6; g3.gain.value = MOB ? 0.35 : 0.55;
       s3.connect(f3).connect(g3).connect(g); s3.start(t + 0.02);
-      const swell = () => { try { const n = a.currentTime; g3.gain.setTargetAtTime(0.45 + Math.random() * 0.3, n, 0.35); } catch (e) {} };
+      // スマホは、ときどき雨足が弱まるすき間をつくる
+      const swell = () => { try { const n = a.currentTime; g3.gain.setTargetAtTime(MOB ? (Math.random() < 0.3 ? 0.08 : 0.25 + Math.random() * 0.2) : 0.45 + Math.random() * 0.3, n, MOB ? 0.5 : 0.35); } catch (e) {} };
       const timer = setInterval(swell, 700);
-      rainNodes = { g, s1, s2, s3, lfo, timer, base: 0.42 };
+      // 水の跳ねる音（スマホだけ）：短く高い「ぴちゃ」を、ばらばらの間隔で
+      const splash = at => { const b = a.createBufferSource(), f = a.createBiquadFilter(), sg = a.createGain();
+        b.buffer = getNoise(); f.type = 'bandpass'; f.frequency.value = 1800 + Math.random() * 2600; f.Q.value = 2.5 + Math.random() * 2;
+        const v = 0.25 + Math.random() * 0.35, d = 0.04 + Math.random() * 0.07;
+        sg.gain.setValueAtTime(0.0001, at); sg.gain.linearRampToValueAtTime(v, at + 0.004); sg.gain.exponentialRampToValueAtTime(0.0001, at + d);
+        b.connect(f).connect(sg).connect(g); b.start(at, Math.random() * 0.8); b.stop(at + d + 0.02); };
+      const timer2 = MOB ? setInterval(() => { try { const n = a.currentTime; const k = Math.random() < 0.5 ? 1 : 2 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < k; i++) splash(n + 0.03 + Math.random() * 0.3); } catch (e) {} }, 320) : 0;
+      rainNodes = { g, s1, s2, s3, lfo, timer, timer2, base: 0.42 };
     } catch (e) {}
   }
   // 雨が強くなる（もう一人の自分の独白の途中）
