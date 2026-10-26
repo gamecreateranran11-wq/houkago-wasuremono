@@ -7576,7 +7576,16 @@
   async function continueRun(d, resume) {
     closeOverlay();
     busy = true;
-    await setChapter(d.ch);
+    const toRoof = !!(resume && resume.key && resume.key.startsWith('roof:'));
+    await setChapter(d.ch, !toRoof);
+    // 屋上から再開するとき：保健室の絵を読みこませず、先に屋上の絵を読み終えてから始める（回線が遅いと、保健室の絵の上に屋上の絵が重なって出ていた）
+    if (toRoof) {
+      const bg = $('#bgImg');
+      $('#sitFig').classList.add('gone'); $('#loading').hidden = false;
+      bg.src = 'img/rooftop.webp';
+      await Promise.all([bg.decode().catch(() => {}), FONTS_READY]);
+      $('#loading').hidden = true;
+    }
     R = d; busy = false;
     if (C.id === 'infirmary' && R.taken && R.taken.dark) setDark(true);  // 明かりを消したまま中断していたら、消したまま再開する
     render();
