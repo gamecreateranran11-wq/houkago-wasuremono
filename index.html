@@ -2551,7 +2551,8 @@
       const s3 = a.createBufferSource(), f3 = a.createBiquadFilter(), g3 = a.createGain();
       s3.buffer = getLongNoise(); s3.loop = true; f3.type = 'bandpass'; f3.frequency.value = 520; f3.Q.value = 0.6; g3.gain.value = 0.55;
       s3.connect(f3).connect(g3).connect(g); s3.start(t + 0.02, 4.7);
-      const swell = () => { try { const n = a.currentTime; g3.gain.setTargetAtTime(0.45 + Math.random() * 0.3, n, 0.35); } catch (e) {} };
+      const st = { hv: 1 };   // 打ちつける音の強さの倍率（スマホで雨が強まると上がる）
+      const swell = () => { try { const n = a.currentTime; g3.gain.setTargetAtTime((0.45 + Math.random() * 0.3) * st.hv, n, 0.35); } catch (e) {} };
       const timer = setInterval(swell, 700);
       // 水の跳ねる音（スマホだけ）：短く高い「ぴちゃ」を、ばらばらの間隔で
       const splash = at => { const b = a.createBufferSource(), f = a.createBiquadFilter(), sg = a.createGain();
@@ -2561,7 +2562,7 @@
         b.connect(f).connect(sg).connect(g); b.start(at, Math.random() * 0.8); b.stop(at + d + 0.02); };
       const timer2 = MOB ? setInterval(() => { try { const n = a.currentTime; const k = Math.random() < 0.5 ? 1 : 2 + Math.floor(Math.random() * 2);
         for (let i = 0; i < k; i++) splash(n + 0.03 + Math.random() * 0.3); } catch (e) {} }, 320) : 0;
-      rainNodes = { g, s1, s2, s3, lfo, timer, timer2, base: 0.42 };
+      rainNodes = { g, g1, f1, st, mob: MOB, s1, s2, s3, lfo, timer, timer2, base: 0.42 };
     } catch (e) {}
   }
   // 雨が強くなる（もう一人の自分の独白の途中）
@@ -2570,7 +2571,12 @@
     clearInterval(rainNodes.timer2); rainNodes.timer2 = 0;   // スマホ：雨が強まったら、水の跳ねる音は止める
     try { const a = audio(), t = a.currentTime, g = rainNodes.g; rainNodes.base *= k;
       g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(rainNodes.base * seMul(), t + sec);
- } catch (e) {}
+      // スマホ：音量を上げるだけだと音をそろえる処理で抑えられ、跳ねる音が消えた分かえって弱く聞こえるので、「サー」を高く・大きくし、打ちつける音も強める
+      if (rainNodes.mob) { const { g1, f1 } = rainNodes; rainNodes.st.hv *= 1.6;
+        g1.gain.cancelScheduledValues(t); g1.gain.setValueAtTime(g1.gain.value, t); g1.gain.linearRampToValueAtTime(g1.gain.value * 3.2, t + sec);
+        f1.frequency.cancelScheduledValues(t); f1.frequency.setValueAtTime(f1.frequency.value, t); f1.frequency.linearRampToValueAtTime(2200, t + sec);
+        f1.Q.setValueAtTime(0.6, t); }
+    } catch (e) {}
   }
   function bounce(n = 1) {
     if (!P.sound || replay) return;
