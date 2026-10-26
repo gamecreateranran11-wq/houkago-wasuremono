@@ -899,6 +899,8 @@
   P.mem = P.mem || {};
   // touchMem：ほどけなくても心に触れたときに受け取った、主人公の記憶のかけら（章ごとに一度だけ出す）
   P.touchMem = P.touchMem || {};
+  // said：章の対話で選んだ言葉（周回をまたいで残す）。wrong＝正論・慰める・追い詰める、yori＝寄り添う・わすれものの言葉。屋上の言葉の雨ともう一人の自分の台詞に混ぜる
+  P.said = P.said && P.said.wrong ? P.said : { wrong: [], yori: [] };
   // 謎解きの難しさ：normal（普通）／easy（やさしい）。やさしいは、3〜5章の手順だけの謎（本の並べ替え・マグネット・方向の錠・照らし合わせ）を自動で解く。
   // 物語や背景がわかる手がかり（貸出記録・部誌・来室カード・窓の跡など）は、どちらでも自分で調べる
   P.diff = P.diff === 'easy' ? 'easy' : 'normal';
@@ -2934,7 +2936,7 @@
   const RAIN_RATE = { fast: .5, normal: .72, slow: 1, slower: 1.3 };
   const rainRate = () => RAIN_RATE[RAIN_SPEED[P.textSpeed] || 'slow'];
   function fxSkip(key) { const k = 'fx|' + key, seen = READ.has(k); markRead(k); return !!(P.skip && seen && !(R && R.forceRead)); }
-  async function wordRain() {
+  async function wordRain(extra = []) {
     if (replay) return;   // 早送り中は出さない
     // 初めて見るときは、既読スキップがONでも早回しにせず、雨の速さ（文字の速さより一段階ゆっくり）で流す。2回目以降で既読スキップがONなら、早回し
     const quick = fxSkip('wordRain'), r = rainRate();
@@ -2951,6 +2953,8 @@
                    ['殴るよ', 'neg'], ['なんでそんなことするの', 'sei'], ['やる気、あんの？', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
                    ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['お前なんか、いらない', 'neg'],
                    ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['お姉ちゃんは、できたのに', 'sei'], ['ハルくんの分まで、生きなきゃね', 'nag'], ['頼まれてくれるよね？', 'sei'], ['お前の事なんて、どうでもいい', 'neg'], ['そういうの、めんどくさい', 'neg'], ['お前には言われたくない', 'neg'], ['あなたなら、できるよ', 'nag'], ['頑張って', 'nag'], ['笑ってれば、大丈夫', 'nag'], ['あなたは、強い子だから', 'nag']];
+    // 自分が章の対話で選んだ言葉も、言われてきた言葉に混ざって降ってくる（はじめの3つより後ろに）
+    extra.forEach(w => longs.splice(3 + Math.floor(Math.random() * (longs.length - 3)), 0, w));
     // 押すと早回しにできるのは、2回目以降だけ（初めて見るときは、文章を進めるつもりで押しても速くしない）
     let fast = quick; box.onclick = () => { if (quick) fast = true; };
     const drop = (t, cls) => {
@@ -3084,15 +3088,19 @@
     windSE(false, 3); await darkSwap('rooftop_rain'); rainSE(true); bgm('roofCore', 4);
     await say(['目を開けると、雨だった。', '大粒の雨が屋上を打っている。……いつから降っていたのか、わからない。', '手帳の白い行が、雨に濡れていく。',
                '雨の音に混じって、言葉が降ってきた。', '今日、五人が打ち明けてくれた言葉。……それから自分が、どこかで言われてきた言葉。']);
-    await wordRain();
+    const said = saidForRoof();
+    await wordRain(said.rain);
     // 言葉の雨が沈んだあと、雨の音だけの短い沈黙をはさんでから、遅れて混ざる言葉へ（強い演出を続けて重ねない）
     if (!replay) await sleep(1800);
-    await lateWords([['苦しいのは、あなただけじゃないよ', 'sei'], ['いつもヘラヘラしてるのに', 'neg'], ['簡単に泣かない方がいいよ', 'sei'], ['一時の感情に、流されないようにね', 'sei'],
-                     ['考えすぎだよ', 'nag'], ['私の方が辛い', 'sei'], ['かわいそう', 'nag'], ['これからも期待してるよ', 'nag'], ['もう、頑張らなくていいよ', 'nag'], ['時間が、解決してくれるんじゃないかな', 'nag'], ['昔の私に似てる。……でも大丈夫。今は、変われたから', 'nag']]);
+    const late1 = [['苦しいのは、あなただけじゃないよ', 'sei'], ['いつもヘラヘラしてるのに', 'neg'], ['簡単に泣かない方がいいよ', 'sei'], ['一時の感情に、流されないようにね', 'sei'],
+                     ['考えすぎだよ', 'nag'], ['私の方が辛い', 'sei'], ['かわいそう', 'nag'], ['これからも期待してるよ', 'nag'], ['もう、頑張らなくていいよ', 'nag'], ['時間が、解決してくれるんじゃないかな', 'nag'], ['昔の私に似てる。……でも大丈夫。今は、変われたから', 'nag']];
+    said.late.forEach((w, n) => late1.splice(2 + n * 3, 0, w));   // 自分が選んだ正論・慰めの言葉を、間をあけて混ぜる
+    await lateWords(late1);
     await say(['頭に誰かの手が置かれる感触がした。']);
     await lateWords([['まだ若いんだから、大丈夫', 'nag'], ['人生、これからだよ', 'nag'], ['生きてれば、いいことあるよ', 'nag']]);
     // ここから先の声は、主人公がいま考えていることではなく、ずっと頭の中にいた「もう一人の自分」の声。遊ぶ人は、選択肢でそれに答える
     const O = 'もう一人の自分';
+    if (said.rain.length || said.late.length) await say(['……自分があの子たちに言った言葉も、混ざっていた。']);
     await say(['どれが誰に向けられた言葉だったのか、もうわからなかった。', '雨が手帳の上で跳ねていた。',
                '雨の中で、声がした。……自分の声だった。', 'ずっと頭の中にいた、もう一人の自分の声。',
                [O, '言われたときは、傷ついたなんて、思わなかったよね'], [O, 'でも、ずっと、残ってた'],
@@ -3145,7 +3153,8 @@
                [[O, '……これから？'], [O, '今までずっと地獄だったのに、それを、まだ何十年も続けろっていうの'], [O, 'それは、自分に向けられた言葉じゃない。……綺麗事だよ']],
                [[O, '……わからないなら、放っておけばいいのに'], [O, 'みんな、そうしてきた'], [O, '……なのに、聞くの？'],
                 'もう一人の自分はそれきり黙った。……初めて誰かに聞いてもらった顔をしていた。']][t]);
-    await say([[O, '……ねえ。あの子たちには、言えたよね'], [O, '「つらかったんだね」って。「一人で抱えなくていい」って。……何度も'],
+    await say([[O, '……ねえ。あの子たちには、言えたよね'], ...(said.yori.length ? said.yori.map((t, n) => [O, `「${t}」${n === said.yori.length - 1 ? 'って。……何度も' : 'って'}`])
+                                   : [[O, '「つらかったんだね」って。「一人で抱えなくていい」って。……何度も']]),
                'もう一人の自分が近づいてくる気がした。胸ぐらをつかむような勢いで。',
                [O, 'どうして、自分には言えないの？'], [O, 'あの子たちにかけた言葉は、嘘だったの！？'], [O, '……なんとか言えよ！！'],
                '……声の最後が、かすれていた。',
@@ -3494,10 +3503,31 @@
       .map((o, n) => [o, n]).sort((x, y) => pos(x[0][1]) - pos(y[0][1]) || x[1] - y[1]).map(([o]) => o);
     const i = await choose(list.map(([t]) => t));
     const kind = list[i][1];
+    saidNote(list[i][0], kind, stage);
     if (stage === 1 && kind === 'yori') { R.touched = true; bgm(null); pendingCore = C.coreAt || 2; }   // coreAt：選択のあと何文目で核心の曲を始めるか（章ごと）
     if (stage >= 2 && (kind === 'yori' || kind === 'nagu' || kind === 'key')) R.touched = true;
     if (kind !== 'yori' && kind !== 'key') nmMark('miss');
     return kind;
+  }
+  // 選んだ言葉を覚えておく（同じ文は一度だけ。新しいものを後ろに、多すぎたら古いものから捨てる）
+  function saidNote(t, kind, stage) {
+    if (typeof t !== 'string' || !C || !CHAPTERS[C.id]) return;
+    const box = (kind === 'yori' || kind === 'key') ? P.said.yori : ['seiron', 'nagu', 'oitsu'].includes(kind) ? P.said.wrong : null;
+    if (!box) return;
+    const n = box.findIndex(e => e.t === t); if (n >= 0) box.splice(n, 1);
+    box.push({ t, k: kind, s: stage, c: C.id }); if (box.length > 30) box.shift();
+    saveP();
+  }
+  // 屋上で返す言葉：言葉の雨（短いもの。横に流れるので20字まで）／遅れて混ざる言葉（正論・慰める）／もう一人の自分が引く「寄り添う」の言葉（2つ。違う章から）
+  function saidForRoof() {
+    const mix = a => a.slice().sort(() => Math.random() - .5), cls = { seiron: 'sei', nagu: 'nag', oitsu: 'neg' };
+    const bare = t => t.replace(/^「|」$/g, '');   // 選択肢の文に「」がついていても、二重にしない
+    const wrong = mix(P.said.wrong).map(e => [bare(e.t).replace(/^……/, ''), cls[e.k]]);
+    const rain = wrong.filter(([t]) => t.length <= 20).slice(0, 3);
+    const late = wrong.filter(w => !rain.includes(w) && w[1] !== 'neg').slice(0, 3);
+    const yori = [], seen = new Set();
+    for (const e of mix(P.said.yori).sort((a, b) => (b.s >= 2) - (a.s >= 2))) { if (yori.length < 2 && !seen.has(e.c)) { seen.add(e.c); yori.push(bare(e.t)); } }
+    return { rain, late, yori };
   }
   // 最後の選択肢で「正論」「慰める」を選んだあと：わすれものがなければ心を閉ざしてループ、あれば3択
   // わすれものがないまま最後の段で行き詰まったとき：一度だけ、仕組みを伝える
@@ -7526,7 +7556,7 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.achPending = []; P.metTsumugi = false; P.album = {}; P.diffSet = false; P.touchMem = {}; P.lastRun = null; saveP(); try { localStorage.removeItem(ROOF_START_KEY); } catch (e) {} clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.achPending = []; P.metTsumugi = false; P.album = {}; P.diffSet = false; P.touchMem = {}; P.said = { wrong: [], yori: [] }; P.lastRun = null; saveP(); try { localStorage.removeItem(ROOF_START_KEY); } catch (e) {} clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
