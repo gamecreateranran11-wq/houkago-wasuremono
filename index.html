@@ -2551,7 +2551,7 @@
       const s3 = a.createBufferSource(), f3 = a.createBiquadFilter(), g3 = a.createGain();
       s3.buffer = getLongNoise(); s3.loop = true; f3.type = 'bandpass'; f3.frequency.value = 520; f3.Q.value = 0.6; g3.gain.value = 0.55;
       s3.connect(f3).connect(g3).connect(g); s3.start(t + 0.02, 4.7);
-      const st = { hv: 1 };   // 打ちつける音の強さの倍率（スマホで雨が強まると上がる）
+      const st = { hv: 1 };   // 打ちつける音の強さの倍率（雨が強まると上がる）
       const swell = () => { try { const n = a.currentTime; g3.gain.setTargetAtTime((0.45 + Math.random() * 0.3) * st.hv, n, 0.35); } catch (e) {} };
       const timer = setInterval(swell, 700);
       // 水の跳ねる音（スマホだけ）：短く高い「ぴちゃ」を、ばらばらの間隔で
@@ -2571,8 +2571,8 @@
     clearInterval(rainNodes.timer2); rainNodes.timer2 = 0;   // スマホ：雨が強まったら、水の跳ねる音は止める
     try { const a = audio(), t = a.currentTime, g = rainNodes.g; rainNodes.base *= k;
       g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(rainNodes.base * seMul(), t + sec);
-      // スマホ：音量を上げるだけだと音をそろえる処理で抑えられ、跳ねる音が消えた分かえって弱く聞こえるので、「サー」を高く・大きくし、打ちつける音も強める
-      if (rainNodes.mob) { const { g1, f1 } = rainNodes; rainNodes.st.hv *= 1.6;
+      // 音量を上げるだけだと音をそろえる処理で抑えられて強まって聞こえない（スマホは跳ねる音も消える）ので、「サー」を高く・大きくし、打ちつける音も強める
+      { const { g1, f1 } = rainNodes; rainNodes.st.hv *= 1.6;
         g1.gain.cancelScheduledValues(t); g1.gain.setValueAtTime(g1.gain.value, t); g1.gain.linearRampToValueAtTime(g1.gain.value * 3.2, t + sec);
         f1.frequency.cancelScheduledValues(t); f1.frequency.setValueAtTime(f1.frequency.value, t); f1.frequency.linearRampToValueAtTime(2200, t + sec);
         f1.Q.setValueAtTime(0.6, t); }
