@@ -7615,6 +7615,7 @@
     if (toRoof) {
       const bg = $('#bgImg');
       $('#sitFig').classList.add('gone'); $('#loading').hidden = false;
+      $('#clock').textContent = '18:30'; $('#remain').textContent = ''; $('#bells').style.visibility = 'hidden';   // 読みこみ中も、上の欄は屋上の表示（保健室の16:00とチャイムの丸を出さない）
       bg.src = 'img/rooftop.webp';
       await Promise.all([bg.decode().catch(() => {}), FONTS_READY]);
       $('#loading').hidden = true;
