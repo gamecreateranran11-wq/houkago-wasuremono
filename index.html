@@ -576,6 +576,8 @@
   @keyframes flash { 10% { opacity: .55; } 100% { opacity: 0; } }
 
   .scene.reset, .scene.reset * { transition: none !important; }
+  /* iPhoneのSafari（iOS 26〜）は、画面のいちばん上をぼかして表示するので、上の欄の時刻がぼやける。スマホでは、上の欄をぼかしの下まで下げる */
+  @media (pointer: coarse) { #app { padding-top: 30px; } }
   @media (max-width: 480px) {
     #clock { font-size: 19px; }
     .bar-actions button { padding: 5px 8px; font-size: 12px; }
