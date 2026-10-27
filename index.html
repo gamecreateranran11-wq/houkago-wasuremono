@@ -2698,13 +2698,18 @@
   }
   async function voidLines() { const t = VOID_LINES[C.id]; if (t) await voidWait(t); }
   // 黒い画面の文：文が一つずつ浮かび、全部出てから進むしるし（▼。本編の文章送りと同じ印）を出す
+  // 文の出る間隔と、1行が浮かぶ長さは文字の速さの設定に合わせる（「普通」が元の速さ。一括は全部の行をいっしょに出す）。
+  // 一度見た黒い画面は、既読スキップがONなら全部の行をすぐ出す
+  const VOID_SPEED = { instant: [0, .6], fast: [.45, .7], normal: [.8, .9], slow: [1.15, 1.1] };
   function voidWait(lines) {
     if (replay) return Promise.resolve();   // ロード直後の早送り中は出さない
-    const d = reduce ? 0 : (0.8 * (lines.length - 1) + 1.6);
-    const pr = uiWait(`<div class="fade void-text">${lines.map((l, i) => `<p style="animation-delay:${(0.8 * i).toFixed(1)}s">${l}</p>`).join('')}</div>`, 'void', ['▼']);   // 何行あっても1行ずつ出す（CSSの nth-child は10行目まで）
+    const quick = fxSkip('void|' + lines.join('|'));
+    const [step, dur] = quick ? [0, .3] : (VOID_SPEED[P.textSpeed] || VOID_SPEED.normal);
+    const d = reduce ? 0 : (step * (lines.length - 1) + dur + (quick ? .1 : .7));
+    const pr = uiWait(`<div class="fade void-text">${lines.map((l, i) => `<p style="animation-delay:${(step * i).toFixed(2)}s;animation-duration:${dur}s">${l}</p>`).join('')}</div>`, 'void', ['▼']);   // 何行あっても1行ずつ出す（CSSの nth-child は10行目まで）
     card.style.setProperty('--void-delay', d + 's');
     // 文が全部出てからは、▼だけでなく画面のどこを押しても進める
-    const tm = setTimeout(() => { ov.onclick = () => { const b = card.querySelector('[data-v]'); if (b) b.click(); }; }, d * 1000 + 600);
+    const tm = setTimeout(() => { ov.onclick = () => { const b = card.querySelector('[data-v]'); if (b) b.click(); }; }, d * 1000 + (quick ? 150 : 600));
     return pr.then(() => { clearTimeout(tm); ov.onclick = null; card.style.removeProperty('--void-delay'); closeOverlay(); });
   }
   // ヒントは段階式：同じところで押すたびに、少しずつ具体的になる（配列の最後が答えに近いヒント）
