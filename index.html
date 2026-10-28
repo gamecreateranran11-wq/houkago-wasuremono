@@ -3260,13 +3260,15 @@
                '手帳の、白い6行目を見た。']);
     if (await choose(['（……書きたい。自分の名前を）', '（……もう、閉じよう）']) === 1) return roofBad8('close');
     // TRUE
-    { const nm = await askName(); if (nm) { P.myName = nm; saveP(); } await buildNamedNotebook(); }
     await say(['（……生かされるんじゃない）', '（知ってる場所から、出ていくんだ）',
                () => bgm(null), 'うつむいているもう一人の自分に、向き直った。', () => bgm('musicbox', 2), '「……待たせて、ごめん」', '「あなたのことも、自分のことも。……自分で、助ける。必ず」']);
     roofTint(null);
     // フェンスの前の「（書いていい名前だと、思えないだけだ）」に答える：思えるようになったから書くのではなく、思えないまま書く
     await say(['ペンを持つ手が少し震えた。', '（……まだ、書いていい名前だとは思えない）', '（それでも、書く）', '（……待っていたんだ。ずっと、明日が来るのを）', '（待っているだけで、自分から歩き出したことは、なかった）',
-               '一画目が、重かった。……知らない場所へ足を踏み出すみたいに。', '6行目に、名前を書いた。', '（……一歩ずつ、進んでいこう）',
+               '一画目が、重かった。……知らない場所へ足を踏み出すみたいに。']);
+    // 名前を入れるのは、一画目を書くこの瞬間（決意の台詞を途中で切らないように）
+    { const nm = await askName(); if (nm) { P.myName = nm; saveP(); } await buildNamedNotebook(); }
+    await say(['6行目に、名前を書いた。', '（……一歩ずつ、進んでいこう）',
                '顔を上げると、フェンスの向こうにはもう誰もいなかった。', '代わりに、手のひらがあたたかい気がした。', '誰かと手をつないでいるみたいに。']);
     await say(['扉のほうを見た。', '鍵が挿さったままだった。', '（……扉、閉めてなかったんだ）']);
     bgm('unravelTrue', 2);
@@ -3345,6 +3347,20 @@
     } catch (e) { NB_NAMED = null; }
   }
   // 名前を書く場面：空のまま進むこともできる（そのときは、これまでどおり名前は絵に出ない）
+  // 名前に使えない言葉（性的な言葉・排せつの言葉・暴言・差別語など）。外につながずに、ゲームの中だけで判定する
+  // 長くてほかの名前とまぎれない言葉は「含む」で止め、短くて名前の一部になりうる言葉は「名前全体がその言葉」のときだけ止める
+  const NG_PART = ['ちんこ', 'ちんちん', 'ちんぽ', 'まんこ', 'うんこ', 'うんち', 'おしっこ', 'せっくす', 'おっぱい', 'ちくび', 'きんたま', 'ぺにす', 'ふぇら', 'れいぷ', 'ごうかん', 'やりまん', 'やりちん',
+                   'きちがい', 'がいじ', 'ころす', 'ころせ', '死ね', '殺す', '殺せ', '強姦', '犯す', '糞', '基地外', '池沼',
+                   'fuck', 'shit', 'sex', 'porn', 'dick', 'pussy', 'bitch', 'nigg', 'penis', 'rape'];
+  const NG_WHOLE = ['しね', 'くそ', 'しっこ', 'げり', 'ばか', 'あほ', 'かす', 'ごみ', 'くず', 'ぶす', 'でぶ', 'はげ', 'かたわ', 'ちょん', 'えっち', 'てめえ', 'てめ', 'きもい', 'うざい',
+                    '馬鹿', '阿呆', '屑', 'kill', 'die', 'ass'];
+  function badName(v) {
+    // 全角と半角、カタカナとひらがな、大文字と小文字をそろえ、記号・空白・数字・のばす音を除いてから比べる
+    const n = v.normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60))
+               .replace(/[\s\-_.・,、。!！?？~〜ー…'"()（）「」\[\]【】☆★♡♥*＊#＃@＠0-9]/g, '');
+    if (!n) return false;
+    return NG_PART.some(w => n.includes(w)) || NG_WHOLE.some(w => n === w || n === w + 'さん' || n === w + 'くん' || n === w + 'ちゃん');
+  }
   function askName() {
     const r = replayed(); if (r) return Promise.resolve(r.v);
     return new Promise(res0 => {
@@ -3352,10 +3368,17 @@
       openOverlay(`<p class="eyebrow">生徒手帳</p><h2>6行目に、自分の名前を書く</h2>
         <p class="note">この子の名前を入れてください（8文字まで）。あとから変えられません。空のまま進むと、名前は書かれますが、画面には出しません。</p>
         <input id="myName" class="name-in" type="text" maxlength="8" autocomplete="off" spellcheck="false" placeholder="この子の名前" aria-label="この子の名前">
+        <p class="note" id="nmNg" hidden>その名前は使えません。ほかの名前にしてください。</p>
         <div class="row"><button type="button" class="btn primary" id="nmOk">書く</button></div>`);
       const inp = $('#myName'); inp.focus();
-      const ok = () => { const v = inp.value.replace(/[\r\n\t]/g, '').trim().slice(0, 8); closeOverlay(); res(v); };
-      $('#nmOk').onclick = ok; inp.onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); ok(); } };
+      const ok = () => {
+        const v = inp.value.replace(/[\r\n\t]/g, '').trim().slice(0, 8);
+        if (v && badName(v)) { $('#nmNg').hidden = false; inp.focus(); return; }
+        closeOverlay(); res(v);
+      };
+      inp.oninput = () => { $('#nmNg').hidden = true; };
+      // 日本語入力で変換を確定するEnterでは、まだ書かない
+      $('#nmOk').onclick = ok; inp.onkeydown = ev => { if (ev.key === 'Enter' && !ev.isComposing && ev.keyCode !== 229) { ev.preventDefault(); ok(); } };
     });
   }
   /* ---------- エンドロール：NORMAL以上の結末で、結末の名前を出す前に流す。作中の一枚絵とわすれものを後ろに映す ---------- */
