@@ -479,8 +479,8 @@
   @keyframes rwsway { 0% { transform: translate(0, 0); } 25% { transform: translate(14px, 21vh); } 50% { transform: translate(-10px, 42vh); } 75% { transform: translate(12px, 63vh); } 100% { transform: translate(0, 85vh); } }
   @keyframes rwvanish { 0% { transform: translateY(0); opacity: .6; } 55% { opacity: .6; } 100% { transform: translateY(46vh); opacity: 0; } }
   body.fx-on .clock { visibility: hidden; }
-  .rw.final { left: 0; right: 0; top: 40%; text-align: center; letter-spacing: .16em; font-family: 'Shippori Mincho B1', serif; font-weight: 800; font-size: clamp(22px, 4.2vw, 34px); color: #8a1a1c;
-              text-shadow: 0 0 22px rgba(120, 0, 0, .9), 0 0 3px #000, 0 2px 0 #1a0608; animation: finalin 2.6s cubic-bezier(.2, .7, .2, 1) both, tremble .14s steps(2) infinite 2.6s; }
+  .rw.final { left: 0; right: 0; top: 40%; text-align: center; letter-spacing: .16em; font-family: 'Shippori Mincho B1', serif; font-weight: 800; font-size: clamp(22px, 4.2vw, 34px); color: #ece5d8;
+              text-shadow: 0 0 18px rgba(236, 229, 216, .35), 0 0 3px #000; animation: finalin 2.6s cubic-bezier(.2, .7, .2, 1) both; }
   .rw.final.gone { opacity: 1; animation: finalout 2.6s ease-in forwards; }
   @keyframes finalin { from { opacity: 0; filter: blur(14px); transform: scale(1.4); letter-spacing: .6em; } 55% { opacity: 1; filter: blur(0); } to { opacity: 1; transform: none; letter-spacing: .16em; } }
   @keyframes tremble { from { transform: translate(0, 0); } to { transform: translate(.6px, -.5px); } }
@@ -2972,7 +2972,7 @@
   const RAIN_RATE = { fast: .5, normal: .72, slow: 1, slower: 1.3 };
   const rainRate = () => RAIN_RATE[RAIN_SPEED[P.textSpeed] || 'slow'];
   function fxSkip(key) { const k = 'fx|' + key, seen = READ.has(k); markRead(k); return !!(P.skip && seen && !(R && R.forceRead)); }
-  async function wordRain(extra = []) {
+  async function wordRain(extra = [], soft = []) {
     if (replay) return;   // 早送り中は出さない
     // 初めて見るときは、既読スキップがONでも早回しにせず、雨の速さ（文字の速さより一段階ゆっくり）で流す。2回目以降で既読スキップがONなら、早回し
     const quick = fxSkip('wordRain'), r = rainRate();
@@ -2987,10 +2987,12 @@
     const crushed = ['菌が移る'];   // ミオが中学のいじめで言われた言葉
     const longs = [['そんなんじゃ、社会で通用しない', 'neg'], ['誰も、相手にしないよ', 'neg'], ['みんな本当は、汚いって思ってるよ', 'neg'], ['きっとみんな、あなたのこと嫌ってるよ', 'neg'],
                    ['殴られたいのか', 'neg'], ['なんでそんなことするの', 'sei'], ['やる気、あんの？', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
-                   ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['お前なんか、いらない', 'neg'],
+                   ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['あなたは、人間じゃない', 'neg'], ['お前なんか、いらない', 'neg'],
                    ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['お姉ちゃんは、できたのに', 'sei'], ['ハルくんの分まで、生きなきゃね', 'nag'], ['頼まれてくれるよね？', 'sei'], ['お前の事なんて、どうでもいい', 'neg'], ['そういうの、めんどくさい', 'neg'], ['お前には言われたくない', 'neg'], ['あなたなら、できるよ', 'nag'], ['頑張って', 'nag'], ['笑ってれば、大丈夫', 'nag'], ['あなたは、強い子だから', 'nag']];
     // 自分が章の対話で選んだ言葉も、言われてきた言葉に混ざって降ってくる（はじめの3つより後ろに）
     extra.forEach(w => longs.splice(3 + Math.floor(Math.random() * (longs.length - 3)), 0, w));
+    // 否定の言葉のあとに、正論と慰めの言葉が続けて降る（言われたときは傷ついたとわからなかった言葉）
+    longs.push(...soft);
     // 押すと早回しにできるのは、2回目以降だけ（初めて見るときは、文章を進めるつもりで押しても速くしない）
     let fast = quick; box.onclick = () => { if (quick) fast = true; };
     const drop = (t, cls) => {
@@ -3022,11 +3024,11 @@
       await sleep(fast ? 100 : 900 * r);
       clearInterval(rainT);
     }
-    // 最後の一つ。そのあと、すべての言葉が止まる
+    // 最後の一つ。そのあと、すべての言葉が止まる。強い否定ではなく、悪気のない慰めの言葉（主人公が話すのをやめた言葉）
     box.querySelectorAll('.rw, .rw-list').forEach(e => e.classList.add('gone'));
-    const last = document.createElement('p'); last.className = 'rw final'; last.textContent = '「あなたは、人間じゃない」';
+    const last = document.createElement('p'); last.className = 'rw final'; last.textContent = '「そんなの、大したことないって」';
     const fr = quick ? Math.min(r, .6) : r;   // 既読の早回しは、遅くとも「速い」くらいに
-    last.style.animation = `finalin ${2.6 * fr}s cubic-bezier(.2, .7, .2, 1) both, tremble .14s steps(2) infinite ${2.6 * fr}s`;
+    last.style.animation = `finalin ${2.6 * fr}s cubic-bezier(.2, .7, .2, 1) both`;
     box.appendChild(last);
     rumbleSE();
     await sleep(4200 * fr);
@@ -3131,13 +3133,14 @@
     // 7/15 の現実の主人公（企画書 02「現実の放課後と屋上の数分」）。その日の行動だけを書き、理由と過去は書かない。
     // 鍵を扉に挿したままだったことは、TRUE の「……扉、閉めてなかったんだ」で初めて気づくので、ここでは言わない
     await say(['……それから、今日のことを思い出した。']);
-    await roofVoid(['昼すぎの職員室。', '三者面談で、先生たちはみんな出はらっていた。', '入口のそばのキーボックスから、屋上の鍵を一本取った。', '貸出簿には、何も書かなかった。']);
     // 三者面談（黒い画面の文）。母は悪者にしない：この子は大丈夫だと信じきっていて、本人に聞かない（残る理由も聞かない）。「助かってる」は本心
-    await roofVoid(['それから、自分の三者面談があった。', '先生が「ご家庭では、どうですか」と聞いた。', '母は「この子は、本当に手がかからなくて。……何も心配してないんです」と笑った。',
+    await roofVoid(['昼すぎ、自分の三者面談があった。', '先生が「ご家庭では、どうですか」と聞いた。', '母は「この子は、本当に手がかからなくて。……何も心配してないんです」と笑った。',
                     '先生も「そうですよね。学校でも、いつも落ち着いてますし」とうなずいた。', '二人とも、こちらを見て、こちらのことを話していた。',
                     '「ね？」と聞かれて、「……うん」と答えた。', '誰も聞かなかった。今、どう思っているのかを。']);
     await roofVoid(['教室を出ると、母が「一緒に帰ろうか」と言った。', '「……少し、残ってく」', '母は「そう」とだけ言って、それ以上は聞かなかった。',
                     '少しだけ疲れた顔で笑って、「あなたが大丈夫だから、ほんとに助かってる」と言った。', '大丈夫じゃないって、言える場所は、家にもなかった。']);
+    // 鍵は三者面談のあと。ほかの面談が続いていて、職員室にはほとんど人がいない
+    await roofVoid(['母と別れて、職員室へ行った。', 'ほかの三者面談が続いていて、先生たちはみんな出はらっていた。', '入口のそばのキーボックスから、屋上の鍵を一本取った。', '貸出簿には、何も書かなかった。']);
     await roofVoid(['放課後、五つの部屋で、五人に会った。', '別れぎわに、生徒手帳を差し出して、名前を書いてもらった。', '……自分の名前は、一度も言わなかった。',
                     '（覚えてもらうほどの名前じゃない）', '（それでも、名前を言ったら、覚えていてほしくなる）', '（忘れられたときのことを、考えたくなかった）']);
     await roofVoid(['最終下校のチャイムの少し前。', '西の階段をのぼって、屋上の扉を開けた。', 'フェンスの前で、手帳の名前のページを開いた。', '……そこから先は、覚えていない。']);
@@ -3147,13 +3150,12 @@
     await say(['目を開けると、雨だった。', '大粒の雨が屋上を打っている。……いつから降っていたのか、わからない。', '手帳の白い行が、雨に濡れていく。',
                '雨の音に混じって、言葉が降ってきた。', '今日、五人が打ち明けてくれた言葉。……それから自分が、どこかで言われてきた言葉。']);
     const said = saidForRoof();
-    await wordRain(said.rain);
-    // 言葉の雨が沈んだあと、雨の音だけの短い沈黙をはさんでから、遅れて混ざる言葉へ（強い演出を続けて重ねない）
+    const soft = [['苦しいのは、あなただけじゃないよ', 'sei'], ['いつもヘラヘラしてるのに', 'neg'], ['簡単に泣かない方がいいよ', 'sei'], ['一時の感情に、流されないようにね', 'sei'],
+                  ['考えすぎだよ', 'nag'], ['私の方が辛い', 'sei'], ['かわいそう', 'nag'], ['これからも期待してるよ', 'nag'], ['もう、頑張らなくていいよ', 'nag'], ['時間が、解決してくれるんじゃないかな', 'nag'], ['昔の私に似てる。……でも大丈夫。今は、変われたから', 'nag']];
+    said.late.forEach((w, n) => soft.splice(2 + n * 3, 0, w));   // 自分が選んだ正論・慰めの言葉を、間をあけて混ぜる
+    await wordRain(said.rain, soft);
+    // 言葉の雨が沈んだあと、雨の音だけの短い沈黙をはさむ（強い演出を続けて重ねない）
     if (!replay) await sleep(1800);
-    const late1 = [['苦しいのは、あなただけじゃないよ', 'sei'], ['いつもヘラヘラしてるのに', 'neg'], ['簡単に泣かない方がいいよ', 'sei'], ['一時の感情に、流されないようにね', 'sei'],
-                     ['考えすぎだよ', 'nag'], ['そんなの、大したことないって', 'nag'], ['私の方が辛い', 'sei'], ['かわいそう', 'nag'], ['これからも期待してるよ', 'nag'], ['もう、頑張らなくていいよ', 'nag'], ['時間が、解決してくれるんじゃないかな', 'nag'], ['昔の私に似てる。……でも大丈夫。今は、変われたから', 'nag']];
-    said.late.forEach((w, n) => late1.splice(2 + n * 3, 0, w));   // 自分が選んだ正論・慰めの言葉を、間をあけて混ぜる
-    await lateWords(late1);
     await say(['頭に誰かの手が置かれる感触がした。']);
     await lateWords([['まだ若いんだから、大丈夫', 'nag'], ['人生、これからだよ', 'nag'], ['生きてれば、いいことあるよ', 'nag']]);
     // ここから先の声は、主人公がいま考えていることではなく、ずっと頭の中にいた「もう一人の自分」の声。遊ぶ人は、選択肢でそれに答える
