@@ -2266,8 +2266,10 @@
     },
   };
   let pendingCore = 0;  // 核心に入る選択のあと、何文目で核心の曲を始めるか
-  // 録音した曲（ファイル）。曲そのものに残響が入っているので、教室の残響は通さない。vol は組み立てる曲と聞こえの大きさをそろえる倍率
-  const FILE_BGM = { lastBell: { src: 'snd/last_bell_in_july.m4a', vol: 0.8 } };
+  // 録音した曲（ファイル）。曲そのものに残響が入っているので、教室の残響は通さない。vol は組み立てる曲と聞こえの大きさをそろえる倍率（ゲームの出口で、前の探索の曲と同じ大きさになるように測って決めた）
+  // explore（探索と会話）は 2026-10-29 に作者が Gemini で作った『July Hallways』へ差し替えた。前の組み立てる曲（BGM.explore）は控えとして残す
+  const FILE_BGM = { lastBell: { src: 'snd/last_bell_in_july.m4a', vol: 0.16 },
+                     explore: { src: 'snd/explore_july_hallways.m4a', vol: 0.14 } };
   const fileBuf = {};
   function loadFileBgm(name) {
     const a = audio(), f = FILE_BGM[name];
@@ -2289,6 +2291,7 @@
     if (master && master.gain.value < MASTER_GAIN * 0.99) unmute();
     if (name && !P.heard[name]) { P.heard[name] = true; saveP(); }
     let a; try { a = audio(); } catch (e) { return; }
+    try { loadFileBgm('explore'); } catch (e) {}   // 探索の曲は録音のファイルなので、タイトルのうちに読み込んでおく（始めてすぐ鳴るように）
     if (bgmGain) { const g = bgmGain, src = bgmSrc; g.gain.setTargetAtTime(0, a.currentTime, 0.4); setTimeout(() => { try { g.disconnect(); if (src) src.stop(); } catch (e) {} }, 2500); }
     clearInterval(bgmTimer); bgmGain = null; bgmSrc = null;
     if (!name) return;
@@ -7746,7 +7749,7 @@
   // [曲, 題, 版の印, 説明]。ゲームの中で流れる順に並べる。『放課後』はソウタとハルの連弾曲。ソロなどの版は、題のあとの印でわかるようにする
   const OST = [
     ['title', '夕映えの校舎', '', 'アコースティックギターと、遠くで練習する吹奏楽のホルン'],
-    ['explore', '誰もいない放課後', '', 'やわらかな弦の和音とアルペジオ。後半に、鉄琴のような高い旋律'],
+    ['explore', 'July Hallways（仮）', '', '（説明は未定）'],
     ['core', '胸の奥の声', '', 'チェロ・ビオラ・コントラバスとフルート'],
     ['musicbox', 'ひとかけらの希望', '', 'ゆっくりしたオルゴール。音の余韻が、次の音に重なっていく'],
     ['unravel', '夕映えの微笑み', '', '弦とアルペジオ、フルートのあたたかい旋律'],
