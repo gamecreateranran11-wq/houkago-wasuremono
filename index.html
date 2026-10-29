@@ -2270,7 +2270,8 @@
   // explore（探索と会話）は 2026-10-29 に作者が Gemini で作った『July Hallways』へ差し替えた。前の組み立てる曲（BGM.explore）は控えとして残す
   const FILE_BGM = { lastBell: { src: 'snd/last_bell_in_july.m4a', vol: 0.16 },
                      explore: { src: 'snd/explore_july_hallways.m4a', vol: 0.14 },
-                     core: { src: 'snd/core_july_sun.m4a', vol: 0.16 } };   // core（『胸の奥の声』）も 2026-10-29 に Gemini の曲へ。前の組み立てる曲（BGM.core）は控えとして残す
+                     core: { src: 'snd/core_july_sun.m4a', vol: 0.16 },   // core（『胸の奥の声』）も 2026-10-29 に Gemini の曲へ。前の組み立てる曲（BGM.core）は控えとして残す
+                     roofCore: { src: 'snd/roof_after_last_bell.m4a', vol: 0.36 } };   // roofCore（屋上『深淵からの声』）も 2026-10-29 に Gemini の『After the Last Bell』へ。前の組み立てる曲（BGM.roofCore）は控えとして残す
   const fileBuf = {};
   function loadFileBgm(name) {
     const a = audio(), f = FILE_BGM[name];
@@ -7758,7 +7759,7 @@
     ['vanish', '手のひらに遺るもの', '', 'アルトリコーダーの素朴な旋律と、クラリネットの低く暗い声'],
     ['shut', '閉ざされた扉', '', '重い低音と、ゆっくり沈むチェロ。扉を叩くような音'],
     ['coreHeavy', '身代わりの影', '', '低く沈んだ弦の和音'],
-    ['roofCore', '深淵からの声', '', '『胸の奥の声』のアレンジ。明るい和音のない、どこまでも沈んでいく版。低いチェロの叫びに、ホルン・チューバ・バスドラムと、風の低いうなり'],
+    ['roofCore', '深淵からの声', '', '（説明は未定）'],
     ['codep', 'ふたりきりの子守唄', '', 'オルゴールとピアノの3拍子。穏やかなのに、どこか落ち着かない'],
     // ここから下の（仮）の題は、管理人が名前をつけるまでの仮の名前
     ['endless', '終わらない放課後（仮）', '', 'チャイムが一音ずつゆっくり鳴り、時計の秒針だけが進む。ユーフォニアムとホルン、ファゴット'],
