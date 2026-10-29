@@ -3018,7 +3018,7 @@
         e.style.top = (14 + Math.random() * 62) + '%';
         box.appendChild(e);
         { const W = box.clientWidth, room = W * .92;
-          if (e.offsetWidth > room) e.style.fontSize = (19 * room / e.offsetWidth).toFixed(1) + 'px';
+          if (e.offsetWidth > room) { e.style.whiteSpace = 'normal'; e.style.width = room + 'px'; }   // 収まらない長さは、字を小さくせずに二行にする
           e.style.left = (W * .04 + Math.random() * Math.max(0, room - e.offsetWidth)) + 'px'; }
         const hold = (1700 + Math.random() * 1600) * r;
         setTimeout(() => e.classList.add(pick(['out-fade', 'out-blur', 'out-sink', 'out-drift'])), hold);
