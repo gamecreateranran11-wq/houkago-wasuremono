@@ -479,8 +479,9 @@
   @keyframes rwsway { 0% { transform: translate(0, 0); } 25% { transform: translate(14px, 21vh); } 50% { transform: translate(-10px, 42vh); } 75% { transform: translate(12px, 63vh); } 100% { transform: translate(0, 85vh); } }
   @keyframes rwvanish { 0% { transform: translateY(0); opacity: .6; } 55% { opacity: .6; } 100% { transform: translateY(46vh); opacity: 0; } }
   body.fx-on .clock { visibility: hidden; }
-  .rw.final { left: 0; right: 0; top: 40%; text-align: center; letter-spacing: .16em; font-family: 'Shippori Mincho B1', serif; font-weight: 800; font-size: clamp(22px, 4.2vw, 34px); color: #ece5d8;
+  .rw.final { left: 0; right: 0; top: 40%; padding: 0 16px; white-space: normal; text-align: center; letter-spacing: .16em; font-family: 'Shippori Mincho B1', serif; font-weight: 800; font-size: clamp(22px, 4.2vw, 34px); color: #ece5d8;
               text-shadow: 0 0 18px rgba(236, 229, 216, .35), 0 0 3px #000; animation: finalin 2.6s cubic-bezier(.2, .7, .2, 1) both; }
+  @media (max-width: 480px) { .rw.final { font-size: 18px; letter-spacing: .08em; } }
   .rw.final.gone { opacity: 1; animation: finalout 2.6s ease-in forwards; }
   @keyframes finalin { from { opacity: 0; filter: blur(14px); transform: scale(1.4); letter-spacing: .6em; } 55% { opacity: 1; filter: blur(0); } to { opacity: 1; transform: none; letter-spacing: .16em; } }
   @keyframes tremble { from { transform: translate(0, 0); } to { transform: translate(.6px, -.5px); } }
@@ -2986,7 +2987,7 @@
     const nextShort = () => { if (!bag.length) bag = shorts.slice().sort(() => Math.random() - .5); return bag.pop(); };
     const crushed = ['菌が移る'];   // ミオが中学のいじめで言われた言葉
     const longs = [['そんなんじゃ、社会で通用しない', 'neg'], ['誰も、相手にしないよ', 'neg'], ['みんな本当は、汚いって思ってるよ', 'neg'], ['きっとみんな、あなたのこと嫌ってるよ', 'neg'],
-                   ['殴られたいのか', 'neg'], ['なんでそんなことするの', 'sei'], ['やる気、あんの？', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
+                   ['殴られたいのか', 'neg'], ['なんでそんなことするの', 'sei'], ['やる気、あんの？', 'sei'], ['普通に考えれば、わかるでしょ', 'sei'], ['いつもヘラヘラしてる', 'neg'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
                    ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['あなたは、人間じゃない', 'neg'], ['お前なんか、いらない', 'neg'],
                    ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['お姉ちゃんは、できたのに', 'sei'], ['ハルくんの分まで、生きなきゃね', 'nag'], ['頼まれてくれるよね？', 'sei'], ['お前の事なんて、どうでもいい', 'neg'], ['そういうの、めんどくさい', 'neg'], ['お前には言われたくない', 'neg'], ['あなたなら、できるよ', 'nag'], ['頑張って', 'nag'], ['笑ってれば、大丈夫', 'nag'], ['あなたは、強い子だから', 'nag']];
     // 自分が章の対話で選んだ言葉も、言われてきた言葉に混ざって降ってくる（はじめの3つより後ろに）
@@ -3014,8 +3015,11 @@
         const t = `「${l}」`;
         if (how === 'in-type') e.innerHTML = [...t].map((c, i) => `<span style="animation-delay:${i * 55}ms">${c}</span>`).join('');
         else e.textContent = t;
-        e.style.top = (14 + Math.random() * 62) + '%'; e.style.left = (6 + Math.random() * 40) + '%';
+        e.style.top = (14 + Math.random() * 62) + '%';
         box.appendChild(e);
+        { const W = box.clientWidth, room = W * .92;
+          if (e.offsetWidth > room) e.style.fontSize = (19 * room / e.offsetWidth).toFixed(1) + 'px';
+          e.style.left = (W * .04 + Math.random() * Math.max(0, room - e.offsetWidth)) + 'px'; }
         const hold = (1700 + Math.random() * 1600) * r;
         setTimeout(() => e.classList.add(pick(['out-fade', 'out-blur', 'out-sink', 'out-drift'])), hold);
         setTimeout(() => e.remove(), hold + 1500);
@@ -3150,7 +3154,7 @@
     await say(['目を開けると、雨だった。', '大粒の雨が屋上を打っている。……いつから降っていたのか、わからない。', '手帳の白い行が、雨に濡れていく。',
                '雨の音に混じって、言葉が降ってきた。', '今日、五人が打ち明けてくれた言葉。……それから自分が、どこかで言われてきた言葉。']);
     const said = saidForRoof();
-    const soft = [['苦しいのは、あなただけじゃないよ', 'sei'], ['いつもヘラヘラしてるのに', 'neg'], ['簡単に泣かない方がいいよ', 'sei'], ['一時の感情に、流されないようにね', 'sei'],
+    const soft = [['苦しいのは、あなただけじゃないよ', 'sei'], ['簡単に泣かない方がいいよ', 'sei'], ['一時の感情に、流されないようにね', 'sei'],
                   ['考えすぎだよ', 'nag'], ['私の方が辛い', 'sei'], ['かわいそう', 'nag'], ['これからも期待してるよ', 'nag'], ['もう、頑張らなくていいよ', 'nag'], ['時間が、解決してくれるんじゃないかな', 'nag'], ['昔の私に似てる。……でも大丈夫。今は、変われたから', 'nag']];
     said.late.forEach((w, n) => soft.splice(2 + n * 3, 0, w));   // 自分が選んだ正論・慰めの言葉を、間をあけて混ぜる
     await wordRain(said.rain, soft);
