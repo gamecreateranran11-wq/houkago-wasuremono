@@ -2266,6 +2266,15 @@
     },
   };
   let pendingCore = 0;  // 核心に入る選択のあと、何文目で核心の曲を始めるか
+  // 録音した曲（ファイル）。曲そのものに残響が入っているので、教室の残響は通さない。vol は組み立てる曲と聞こえの大きさをそろえる倍率
+  const FILE_BGM = { lastBell: { src: 'snd/last_bell_in_july.m4a', vol: 0.8 } };
+  const fileBuf = {};
+  function loadFileBgm(name) {
+    const a = audio(), f = FILE_BGM[name];
+    if (!fileBuf[name]) fileBuf[name] = fetch(f.src).then(r => r.arrayBuffer()).then(b => new Promise((ok, ng) => a.decodeAudioData(b, ok, ng)));
+    return fileBuf[name];
+  }
+  let bgmSrc = null;
   function bgm(name, fadeIn = 0.8) {
     pendingCore = 0;
     if (replay) { replay.bgm = name; return; }
@@ -2280,9 +2289,19 @@
     if (master && master.gain.value < MASTER_GAIN * 0.99) unmute();
     if (name && !P.heard[name]) { P.heard[name] = true; saveP(); }
     let a; try { a = audio(); } catch (e) { return; }
-    if (bgmGain) { const g = bgmGain; g.gain.setTargetAtTime(0, a.currentTime, 0.4); setTimeout(() => { try { g.disconnect(); } catch (e) {} }, 2500); }
-    clearInterval(bgmTimer); bgmGain = null;
+    if (bgmGain) { const g = bgmGain, src = bgmSrc; g.gain.setTargetAtTime(0, a.currentTime, 0.4); setTimeout(() => { try { g.disconnect(); if (src) src.stop(); } catch (e) {} }, 2500); }
+    clearInterval(bgmTimer); bgmGain = null; bgmSrc = null;
     if (!name) return;
+    if (FILE_BGM[name]) {
+      const gain = bgmGain = a.createGain(); gain.gain.value = 0; gain.connect(out());
+      loadFileBgm(name).then(buf => {
+        if (bgmGain !== gain) return;
+        const v = a.createGain(); v.gain.value = FILE_BGM[name].vol; v.connect(gain);   // 音量バー・会話中の音量下げは、組み立てる曲と同じ bgmGain で
+        const src = bgmSrc = a.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(v); src.start();
+        gain.gain.setTargetAtTime(bgmLevel(), a.currentTime, fadeIn);
+      }).catch(() => {});
+      return;
+    }
     bgmGain = a.createGain(); bgmGain.gain.value = 0; bgmGain.connect(out()); bgmGain.connect(reverb());
     bgmGain.gain.setTargetAtTime(bgmLevel(), a.currentTime, fadeIn);
     bgmNext = a.currentTime + 0.15; bgmStep = 0;
@@ -3461,7 +3480,7 @@
     P.endings[tag] = true;
     const got = achGain(tag);
     finishRun(true);
-    if (tag === 'TRUE') { P.trueKind = kindNow; saveP(); await endRoll('TRUE'); }
+    if (tag === 'TRUE') { P.trueKind = kindNow; saveP(); bgm('lastBell', 2); await endRoll('TRUE'); }   // 曲は仮押さえ
     const head = tag === 'TRUE' ? `<div class="end-ttl"><p class="end-kind">TRUE END</p><h1 class="end-name">${title}</h1></div>`
                                 : `<div class="fade" style="display:flex;flex-direction:column;gap:12px"><p class="eyebrow">BAD END「${title}」</p></div>`;
     overlayWait(`${head}
@@ -7744,6 +7763,7 @@
     ['burst', '溢れ出す本心', '', '静かにあふれ出し、大きくふくらんでいく。チューバとバスドラムの重さ'],
     ['unravelDim', '見送る背中', '', '『夕映えの微笑み』のアレンジ。ピアノを中心にした静かな版。一瞬だけ、和音が翳る'],
     ['unravelTrue', '黎明に肩を並べて', '', '『夕映えの微笑み』のアレンジ。トランペットとピアノ、ウィンドチャイムを足した夜明けの版'],
+    ['lastBell', 'Last Bell in July（仮）', '', '（説明は未定）'],
     ['sotaDuet', '放課後', '連弾', 'ボーナストラック（本編には出てこない曲）。ソウタとハルが4本の手で弾く連弾版'],
   ];
   const ostOpen = () => !!(P.endings && (P.endings.NORMAL || P.endings.NORMAL2 || P.endings.GOOD || P.endings.TRUE));
