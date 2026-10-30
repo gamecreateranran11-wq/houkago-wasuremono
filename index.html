@@ -2895,9 +2895,9 @@
   function goNext(next) { if (next) startRun(next.id); else runEnd(); }
   // 周回を締めくくる。count=true のとき周回に数える（エンディングを見て放課後が終わった回数。BAD1・手動のやり直しは数えない）。
   // 周回数はタイトルには出さず、内部の記録にとどめる
-  function finishRun(count) {
+  function finishRun(count, end) {
     if (count) P.runs = (P.runs || 0) + 1;
-    P.lastRun = { runNo: P.runNo || 1, cur: JSON.parse(JSON.stringify(P.cur || { results: {} })) };   // 「放課後を思い返す」で、終えた周回の章に戻るため
+    P.lastRun = { runNo: P.runNo || 1, cur: JSON.parse(JSON.stringify(P.cur || { results: {} })), end: end || null };   // end：その周回で見た結末（次の放課後のはじめの文を変える）   // 「放課後を思い返す」で、終えた周回の章に戻るため
     P.runNo = (P.runNo || 1) + 1; P.cur = { results: {} }; saveP(); clearRun();
   }
   // 本実装版に切り替えるときは RELEASE を true にする：タイトルの「試作版　第一章〜」をやめて「ver 〇〇」を小さく出し、
@@ -2948,7 +2948,7 @@
     else if (end[0] === 'NORMAL2' || (end[0] === 'NORMAL' && P.cur.mtSplit)) keepBgm('farewell', ['farewell', 'farewellLate']);
     else bgm(end[3]);
     const got = achGain(end[0]);
-    finishRun(true);
+    finishRun(true, end[0]);
     if (end[0] === 'BAD4') await closedSchool();
     if (end[0] === 'BAD5') await emptySeats(ORDER.map(id => CHAPTERS[id]).filter(ch => res[ch.key] === 'vanished'));
     if (end[2].length) {
@@ -3492,7 +3492,7 @@
     const firstTrue = tag === 'TRUE' && !P.endings.TRUE;
     P.endings[tag] = true;
     const got = achGain(tag);
-    finishRun(true);
+    finishRun(true, tag);
     if (tag === 'TRUE') { P.trueKind = kindNow; saveP(); bgm('lastBell', 2); await endRoll('TRUE'); }   // 曲は仮押さえ
     const head = tag === 'TRUE' ? `<div class="end-ttl"><p class="end-kind">TRUE END</p><h1 class="end-name">${title}</h1></div>`
                                 : `<div class="fade" style="display:flex;flex-direction:column;gap:12px"><p class="eyebrow">BAD END「${title}」</p></div>`;
@@ -7337,6 +7337,17 @@
     const last = Object.values((P.lastRun && P.lastRun.cur && P.lastRun.cur.results) || {});
     const carry = Object.keys(P.shelf || {}).some(k => k !== 'me' && P.shelf[k] && (P.shelfRun[k] || 0) < (P.runNo || 1));
     const L = ['（……また、この放課後の入り口に立っている）'];
+    // 前の放課後を、五人を見送る結末（TRUE・GOOD・それぞれの朝）で終えていたら、悔いや「今度は」を言わない。
+    // 結末を記録する前のセーブは、五つの章がすべてほどけていたかで見分ける
+    const prevEnd = P.lastRun && (P.lastRun.end || (last.length >= ORDER.length && last.every(r => r === 'saved') ? (P.lastRun.cur.mtSplit ? 'NORMAL2' : 'GOOD') : null));
+    if (prevEnd === 'TRUE' || prevEnd === 'GOOD' || prevEnd === 'NORMAL2') {
+      if (prevEnd === 'TRUE') L.push('（あの屋上で迎えた朝を、まだ覚えている）');
+      else if (prevEnd === 'GOOD') L.push('（五人の背中を、校門の向こうへ見送った）', '（足もとに落ちていた生徒手帳を、まだ覚えている）');
+      else L.push('（五人の背中を、校門の向こうへ見送った）', '（……言えなかった「またね」が、まだ胸に残っている）');
+      if (carry) L.push('（手の中に、あの子たちが残していったものがある）');
+      L.push(prevEnd === 'TRUE' ? '（……もう一度、あの日の五人に会いに行こう）' : '（……もう一度、あの放課後を歩いてみよう）');
+      return L;
+    }
     if (last.includes('vanished') || last.includes('died')) L.push('（届かなかった言葉を、まだ覚えている）');
     else if (last.includes('shut')) L.push('（閉ざされた扉の向こうの顔を、まだ覚えている）');
     else if (last.length) L.push('（見送った背中を、まだ覚えている）');
