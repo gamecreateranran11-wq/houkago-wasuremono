@@ -2271,7 +2271,8 @@
   const FILE_BGM = { lastBell: { src: 'snd/last_bell_in_july.m4a', vol: 0.16 },
                      explore: { src: 'snd/explore_july_hallways.m4a', vol: 0.14 },
                      core: { src: 'snd/core_july_sun.m4a', vol: 0.16 },   // core（『胸の奥の声』）も 2026-10-29 に Gemini の曲へ。前の組み立てる曲（BGM.core）は控えとして残す
-                     roofCore: { src: 'snd/roof_after_last_bell.m4a', vol: 0.36 } };   // roofCore（屋上『深淵からの声』）も 2026-10-29 に Gemini の『After the Last Bell』へ。前の組み立てる曲（BGM.roofCore）は控えとして残す
+                     roofCore: { src: 'snd/roof_after_last_bell.m4a', vol: 0.36 },   // roofCore（屋上『深淵からの声』）も 2026-10-29 に Gemini の『After the Last Bell』へ。前の組み立てる曲（BGM.roofCore）は控えとして残す
+                     musicbox: { src: 'snd/musicbox_gemini.m4a', vol: 0.16 } };   // musicbox（『ひとかけらの希望』）も 2026-10-30 に作者が Gemini で作った曲へ（ゲームでの大きさを前の曲の約 -24.4dB に合わせた）。前の組み立てる曲（BGM.musicbox）は控えとして残す
   // ファイルの中身（数MB）は、タイトルのうちに全曲ぶん取り寄せておく。音にほどく（デコード）のは、かける少し前に（全曲ほどいておくと、スマホで場所を取りすぎる）
   const fileBytes = {}, fileBuf = {};
   function fetchFileBgm(name) {
@@ -2298,7 +2299,7 @@
     if (master && master.gain.value < MASTER_GAIN * 0.99) unmute();
     if (name && !P.heard[name]) { P.heard[name] = true; saveP(); }
     let a; try { a = audio(); } catch (e) { return; }
-    try { loadFileBgm('explore'); Object.keys(FILE_BGM).forEach(fetchFileBgm); } catch (e) {}   // 探索の曲はタイトルのうちにほどいておく（始めてすぐ鳴るように）。ほかの曲も中身だけ取り寄せておく
+    try { loadFileBgm('explore').then(() => loadFileBgm('musicbox')).catch(() => {}); Object.keys(FILE_BGM).forEach(fetchFileBgm); } catch (e) {}   // 探索の曲はタイトルのうちにほどいておく（始めてすぐ鳴るように）。何度も流れる『ひとかけらの希望』も続けてほどく。ほかの曲は中身だけ取り寄せておく
     if (bgmGain) { const g = bgmGain, src = bgmSrc; g.gain.setTargetAtTime(0, a.currentTime, 0.4); setTimeout(() => { try { g.disconnect(); if (src) src.stop(); } catch (e) {} }, 2500); }
     clearInterval(bgmTimer); bgmGain = null; bgmSrc = null;
     if (!name) return;
@@ -7772,7 +7773,7 @@
     ['title', '夕映えの校舎', '', 'アコースティックギターと、遠くで練習する吹奏楽のホルン'],
     ['explore', 'July Hallways（仮）', '', '（説明は未定）'],
     ['core', '胸の奥の声', '', '（説明は未定）'],
-    ['musicbox', 'ひとかけらの希望', '', 'ゆっくりしたオルゴール。音の余韻が、次の音に重なっていく'],
+    ['musicbox', 'ひとかけらの希望', '', '（説明は未定）'],
     ['unravel', '夕映えの微笑み', '', '弦とアルペジオ、フルートのあたたかい旋律'],
     ['sota', '放課後', 'ソロ', 'ソウタのピアノ・ソロ。ハルのパートと同じ主題から始まる'],
     ['vanish', '手のひらに遺るもの', '', 'アルトリコーダーの素朴な旋律と、クラリネットの低く暗い声'],
@@ -7813,8 +7814,8 @@
       const k = b.dataset.k;
       playing = playing === k ? null : k; failed = null; loading = null;
       if (playing && FILE_BGM[playing]) {
-        // 録音の曲は、音にほどき終わるまで「読み込み中…」と出す。ほかの録音の曲のほどいた音は手放す（スマホで場所を取りすぎないように。探索の曲は次に始めるときのために残す）
-        Object.keys(fileBuf).forEach(n => { if (n !== playing && n !== 'explore') delete fileBuf[n]; });
+        // 録音の曲は、音にほどき終わるまで「読み込み中…」と出す。ほかの録音の曲のほどいた音は手放す（スマホで場所を取りすぎないように。探索の曲と『ひとかけらの希望』は、本編ですぐ鳴らすために残す）
+        Object.keys(fileBuf).forEach(n => { if (n !== playing && n !== 'explore' && n !== 'musicbox') delete fileBuf[n]; });
         try {
           loading = k;
           loadFileBgm(k).then(() => { if (loading === k) { loading = null; draw(); } },
