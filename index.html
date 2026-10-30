@@ -2280,7 +2280,7 @@
   }
   function loadFileBgm(name) {
     const a = audio();
-    if (!fileBuf[name]) { fileBuf[name] = fetchFileBgm(name).then(b => new Promise((ok, ng) => a.decodeAudioData(b, ok, ng))); fileBuf[name].catch(() => { delete fileBuf[name]; }); }   // 失敗したら、次にかけるときに取り寄せ直す
+    if (!fileBuf[name]) { fileBuf[name] = fetchFileBgm(name).then(b => new Promise((ok, ng) => a.decodeAudioData(b.slice(0), ok, ng))); fileBuf[name].catch(() => { delete fileBuf[name]; }); }   // 失敗したら、次にかけるときに取り寄せ直す
     return fileBuf[name];
   }
   let bgmSrc = null;
@@ -7794,7 +7794,8 @@
   const ostList = () => OST.filter(([k]) => k !== 'sotaDuet' || !!(P.endings && P.endings.TRUE));
   const ostHeard = k => k === 'sotaDuet' || !!P.heard[k];
   function showSoundtrack() {
-    let playing = bgmName && OST.some(([k]) => k === bgmName) ? bgmName : null;
+    let playing = bgmName && OST.some(([k]) => k === bgmName) ? bgmName : null, loading = null, failed = null;
+    try { Object.keys(FILE_BGM).forEach(k => { if (ostHeard(k)) fetchFileBgm(k); }); } catch (e) {}   // 録音の曲は、画面を開いたときに中身を取り寄せておく
     const list = ostList(), got = list.filter(([k]) => ostHeard(k)).length;
     openOverlay(`<p class="eyebrow">おまけ</p><h2>サウンドトラック</h2>
       <p class="note">聴いた曲　${got} / ${list.length}　　押すと流れ、もう一度押すと止まります。</p>
@@ -7804,12 +7805,23 @@
         : `<div class="ost-row locked"><span class="no">${String(i + 1).padStart(2, '0')}</span><span><span class="ttl">？？？</span><span class="desc">まだ聴いていない曲</span></span><span class="st"></span></div>`).join('')}</div>
       <div class="row"><button type="button" class="btn primary" id="oBack">戻る</button></div>`);
     const draw = () => card.querySelectorAll('.ost-row[data-k]').forEach(b => {
-      const on = b.dataset.k === playing; b.classList.toggle('on', on); b.querySelector('.st').textContent = on ? '♪ 再生中' : '';
+      const k = b.dataset.k, on = k === playing; b.classList.toggle('on', on);
+      b.querySelector('.st').textContent = on ? (loading === k ? '読み込み中…' : '♪ 再生中') : (failed === k ? '読み込めませんでした' : '');
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
     card.querySelectorAll('.ost-row[data-k]').forEach(b => b.onclick = () => {
       const k = b.dataset.k;
-      playing = playing === k ? null : k; bgm(playing, 0.3); draw();
+      playing = playing === k ? null : k; failed = null; loading = null;
+      if (playing && FILE_BGM[playing]) {
+        // 録音の曲は、音にほどき終わるまで「読み込み中…」と出す。ほかの録音の曲のほどいた音は手放す（スマホで場所を取りすぎないように。探索の曲は次に始めるときのために残す）
+        Object.keys(fileBuf).forEach(n => { if (n !== playing && n !== 'explore') delete fileBuf[n]; });
+        try {
+          loading = k;
+          loadFileBgm(k).then(() => { if (loading === k) { loading = null; draw(); } },
+                              () => { if (loading === k) { loading = null; failed = k; if (playing === k) { playing = null; bgm(null); } draw(); } });
+        } catch (e) { loading = null; }
+      }
+      bgm(playing, 0.3); draw();
     });
     draw();
     $('#oBack').onclick = () => showExtras();
