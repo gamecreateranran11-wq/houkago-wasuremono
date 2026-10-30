@@ -954,10 +954,10 @@
   const ROOF_KEY = 'houkago-wasuremono-roof-v1';
   // 屋上のはじまり（その周回で屋上に着いたときの状態）。屋上の結末のあとも残し、「放課後を思い返す」で屋上に戻るときに使う
   const ROOF_START_KEY = 'houkago-wasuremono-roofstart-v1';
-  function saveRoofStart() {
+  function saveRoofStart(force) {
     try {
       const o = JSON.parse(localStorage.getItem(ROOF_START_KEY) || 'null');
-      if (o && o.runNo === P.runNo) return;
+      if (!force && o && o.runNo === P.runNo) return;
       localStorage.setItem(ROOF_START_KEY, JSON.stringify({ runNo: P.runNo, label: '屋上・18:30', run: scr.start, prog: scr.prog, resume: { key: scr.key, lines: 0, inputs: [] } }));
     } catch (e) {}
   }
@@ -2306,12 +2306,13 @@
     if (!name) return;
     if (FILE_BGM[name]) {
       const gain = bgmGain = a.createGain(); gain.gain.value = 0; gain.connect(out());
-      loadFileBgm(name).then(buf => {
+      const play = n => loadFileBgm(name).then(buf => {
         if (bgmGain !== gain) return;
         const v = a.createGain(); v.gain.value = FILE_BGM[name].vol; v.connect(gain);   // 音量バー・会話中の音量下げは、組み立てる曲と同じ bgmGain で
         const src = bgmSrc = a.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(v); src.start();
         gain.gain.setTargetAtTime(bgmLevel(), a.currentTime, fadeIn);
-      }).catch(() => {});
+      }).catch(() => { if (bgmGain === gain) setTimeout(() => { if (bgmGain === gain) play(n + 1); }, Math.min(2000 * 2 ** n, 15000)); });
+      play(0);
       return;
     }
     bgmGain = a.createGain(); bgmGain.gain.value = 0; bgmGain.connect(out()); bgmGain.connect(reverb());
@@ -3109,15 +3110,22 @@
     t.classList.toggle('on', cls === 'tint-pale');
   }
   const roofVoid = lines => voidWait(lines);
+  // 屋上の見た目と音を、ふつうの放課後に戻す（屋上の結末のあと・屋上の途中でタイトルに戻ったとき）
+  function roofClear(fade) {
+    bgClockOverride = null; rainSE(false, fade); windSE(false, fade); roofTint(null);
+    $('#scene').classList.remove('roof-dark', 'roof-wind'); $('#bells').style.visibility = '';
+    document.querySelectorAll('.roof-fx').forEach(fxEnd);
+  }
 
   async function roofScene(split) {
     const kind = split ? 'split' : (P.cur.mtKind || 'straight');
     C = { ...INFIRMARY, id: 'roof', key: 'roof', name: '#roof', faces: {} };   // 名前は誰の台詞とも一致しない印（地の文でも立ち絵を出さない）   // 屋上では立ち絵を出さない（5人は文と声だけ）
     talkHold = false; guest = null; guestRender();
+    $('#inv').innerHTML = ''; $('#hsLayer').innerHTML = '';   // 保健室の持ち物と調べる場所は、屋上では出さない
     // 上の欄：時刻は18:30のまま。チャイムの残りとヒント・チャイムを待つ・セーブは使わない
     $('#clock').textContent = '18:30'; $('#remain').textContent = ''; $('#bells').style.visibility = 'hidden';
     ['#btnHint', '#btnWait'].forEach(q => { $(q).disabled = true; });
-    if (!onRoof()) beginScript('roof:' + (split ? 'split' : 'straight'));   // 屋上もセーブできる（答えを記録して、ロードで早送り）
+    if (!onRoof()) { beginScript('roof:' + (split ? 'split' : 'straight')); saveRoofStart(true); }   // 屋上もセーブできる（答えを記録して、ロードで早送り）。新しく屋上に来たときは、屋上のはじまりを今の分岐で記録し直す（「思い返す」で古い分岐に戻らないように）
     syncSave();
     bgm(null);
     // 屋上のはじまりは、雨も風もやんでいる（タイトルや中断から持ちこした雨の音・演出を消す）。雨は、このあと雲が出てから降り出す
@@ -3283,7 +3291,7 @@
                  ['ソウタ', '……知らねえよ、そんなの']]);
     else await say(['言葉が、出てこなかった。']);
     await say([['ソウタ', '放課後、ずっと隣にいたのは、お前だろ'],
-               ['ヒナ', '……私の絵、最後まで見ててくれたでしょ'], ['ミオ', '……あなた、何も聞かずに、待っててくれた'],
+               ['ヒナ', '……私の絵、最後まで見ててくれたでしょ'], ['ミオ', '……あなた、責めないで、最後まで聞いてくれた'],
                '（……隣にいただけだ。何も、していない）', '（見ていただけ。待っていただけだった）', '（なのに、この子たちはそれを覚えていた）',
                '（……ずっと、誰かにとっての一番になりたかった）', '（一番じゃなくていい。誰かの中に、いさせてほしかった）',
                '気がつくと、涙が止まらなくなっていた。', '（泣きたくなんかないのに。勝手に、出てくる）',
@@ -3489,7 +3497,7 @@
   async function roofEnd(tag, title) {
     const kindNow = P.cur.mtSplit ? 'split' : (P.cur.mtKind || 'straight');   // 5章の結末（アナザーストーリーの文を変える）
     clearRoof(); scr = null; syncSave();
-    bgClockOverride = null; rainSE(false); windSE(false); roofTint(null); $('#scene').classList.remove('roof-dark', 'roof-wind'); $('#bells').style.visibility = '';
+    roofClear();
     const firstTrue = tag === 'TRUE' && !P.endings.TRUE;
     P.endings[tag] = true;
     const got = achGain(tag);
@@ -4186,7 +4194,7 @@
         await say(['「……空の絵を、見たことがある。この窓から見た空の」', 'ヒナがはっとこちらを見た。']);
         await line(['ヒナ', '……なんで知ってんの。あれ、もう捨てたのに', 'surprise'], false);
       }
-      let a = await ask([['きれいな空だった。……破いたの、ヒナさんじゃないよね', 'yori'], ['あんなにきれいなのに、捨てちゃうのはもったいないよ', 'seiron'], ['お母さんにも、ヒナさんを心配する気持ちがあったんじゃないかな', 'oitsu']], 1);
+      let a = await ask([['きれいな空だった。……破いたの、ヒナさんじゃないよね', 'yori'], ['あんなにきれいなのに、捨てちゃうのはもったいないよ', 'seiron'], [R.know.has('resign') ? 'お母さんにも、ヒナさんを心配する気持ちがあったんじゃないかな' : '家の人にも、ヒナさんを心配する気持ちがあったんじゃないかな', 'oitsu']], 1);
       if (a === 'seiron') { await say([['ヒナ', '……捨てたんじゃない', 'angry'], 'ヒナは何か言いかけて、唇を噛んだ。', ['ヒナ', '……もういい', 'angry'], ['', 'ヒナは窓のほうへ顔をそむけた。……その横顔がほんの一瞬、寂しそうに見えた気がした。', 'sad']]); return closeHeart(); }
       if (a === 'oitsu') return shutOut([['ヒナ', '……心配？', 'surprise'],
                                 ['ヒナ', '……みんな、そう言うんだよね', 'sad'],
@@ -4212,7 +4220,7 @@
                  ['ヒナ', '中3のとき、一回だけ、市のコンクールで賞をもらったんだ。見せたら、『サクラはその年、金賞だった』って', 'sad'],
                  ['ヒナ', '……その夜、お姉ちゃんが部屋に来て、色鉛筆をくれたの', 'sad']]);
       albumSee('sakura');
-      await overlayWait(`<img class="cg" src="img/sakura.webp" alt=""夜、部屋の扉を開けた姉が、リボンのかかった色鉛筆の箱を差し出して微笑んでいる">
+      await overlayWait(`<img class="cg" src="img/sakura.webp" alt="夜、部屋の扉を開けた姉が、リボンのかかった色鉛筆の箱を差し出して微笑んでいる">
         <p>『これ、大学の近くの画材屋で見つけたの。……ヒナ、青、よく使うでしょ』</p><p>『ほら、窓から描いてたやつ。あの空の色、私けっこう好きなんだよね』</p>`, '', ['続ける']);
       closeOverlay();
       await say([
@@ -5187,7 +5195,7 @@
     windowImg: 'ci_window_library',   // 2階の窓（美術室・音楽室の3階より1階分低い。木々の茂みが窓の下を覆う）
     window1: ['西向きの窓。すぐ外の木々の茂みの上に、ずっと同じ夕焼けが広がっている。', '木々のあいだから家並みが少しのぞき、その向こうに山並み。太陽は山の少し上にかかったまま、動かない。'],
     window2: ['窓の外、ずっと下のほうに正門と、その先の市道が見える。', '……この窓からは、帰っていく生徒の背中が毎日見えていたはずだ。ミオは窓のほうを見ようとしなかった。'],
-    clock2: ['時計の下に、開館時間の札。「放課後　〜17:00」。', 'その下に小さな付箋が貼ってある。「7/15　当番　水野」。……今日の当番は、ミオひとりだけらしい。'],
+    clock2: ['時計の下に、開館時間の札。「放課後　〜17:00」。', 'その下に小さな付箋が貼ってある。「7/15　当番　水野・伊藤」。……閉館の時刻を過ぎても残っているのは、ミオひとりだけらしい。'],
     id: 'library', key: 'mio', memory: ['（……ミオは本を胸に抱えなおしてから、手帳の端に小さく名前を書いた。貸出カードと同じ字だった）', '（図書室の隅の席。閉館のチャイムが鳴るまで、ここにいた日がある。……家に、帰りたくなかった）'], name: 'ミオ', who: 'この子', startMin: 60, room: '図書室', hall: 'hall_library', label: '第三章「図書室」', bg: 'library', bgClock: { cx: 1437, cy: 78, rx: 31, ry: 61 },
     sit: { src: 'mio_sit', style: 'left:12.2%;top:42.0%;height:46.5%' },
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
@@ -5567,7 +5575,7 @@
                  ['ミオ', '棚に戻したら、本当に全部終わっちゃう気がして。……返却の手続きをして、そのまま私が借りたの', 'down'],
                  '窓の外の夕日がミオの横顔を赤く染めていた。',
                  '「……それで、今は？」',
-                 ['', 'ミオは制服のポケットの上から、スマホを押さえた。', 'clench'],
+                 ['', 'ミオは机の奥のスマホを、手のひらでふせた。', 'clench'],
                  ['ミオ', '……今度は、私の番なの', 'sad'],
                  ['ミオ', '……今日、知らないアカウントから、私の机の写真が送られてきたの。……誰からかなんて、わかってるけど', 'sad'],
                  ['ミオ', '落書きは、写真にあとから書き足してあるだけ。教室の机は、きっときれいなまま。……先生に見せても、ただのいたずらで終わるの', 'sad'],
@@ -6816,7 +6824,7 @@
                    '空っぽのベッドと、シーツの上の来室カード。ミオは最後の空欄の、消しゴムの跡を見つめていた。',
                    ['ミオ', '……図書室に、来るつもりだったの？', 'mioGrief'],
                    ['ミオ', '私、ここまで来てたのに。……ノック、できなくて', 'mioGrief'],
-                   guestHide(), 'ミオは本を抱きしめたまま、ベッドのそばに座りこんだ。しおりの手紙はしおりに挟まったままだった。']);
+                   guestHide(), 'ミオは本を抱きしめたまま、ベッドのそばに座りこんだ。しおりの手紙は、本に挟まったままだった。']);
       }
     },
     shelfItem(saved) {
@@ -7211,6 +7219,7 @@
   // splash：最初はタイトルと背景だけを出し、タップしたらメニューを出す
   function showTitle(splash = false) {
     if (R) R.over = true;
+    if (C && C.id === 'roof') { roofClear(0.6); hideCut(); }
     gen++; advance = null; scr = null; replay = null;
     $('#scene').style.visibility = 'hidden';
     clearStage();
@@ -7224,7 +7233,8 @@
         ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save.run)}${save.resume ? '・会話の途中' : ''}</span></button>` : ''}
         ${roof ? `<button type="button" class="btn primary" id="tRoof">前回のつづきから<span class="sub">屋上・18:30</span></button>` : ''}
         ${roof && roof.resume ? '<button type="button" class="btn-sub" id="tRoofRedo">屋上を、はじめからやり直す<span class="sub">屋上の途中の続きは消えます</span></button>' : ''}
-        ${(save || roof) ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
+        ${(save || roof || !allDone()) ? '' : '<button type="button" class="btn primary" id="tEnd">放課後の終わりへ<span class="sub">この周回の結末を見る</span></button>'}
+        ${(save || roof || allDone()) ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
         ${recallSrc() ? '<button type="button" class="btn" id="tRecall">放課後を思い返す<span class="sub">好きな章から、やり直せます</span></button>' : ''}
@@ -7247,6 +7257,7 @@
     if (rainy) { if (audioReady) rainSE(true, 2); } else rainSE(false, 2);
     bgm('title');
     if ($('#tGo')) $('#tGo').onclick = () => goRoom();
+    if ($('#tEnd')) $('#tEnd').onclick = () => { closeOverlay(); runEnd(); };
     $('#tWipe').onclick = () => wipeAll();
     if (save) $('#tCont').onclick = () => save.prog ? loadSlot(save) : continueRun(save.run);
     if (roof) $('#tRoof').onclick = () => loadSlot(roof);
@@ -7659,6 +7670,8 @@
     return `${(CHAPTERS[d.ch] || ART).room}・${time}・チャイム${d.loop}回`;
   }
   // この周回で次に入る教室（章は順番に進む。終えた章には戻れない）
+  // この周回の章を、全部終えた（結末はまだ）
+  const allDone = () => ORDER.every(id => P.cur.results[CHAPTERS[id].key]);
   const nextCh = () => CHAPTERS[ORDER.find(id => selectable(id)) || ORDER[0]];
   // タイトルに出す、この周回の記録（終えた教室と結果）
   function runRecord() {
@@ -7680,7 +7693,16 @@
     const v = await overlayWait(`<p class="eyebrow">プレイデータをリセット</p><h2>すべてのプレイデータを消しますか？</h2>
       <p>わすれもの棚、途中の放課後、セーブファイル、朝を迎えた記録、見たエンディング、周回数、既読の記録がすべて消えます。</p>
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
-    if (v === 0) { P.shelf = {}; P.shelfRun = {}; P.shelfSeen = {}; P.saved = {}; P.cur = { results: {} }; P.runNo = 1; P.runs = 0; P.endings = {}; P.cleared = {}; P.played = false; P.heard = {}; P.ach = {}; P.achX = false; P.achShown = {}; P.achPending = []; P.metTsumugi = false; P.album = {}; P.diffSet = false; P.touchMem = {}; P.said = { wrong: [], yori: [] }; P.lastRun = null; saveP(); try { localStorage.removeItem(ROOF_START_KEY); } catch (e) {} clearRun(); READ.clear(); try { localStorage.removeItem(READ_KEY); SLOTS.forEach(n => localStorage.removeItem(SLOT_KEY(n))); } catch (e) {} }
+    if (v === 0) {
+      // 手帳の名前・章ごとの調べた記憶・屋上の途中なども含めて消す（前は一部が残り、リセット直後も「前回のつづきから 屋上」が出ていた）
+      const keep = { sound: P.sound, skip: P.skip, textSpeed: P.textSpeed, bgmVol: P.bgmVol, seVol: P.seVol };
+      try {
+        [KEY, SAVE_KEY, ROOF_KEY, ROOF_START_KEY, READ_KEY, ...SLOTS.map(SLOT_KEY)].forEach(k => localStorage.removeItem(k));
+        localStorage.setItem(KEY, JSON.stringify({ shelf: {}, runs: 0, endings: {}, ...keep }));
+      } catch (e) {}
+      location.reload();
+      return;
+    }
     showTitle();
   }
   // セーブ／ロード画面。mode='save'（プレイ中）なら保存と読み込みの両方、'load'（タイトル）なら読み込みだけ
@@ -7746,7 +7768,8 @@
     if (resume && resume.key && resume.key.startsWith('roof:')) {
       replay = { skip: Math.max(0, resume.lines - 1), inputs: [...(resume.inputs || [])] };
       beginScript(resume.key);
-      roofScene(resume.key === 'roof:split');
+      busy = true;   // 屋上のあいだは、持ち物・ヒント・調べる場所を押せないようにする（ふつうに屋上へ来たときと同じ）
+      try { await roofScene(resume.key === 'roof:split'); } finally { if (R === d) busy = false; }
       return;
     }
     const fn = resume && scriptFn(resume.key);
