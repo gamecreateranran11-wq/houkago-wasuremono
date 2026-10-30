@@ -3793,6 +3793,8 @@
   }
   // ほどけたら開くのは、その部屋の扉。一枚絵はその子の行き先（下校する子は校門、ミオは保健室へ続く渡り廊下）
   // stop：主人公が足を止める場所（主人公は、まだ放課後の外へは出られない）
+  // ほかの教室に、まだ明かりがついているか（まだ行っていない教室と、閉め出された教室は明かりがついたまま。ほどけた子・消えた子の教室は消えている）
+  const litLeft = () => ORDER.some(id => id !== C.id && (!P.cur.results[CHAPTERS[id].key] || P.cur.results[CHAPTERS[id].key] === 'shut'));
   function ending({ lines, img, alt, stop = '門の手前で、足が止まる。まだここは通れない。', album = img, music = null }) {
     talkHold = false;
     if (album) albumSee(album);
@@ -3806,7 +3808,7 @@
       <div class="fade" style="display:flex;flex-direction:column;gap:12px">
         ${lines.map(l => `<p>${l}</p>`).join('')}
         <p>${stop}</p>
-        <p>振り返ると、ほかの教室には、まだ明かりがついていた。</p>
+        <p>${litLeft() ? '振り返ると、ほかの教室には、まだ明かりがついていた。' : '振り返ると、ほかの教室の明かりは、もうどれも消えていた。'}</p>
         <p class="eyebrow">${C.label}　${C.name}の心がほどけた</p>
       </div>`;
     const go = v => v === 0 ? goNext(next) : showTitle(true);
