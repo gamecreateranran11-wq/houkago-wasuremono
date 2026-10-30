@@ -2268,11 +2268,12 @@
   let pendingCore = 0;  // 核心に入る選択のあと、何文目で核心の曲を始めるか
   // 録音した曲（ファイル）。曲そのものに残響が入っているので、教室の残響は通さない。vol は組み立てる曲と聞こえの大きさをそろえる倍率（ゲームの出口で、前の探索の曲と同じ大きさになるように測って決めた）
   // explore（探索と会話）は 2026-10-29 に作者が Gemini で作った『July Hallways』へ差し替えた。前の組み立てる曲（BGM.explore）は控えとして残す
-  const FILE_BGM = { lastBell: { src: 'snd/last_bell_in_july.m4a', vol: 0.16 },
-                     explore: { src: 'snd/explore_july_hallways.m4a', vol: 0.14 },
-                     core: { src: 'snd/core_july_sun.m4a', vol: 0.16 },   // core（『胸の奥の声』）も 2026-10-29 に Gemini の曲へ。前の組み立てる曲（BGM.core）は控えとして残す
-                     roofCore: { src: 'snd/roof_after_last_bell.m4a', vol: 0.36 },   // roofCore（屋上『深淵からの声』）も 2026-10-29 に Gemini の『After the Last Bell』へ。前の組み立てる曲（BGM.roofCore）は控えとして残す
-                     musicbox: { src: 'snd/musicbox_gemini.m4a', vol: 0.16 } };   // musicbox（『ひとかけらの希望』）も 2026-10-30 に作者が Gemini で作った曲へ（ゲームでの大きさを前の曲の約 -24.4dB に合わせた）。前の組み立てる曲（BGM.musicbox）は控えとして残す
+  const FILE_BGM = { lastBell: { src: 'snd/last_bell_in_july_h.m4a', vol: 0.16 },
+                     explore: { src: 'snd/explore_july_hallways_h.m4a', vol: 0.14 },
+                     core: { src: 'snd/core_july_sun_h.m4a', vol: 0.16 },   // core（『胸の奥の声』）も 2026-10-29 に Gemini の曲へ。前の組み立てる曲（BGM.core）は控えとして残す
+                     roofCore: { src: 'snd/roof_after_last_bell_h.m4a', vol: 0.36 },   // roofCore（屋上『深淵からの声』）も 2026-10-29 に Gemini の『After the Last Bell』へ。前の組み立てる曲（BGM.roofCore）は控えとして残す
+                     musicbox: { src: 'snd/musicbox_gemini_h.m4a', vol: 0.16 } };   // musicbox（『ひとかけらの希望』）も 2026-10-30 に作者が Gemini で作った曲へ（ゲームでの大きさを前の曲の約 -24.4dB に合わせた）。前の組み立てる曲（BGM.musicbox）は控えとして残す
+  // 2026-10-30：5曲とも、AIっぽさをやわらげる処理をかけた版（名前の最後に _h）へ。高い音の左右のしゅわしゅわした揺れとギラつきをおさえ、小さな部屋の響きとテープのようなごくわずかな揺れを足した（ヒスは足さない）。大きさは前と同じ。前の曲はデスクトップに控え
   // ファイルの中身（数MB）は、タイトルのうちに全曲ぶん取り寄せておく。音にほどく（デコード）のは、かける少し前に（全曲ほどいておくと、スマホで場所を取りすぎる）
   const fileBytes = {}, fileBuf = {};
   function fetchFileBgm(name) {
