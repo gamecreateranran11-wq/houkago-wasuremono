@@ -2272,10 +2272,15 @@
                      explore: { src: 'snd/explore_july_hallways.m4a', vol: 0.14 },
                      core: { src: 'snd/core_july_sun.m4a', vol: 0.16 },   // core（『胸の奥の声』）も 2026-10-29 に Gemini の曲へ。前の組み立てる曲（BGM.core）は控えとして残す
                      roofCore: { src: 'snd/roof_after_last_bell.m4a', vol: 0.36 } };   // roofCore（屋上『深淵からの声』）も 2026-10-29 に Gemini の『After the Last Bell』へ。前の組み立てる曲（BGM.roofCore）は控えとして残す
-  const fileBuf = {};
+  // ファイルの中身（数MB）は、タイトルのうちに全曲ぶん取り寄せておく。音にほどく（デコード）のは、かける少し前に（全曲ほどいておくと、スマホで場所を取りすぎる）
+  const fileBytes = {}, fileBuf = {};
+  function fetchFileBgm(name) {
+    if (!fileBytes[name]) { fileBytes[name] = fetch(FILE_BGM[name].src).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }); fileBytes[name].catch(() => { delete fileBytes[name]; }); }
+    return fileBytes[name];
+  }
   function loadFileBgm(name) {
-    const a = audio(), f = FILE_BGM[name];
-    if (!fileBuf[name]) fileBuf[name] = fetch(f.src).then(r => r.arrayBuffer()).then(b => new Promise((ok, ng) => a.decodeAudioData(b, ok, ng)));
+    const a = audio();
+    if (!fileBuf[name]) { fileBuf[name] = fetchFileBgm(name).then(b => new Promise((ok, ng) => a.decodeAudioData(b, ok, ng))); fileBuf[name].catch(() => { delete fileBuf[name]; }); }   // 失敗したら、次にかけるときに取り寄せ直す
     return fileBuf[name];
   }
   let bgmSrc = null;
@@ -2293,7 +2298,7 @@
     if (master && master.gain.value < MASTER_GAIN * 0.99) unmute();
     if (name && !P.heard[name]) { P.heard[name] = true; saveP(); }
     let a; try { a = audio(); } catch (e) { return; }
-    try { loadFileBgm('explore'); } catch (e) {}   // 探索の曲は録音のファイルなので、タイトルのうちに読み込んでおく（始めてすぐ鳴るように）
+    try { loadFileBgm('explore'); Object.keys(FILE_BGM).forEach(fetchFileBgm); } catch (e) {}   // 探索の曲はタイトルのうちにほどいておく（始めてすぐ鳴るように）。ほかの曲も中身だけ取り寄せておく
     if (bgmGain) { const g = bgmGain, src = bgmSrc; g.gain.setTargetAtTime(0, a.currentTime, 0.4); setTimeout(() => { try { g.disconnect(); if (src) src.stop(); } catch (e) {} }, 2500); }
     clearInterval(bgmTimer); bgmGain = null; bgmSrc = null;
     if (!name) return;
@@ -3177,9 +3182,10 @@
     await roofVoid(['放課後、五つの部屋で、五人に会った。', '別れぎわに、生徒手帳を差し出して、名前を書いてもらった。', '……自分の名前は、一度も言わなかった。',
                     '（覚えてもらうほどの名前じゃない）', '（それでも、名前を言ったら、覚えていてほしくなる）', '（忘れられたときのことを、考えたくなかった）']);
     await roofVoid(['最終下校のチャイムの少し前。', '西の階段をのぼって、屋上の扉を開けた。', 'フェンスの前で、手帳の名前のページを開いた。', '……そこから先は、覚えていない。']);
+    try { loadFileBgm('roofCore'); } catch (e) {}   // 雨の曲を、空が暗くなる前にほどいておく
     await say(['（この手帳は、……誰かに会えた証が、ほしかったんだ）', '（今日、たしかに誰かと話したって）']);
     await say(['風が急に冷たくなった。', '夕日が黒い雲に飲まれていく。……空が、音を立てて暗くなる。']);
-    windSE(false, 3); await darkSwap('rooftop_rain'); rainSE(true); bgm('roofCore', 4);
+    windSE(false, 3); await darkSwap('rooftop_rain'); rainSE(true); bgm('roofCore', 4); try { loadFileBgm('lastBell'); } catch (e) {}   // エンディングの曲も、屋上のあいだにほどいておく
     await say(['目を開けると、雨だった。', '大粒の雨が屋上を打っている。……いつから降っていたのか、わからない。', '手帳の白い行が、雨に濡れていく。',
                '雨の音に混じって、言葉が降ってきた。', '今日、五人が打ち明けてくれた言葉。……それから自分が、どこかで言われてきた言葉。']);
     const said = saidForRoof();
@@ -3627,7 +3633,7 @@
     const i = await choose(list.map(([t]) => t));
     const kind = list[i][1];
     saidNote(list[i][0], kind, stage);
-    if (stage === 1 && kind === 'yori') { R.touched = true; bgm(null); pendingCore = C.coreAt || 2; }   // coreAt：選択のあと何文目で核心の曲を始めるか（章ごと）
+    if (stage === 1 && kind === 'yori') { R.touched = true; bgm(null); pendingCore = C.coreAt || 2; try { loadFileBgm('core'); } catch (e) {} }   // 核心の曲は、選んだすぐあとからほどいておく   // coreAt：選択のあと何文目で核心の曲を始めるか（章ごと）
     if (stage >= 2 && (kind === 'yori' || kind === 'nagu' || kind === 'key')) R.touched = true;
     if (kind !== 'yori' && kind !== 'key') nmMark('miss');
     return kind;
