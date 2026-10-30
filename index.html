@@ -3787,9 +3787,12 @@
 
   const ROOMS = [['hina', '美術室'], ['sota', '音楽室'], ['mio', '図書室'], ['kei', '体育館'], ['tsumugi', '保健室']];
   // 部屋の名前は、その章を開放したあとだけ出す（まだ行ったことのない部屋は「ほかの教室」）
+  // 窓を調べたときの最後の文。閉め出した子の教室は、静かでも気配だけは残っている（明かりがついたまま、子が中にいる）。でも、もう入れない
   function windowLine() {
-    const named = ORDER.filter(id => id !== C.id && unlocked(id)).map(id => CHAPTERS[id].room);
-    return named.length ? `${named.join('からも、')}からも、ほかの教室からも、物音ひとつしない。` : 'ほかの教室からも、物音ひとつしない。';
+    const ids = ORDER.filter(id => id !== C.id && unlocked(id)), isShut = id => P.cur.results[CHAPTERS[id].key] === 'shut';
+    const quiet = ids.filter(id => !isShut(id)).map(id => CHAPTERS[id].room), shut = ids.filter(isShut).map(id => CHAPTERS[id].room);
+    return [quiet.length ? `${quiet.join('からも、')}からも、ほかの教室からも、物音ひとつしない。` : 'ほかの教室からも、物音ひとつしない。',
+            ...(shut.length ? [`……${shut.join('と')}の扉の向こうには、まだ誰かの気配が残っている気がした。`, 'でも、あの扉はもう開かない。'] : [])];
   }
   // ほどけたら開くのは、その部屋の扉。一枚絵はその子の行き先（下校する子は校門、ミオは保健室へ続く渡り廊下）
   // stop：主人公が足を止める場所（主人公は、まだ放課後の外へは出られない）
@@ -3825,7 +3828,7 @@
       const first = !R.know.has('window'), second = !first && C.window2 && !R.know.has('window2');
       showCut((!first && C.windowImg2) || C.windowImg || 'ci_window');
       if (first) {
-        await say([...(C.window1 || ['窓の外は、ずっと同じ夕焼け。校庭には誰もいない。']), windowLine()]);
+        await say([...(C.window1 || ['窓の外は、ずっと同じ夕焼け。校庭には誰もいない。']), ...windowLine()]);
         R.know.add('window'); await tick();
       } else if (second) {
         // 2回目：その章だけの、窓まわりの新しい情報
@@ -6632,7 +6635,7 @@
         }
         showCut('ci_inf_window');
         if (!R.know.has('window')) {
-          await say(['窓の外は南の空の夕焼け。すぐ外の植え込みの向こうに、校庭が広がっている。', windowLine()]);
+          await say(['窓の外は南の空の夕焼け。すぐ外の植え込みの向こうに、校庭が広がっている。', ...windowLine()]);
           R.know.add('window'); await tick();
         } else if (!R.know.has('window2')) {
           R.know.add('window2');
