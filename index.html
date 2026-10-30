@@ -3192,7 +3192,7 @@
     await say(['頭に誰かの手が置かれる感触がした。']);
     await lateWords([['まだ若いんだから、大丈夫', 'nag'], ['人生、これからだよ', 'nag'], ['生きてれば、いいことあるよ', 'nag']]);
     // ここから先の声は、主人公がいま考えていることではなく、ずっと頭の中にいた「もう一人の自分」の声。遊ぶ人は、選択肢でそれに答える
-    await say(['……一つずつなら、雨とも呼べなかった。', '降りかかるたびに、少しずつ冷えていった。']);
+    await say(['……一つずつなら、雨とも呼べなかった。', 'でも、降りかかるたびに少しずつ冷えていった。']);
     const O = 'もう一人の自分';
     if (said.rain.length || said.late.length) await say(['……自分があの子たちに言った言葉も、混ざっていた。']);
     await say(['どれが誰に向けられた言葉だったのか、もうわからなかった。', '雨が手帳の上で跳ねていた。',
@@ -3647,8 +3647,11 @@
     const wrong = mix(P.said.wrong).map(e => [bare(e.t).replace(/^……/, ''), cls[e.k]]);
     const rain = wrong.filter(([t]) => t.length <= 20).slice(0, 3);
     const late = wrong.filter(w => !rain.includes(w) && w[1] !== 'neg').slice(0, 3);
+    // もう一人の自分が引くのは、その子の気持ちを受けとめた言葉だけ（問いかけ・しぐさ・手がかりの言葉は、場面を離れると意味が通らないので引かない）
+    const QUOTE = new Set(['……『サクラの妹』って呼ばれるたびに、ずっとその声を聞いてきたんだね', 'だから、自画像の顔だけ描けなかったんだね', 'チョークを渡されたとき、怖かったんだ',
+                           'ここが、ツムギさんの居場所だったんだ', '毎日、ひとりで踏んばってたの？', '「もう守ってあげられない」なんて、誰かに謝らなくていい']);
     const yori = [], seen = new Set();
-    for (const e of mix(P.said.yori).sort((a, b) => (b.s >= 2) - (a.s >= 2))) { if (yori.length < 2 && !seen.has(e.c)) { seen.add(e.c); yori.push(bare(e.t)); } }
+    for (const e of mix(P.said.yori.filter(e => QUOTE.has(e.t))).sort((a, b) => (b.s >= 2) - (a.s >= 2))) { if (yori.length < 2 && !seen.has(e.c)) { seen.add(e.c); yori.push(bare(e.t).replace(/「/g, '『').replace(/」/g, '』')); } }
     return { rain, late, yori };
   }
   // 最後の選択肢で「正論」「慰める」を選んだあと：わすれものがなければ心を閉ざしてループ、あれば3択
