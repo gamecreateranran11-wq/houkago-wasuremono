@@ -3751,7 +3751,7 @@
   // 選択肢の並び：種類ごとの位置が段や章で固まると、位置で答えがわかってしまうので、章と段ごとに並びを決めておく。
   // 毎回ランダムにすると、セーブから再開したときに選んだ答えがずれるため、固定の並びにする（慰めるは2ループ目以降だけ出る）
   const ASK_ORDER = {
-    art:       { 1: ['seiron', 'oitsu', 'yori'], 2: ['yori', 'oitsu', 'nagu', 'seiron'], 3: ['oitsu', 'key', 'nagu', 'seiron'] },
+    art:       { 1: ['seiron', 'oitsu', 'yori'], 2: ['yori', 'oitsu', 'nagu', 'seiron'], 3: ['oitsu', 'key', 'nagu', 'pity', 'seiron'] },
     music:     { 1: ['seiron', 'oitsu', 'yori'], 2: ['yori', 'nagu', 'seiron', 'oitsu'], 3: ['key', 'oitsu', 'nagu', 'seiron'] },
     library:   { 1: ['yori', 'oitsu', 'seiron'], 2: ['oitsu', 'seiron', 'nagu', 'yori'], 3: ['oitsu', 'nagu', 'seiron', 'key'] },
     gym:       { 1: ['oitsu', 'seiron', 'yori'], 2: ['seiron', 'nagu', 'yori', 'oitsu'], 3: ['seiron', 'oitsu', 'key', 'nagu'] },
@@ -3774,7 +3774,7 @@
   // 選んだ言葉を覚えておく（同じ文は一度だけ。新しいものを後ろに、多すぎたら古いものから捨てる）
   function saidNote(t, kind, stage) {
     if (typeof t !== 'string' || !C || !CHAPTERS[C.id]) return;
-    const box = (kind === 'yori' || kind === 'key') ? P.said.yori : ['seiron', 'nagu', 'oitsu'].includes(kind) ? P.said.wrong : null;
+    const box = (kind === 'yori' || kind === 'key') ? P.said.yori : ['seiron', 'nagu', 'oitsu', 'pity'].includes(kind) ? P.said.wrong : null;
     if (!box) return;
     const n = box.findIndex(e => e.t === t); if (n >= 0) box.splice(n, 1);
     box.push({ t, k: kind, s: stage, c: C.id }); if (box.length > 30) box.shift();
@@ -3782,7 +3782,7 @@
   }
   // 屋上で返す言葉：言葉の雨（短いもの。横に流れるので20字まで）／遅れて混ざる言葉（正論・慰める）／もう一人の自分が引く「寄り添う」の言葉（2つ。違う章から）
   function saidForRoof() {
-    const mix = a => a.slice().sort(() => Math.random() - .5), cls = { seiron: 'sei', nagu: 'nag', oitsu: 'neg' };
+    const mix = a => a.slice().sort(() => Math.random() - .5), cls = { seiron: 'sei', nagu: 'nag', oitsu: 'neg', pity: 'nag' };   // 同情は、慰め（見下ろす同情）と同じ色で降らせる
     const bare = t => t.replace(/^「|」$/g, '');   // 選択肢の文に「」がついていても、二重にしない
     const wrong = mix(P.said.wrong).map(e => [bare(e.t).replace(/^……/, ''), cls[e.k]]);
     const rain = wrong.filter(([t]) => t.length <= 20).slice(0, 3);
@@ -4409,7 +4409,8 @@
       } else {
         await line('ヒナは長袖の上から、左の手首をそっと押さえた。', false);
       }
-      const opts = [['傷つけても、苦しいのは消えないよ', 'seiron'], ['……痛かったね', 'nagu'], ['もう二度としないって、約束して', 'oitsu']];
+      // 同情（2026-11-01・作者の案）：1章の手首の場面だけにある答え。相手を「かわいそうな子」として見下ろしてしまう。正論と同じく届かない
+      const opts = [['傷つけても、苦しいのは消えないよ', 'seiron'], ['……痛かったね', 'nagu'], ['……かわいそうに。そこまで追い詰められてたんだね', 'pity'], ['もう二度としないって、約束して', 'oitsu']];
       if (hasKey('hina')) opts.splice(1, 0, ['だから、自画像の顔だけ描けなかったんだね', 'key']);
       a = await ask(opts, 3);
       if (a === 'oitsu') { if (await hurt([['ヒナ', '……やめたら', 'wrist'],
@@ -4431,6 +4432,13 @@
                    'その手を、振りほどけなかった。']);
         await say([DEP_NOTE[C.id], depNote()]);
         return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
+      }
+      if (a === 'pity') {
+        await say([['ヒナ', '……そんな目で見ないで', 'reject'],
+                   ['ヒナ', 'かわいそうな子だって、思ったんでしょ', 'angry'],
+                   'ヒナは長袖の袖口を引っぱって、手首を隠した。',
+                   ...(hasKey('hina') ? [] : ['（何か、あと一つ足りない気がする。この子が誰にも見せていない何かが）'])]);
+        return lastWrong();
       }
       if (a === 'seiron') {
         await say([['ヒナ', '……知ってる', 'angry'],
