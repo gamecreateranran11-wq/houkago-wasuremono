@@ -7398,7 +7398,7 @@
         ${(save || roof || allDone()) ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
-        ${recallSrc() ? '<button type="button" class="btn" id="tRecall">放課後を思い返す<span class="sub">好きな章から、やり直せます</span></button>' : ''}
+        ${(P.runNo || 1) > 1 && recallSrc() ? '<button type="button" class="btn" id="tRecall">放課後を思い返す<span class="sub">好きな章から、やり直せます</span></button>' : ''}
         ${extrasAny() ? '<button type="button" class="btn" id="tExtra">おまけ</button>' : ''}
         <button type="button" class="btn" id="tSet">設定<span class="sub">既読スキップ・文字の速さ・音量</span></button>
         <button type="button" class="btn-reset" id="tWipe">プレイデータをリセット</button>
@@ -7534,6 +7534,7 @@
     return L;
   }
   /* ---------- 放課後を思い返す：今の周回（なければ、いちばん最近に終えた周回）の好きな章、または着いていれば屋上から、やり直す。
+     1周目のあいだはタイトルに出さない（2026-11-01・作者の判断：言葉が届かないのは作りどおりなので、まず1〜5章を通して歩いてもらう。1周目を終えたら出る）。
      その章から先の結果はなかったことになる。この周回で手に入れたわすれものは、この周回のうちは使えない（今までと同じ決まり）。
      調べたこと・話したことは覚えている。思い返した周回は、ノーミスに数えない ---------- */
   const RES_LABEL = { saved: 'ほどけた', vanished: '消えた', shut: '閉ざされた扉', died: '灯が消えた' };
