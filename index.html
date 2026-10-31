@@ -3830,8 +3830,7 @@
     if (await choose(['「……だったら、同じところに立てばわかる？」', '（……何も言えない）']) === 0) {
       bgm('coreHeavy'); await say(C.badSubTalk); return chapterBad('BAD2', '身代わり', C.badSub, 'coreHeavy');
     }
-    if (missing.length) await say(missing);
-    return lastWrong();
+    return lastWrong();   // 「何か、あと一つ足りない気がする」は出さない（届かなかったのは向き合い方のせいで、わすれものが足りないからではない）
   }
   async function lastWrong() {
     if (!hasKey(C.key)) return closeHeart(keyNote);
@@ -4112,7 +4111,9 @@
                 ['ヒナ', '……ここにいても、ずっと聞こえるの。『サクラは、できたのに』って', 'despair'],
                 ['ヒナ', '……お姉ちゃんにもらった色鉛筆、まだ一本も削ってないや', 'despair'],
                 ['ヒナ', '……失敗作なら、失敗作らしく、最後は……', 'despair']],
-    closeLines: ['ヒナは膝を抱えたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。'],
+    // 心を閉ざすときの姿は、直前の動きに合わせる（手首を隠した／膝に顔をうずめた／それ以外＝言い訳や重ねた謝罪のあと）
+    closeLines: () => { const p = R.pose; R.pose = null;
+      return [p === 'wrist' ? 'ヒナは手首を隠したまま、もう何も言わなかった。' : p === 'knees' ? 'ヒナは膝に顔をうずめたまま、もう何も言わなかった。' : 'ヒナはうつむいたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。']; },
     hotspots: [
       ['sink', '流し', 'left:83.3%;top:37.5%;width:16.7%;height:45.8%'],
       ['shelf', '画材棚', 'left:75.8%;top:14.2%;width:13.3%;height:28%'],
@@ -4443,12 +4444,13 @@
         await say([DEP_NOTE[C.id], depNote()]);
         return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
       }
-      if (a === 'pity') return pityBranch([['ヒナ', '……そんな目で見ないで', 'reject'],
+      if (a === 'pity') return (R.pose = 'wrist', pityBranch([['ヒナ', '……そんな目で見ないで', 'reject'],
                    ['ヒナ', 'かわいそうな子だって、思ったんでしょ', 'angry'],
                    'ヒナは長袖の袖口を引っぱって、手首を隠した。',
                    ['ヒナ', '……私の気持ちなんて、何もわからないくせに', 'angry']],
-                   hasKey('hina') ? [] : ['（何か、あと一つ足りない気がする。この子が誰にも見せていない何かが）']);
+                   hasKey('hina') ? [] : ['（何か、あと一つ足りない気がする。この子が誰にも見せていない何かが）']));
       if (a === 'seiron') {
+        R.pose = 'wrist';   // 心を閉ざすときの姿（手首を隠したまま）
         await say([['ヒナ', '……知ってる', 'angry'],
                    ['ヒナ', '消えないことくらい、わかってる。……それでも、ほかのやり方を知らないんだよ', 'angry'],
                    'ヒナは長袖の袖口を引っぱって、手首を隠した。',
@@ -4466,6 +4468,7 @@
                    ['ヒナ', '……それでも、何もしないで、苦しいのに押しつぶされるよりはましだから', 'chestCry'],
                    ['ヒナ', 'それにね、わかんないの。自分がどんな顔してるのか。鏡、見られなくて', 'grief'], 'ヒナは膝に顔をうずめた。',
                    ...(hasKey('hina') ? [] : ['（何か、あと一つ足りない気がする。この子が誰にも見せていない何かが）'])]);
+        R.pose = 'knees';
         return lastWrong();
       }
       await say([['ヒナ', '……なんで', 'surprise'], ['ヒナ', 'なんで知ってるの。あのスケッチブック、誰にも見せてないのに', 'surprise'],
