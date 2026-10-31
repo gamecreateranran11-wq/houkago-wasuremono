@@ -70,6 +70,21 @@
   .cutin.show { opacity: 1; transform: none; }
   .cutin img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; max-width: none; }
   .cutin .clock-hands { position: absolute; inset: 0; width: 100%; height: 100%; }
+  /* 屋上の手帳をなぞる：名前のところへ寄る（中心 880,737・4.4倍） */
+  .cutin.nbz { pointer-events: auto; }
+  .nbz-in { position: absolute; inset: 0; transform-origin: 57.29% 71.97%; transform: translate(-7.29%, -21.97%) scale(4.4); transition: transform 1.4s cubic-bezier(.3, .6, .2, 1); }
+  .nbz-in.far { transform: none; transition: none; }
+  .cutin .nbz-in img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .nbz-row { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .nbz-row::after { content: ""; position: absolute; left: 0; top: 18%; bottom: 14%; width: 0; border-radius: 999px; background: linear-gradient(90deg, rgba(255, 238, 200, 0), rgba(255, 238, 200, .42) 12%, rgba(255, 238, 200, .42) 88%, rgba(255, 238, 200, 0)); mix-blend-mode: screen; transition: width .9s ease; }
+  .nbz-row.traced::after { width: 100%; }
+  .nbz-row:not(.traced):not(.blank):not(:disabled)::before { content: ""; position: absolute; inset: 20% 0 16%; border-radius: 999px; background: rgba(255, 238, 200, .16); mix-blend-mode: screen; opacity: 0; animation: nbzHint 2.8s ease-in-out infinite; }
+  @keyframes nbzHint { 50% { opacity: 1; } }
+  .nbz-row:focus-visible { outline: 1px solid rgba(255, 238, 200, .8); outline-offset: 0; }
+  .nbz-row:disabled { cursor: default; }
+  .nbz-cap { position: absolute; left: 0; right: 0; bottom: 6px; margin: 0; text-align: center; font-size: 12px; letter-spacing: .12em; color: #f4ecdd; text-shadow: 0 1px 4px rgba(0, 0, 0, .9); pointer-events: none; transition: opacity .3s; }
+  .nbz-cap.gone { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { .nbz-in { transition: none; } .nbz-row::after { transition: none; } .nbz-row::before { animation: none; } }
   .scene.cut .hs, .scene.story .hs { visibility: hidden; }
   .get-item { position: absolute; inset: 0; z-index: 4; display: grid; place-items: center; background: rgba(12, 9, 16, .55); opacity: 0; transition: opacity .25s ease; cursor: pointer; }
   .get-item.show { opacity: 1; }
@@ -1334,7 +1349,7 @@
   const DARK_CUTS = new Set(['ci_inf_shelf', 'ci_inf_desk', 'ci_inf_cabinet', 'ci_inf_notice', 'ci_inf_scale', 'ci_inf_stool']);
   function showCut(name) {
     if (DARK_CUTS.has(name) && R && R.taken && R.taken.dark) name += '_dark';
-    const el = $('#cutin');
+    const el = $('#cutin'); el.classList.remove('nbz');
     el.innerHTML = name === 'clock' ? clockSVG() : `<img src="${imgSrc(name)}" alt="">`;
     if (name === 'clock') {   // 時計の絵を読み込み終えてから、針を出す（針だけが先に見えないように）
       const im = el.querySelector('img'), hs = el.querySelector('svg');
@@ -1343,7 +1358,35 @@
     el.classList.add('show');
     $('#scene').classList.add('cut');
   }
+  // 屋上の手帳：名前の行に触れてなぞる。done はなぞり終えた子。返り値は子の id か 'blank'（6行目）
+  const NB_ROWS = [['art', 885, 673, 112, 24, 4], ['music', 874, 701, 94, 18, 11.9], ['library', 851, 716, 64, 15, 13.2], ['gym', 845, 740, 82, 24, 14.4], ['infirmary', 848, 765, 108, 24, 15.3], ['blank', 847, 790, 108, 22, 16.2]];   // [子, 中心x, 中心y, 長さ, 高さ, 罫線の傾き(度)]。字は罫線に沿って右下がり
+  function traceName(done, zoom) {
+    const order = NB_ROWS.map(r => r[0]).filter(k => k !== 'blank' && !done.includes(k));
+    if (replay) {   // 早送り：記録した名前を使う（この仕組みより前のセーブには記録がないので、上から順に）
+      const q = replay.inputs[0];
+      if (typeof q === 'string' && q.startsWith('t:')) return Promise.resolve(replayed().v.slice(2));
+      return Promise.resolve(rec('t:' + order[0]).slice(2));
+    }
+    return new Promise(res => {
+      const el = $('#cutin');
+      el.innerHTML = `<div class="nbz-in${zoom ? ' far' : ''}"><img src="${imgSrc('protag_notebook_dusk')}" alt="夕焼けの屋上に落ちている生徒手帳。五人の名前が並んでいる">${NB_ROWS.map(([k, cx, cy, w, h, deg]) =>
+        `<button type="button" class="nbz-row${done.includes(k) ? ' traced' : ''}${k === 'blank' ? ' blank' : ''}" data-k="${k}" style="left:${(cx - w / 2) / 15.36}%;top:${(cy - h / 2) / 10.24}%;width:${w / 15.36}%;height:${h / 10.24}%;transform:rotate(${deg}deg)" aria-label="${k === 'blank' ? '6行目' : ({ art: '春日ヒナ', music: '井上ソウタ', library: '水野ミオ', gym: '三浦ケイ', infirmary: '白石ツムギ' })[k]}"${done.includes(k) ? ' disabled' : ''}></button>`).join('')}</div>
+        <p class="nbz-cap">名前に触れて、なぞる</p>`;
+      el.classList.add('show', 'nbz'); $('#scene').classList.add('cut');
+      if (zoom) requestAnimationFrame(() => requestAnimationFrame(() => { const z = el.querySelector('.nbz-in'); if (z) z.classList.remove('far'); }));
+      el.querySelectorAll('.nbz-row').forEach(b => b.onclick = ev => {
+        ev.stopPropagation();
+        const k = b.dataset.k;
+        el.querySelectorAll('.nbz-row').forEach(x => { x.disabled = true; });
+        el.querySelector('.nbz-cap').classList.add('gone');
+        if (k === 'blank') { res(rec('t:blank').slice(2)); return; }
+        b.classList.add('traced');   // 指でなぞるように、字の上を光が左から右へ通る
+        setTimeout(() => res(rec('t:' + k).slice(2)), 1000);
+      });
+    });
+  }
   function hideCut() {
+    $('#cutin').classList.remove('nbz');
     $('#cutin').classList.remove('show');
     $('#scene').classList.remove('cut');
   }
@@ -3201,7 +3244,7 @@
                '（……あの放課後は、本当にあった）', 'その下に、6行目があった。', '何も書かれていない。', '（ここには、誰の名前が入るはずだったんだろう）']);
     // 5つの記憶のかけらを、ここで一続きに思い出す。5人の章は、主人公の放課後でもあった（見ていたのに、誰にも見られていなかった）。
     // 過去の出来事は書かない。それぞれの場所を短く映して、屋上に戻る
-    await say(['五人の字を、一行ずつ指でなぞった。', '……なぞるたびに、思い出すことがあった。']);
+    await say(['五人の字に、指をのせてみた。']);
     // 各章で一瞬だけ出て流した心の声と、それにつながる小さな場面（名前のつく出来事ではなく、ありふれた場面。少しずつ話せなくなっていく順）
     const SMALL = {
       art: ['（……得意なことを聞かれても、何も書けなかった気がした）',
@@ -3218,13 +3261,26 @@
       infirmary: ['（……やさしい声で、片付けられたことがある気がした）',
                   ['一度だけ、思い切って、先輩に話した。', '先輩は笑って、「そんなの大したことないって。気にすんなよ」と言った。', '……励ましてくれたんだと、わかっていた。', '……それから、話すのをやめた。']]
     };
-    for (const [img, id] of [['hall_art', 'art'], ['hall_music', 'music'], ['library', 'library'], ['gym', 'gym'], ['hall_infirmary', 'infirmary']]) {
+    // 2026-10-31：なぞる名前は遊ぶ人が選ぶ（順番は自由）。6行目は、なぞる字がない
+    const IMG = { art: 'hall_art', music: 'hall_music', library: 'library', gym: 'gym', infirmary: 'hall_infirmary' };
+    const done = []; let blank = 0;
+    while (done.length < 5) {
+      const id = await traceName(done, !done.length && !blank);
+      if (id === 'blank') {
+        await say(blank++ ? ['……なぞる字は、まだなかった。'] : ['6行目には、何も書かれていない。', '……なぞる字が、なかった。']);
+        continue;
+      }
+      done.push(id);
+      if (done.length === 1) await say(['……なぞると、思い出すことがあった。']);
+      hideCut();
       const c = CHAPTERS[id], m = c && (c.touchMemory || (c.memory && c.memory[1])), sm = SMALL[id];
-      await endScene(img);
+      await endScene(IMG[id]);
       if (m) await say([m.replace('（もうひとつ。', '（')]);
       await say([sm[0], '……あの子の話を聞きながら、そう思って、流した。']);
       await say(sm[1]);
+      if (done.length < 5) await endScene('rooftop');
     }
+    hideCut();
     await endScene('rooftop');
     await say(['（……いつも、誰かを見ていた）', '（でも、本当の自分は、誰にも見つけてもらえなかった）']);
     // 小さな場面（名前のつく出来事ではなく、誰にでも重ねられる形）。もう一人の自分の「途中でやめる」「笑っていれば」「役に立っているあいだだけ」と対応。2026-10-31：「二人組」の場面は、二人組でいつも一人になっていた人が惨めになるので「ノート、見せて」に
@@ -3324,6 +3380,7 @@
                [O, '……わからないでしょ'], [O, '誰も、助けてなんて言ってなかったよ'],
                [O, '頼まれてもいないのに、扉を開けて、言葉をかけて。……役に立っていたかっただけじゃないの'],
                [O, '言葉ひとつ間違えたら、もっと追い詰めてたかもしれないのに'],
+               [O, '誰かにつないだって、その先でまた回されて、ひとりに戻るだけかもしれないのに'],   // つなぐことの、もう一つの現実（2026-10-31 作者の補足を本文に。是非は断定しない）
                [O, '手を伸ばしたなら、伸ばしたぶんの責任だってあるのに'], [O, '……ここに立ってる人に、それが果たせるの？'],
                '（……わからない）', '（あの子たちが、それを望んでいたのかも。……自分に、その覚悟があったのかも）']);
     await say([[O, '……ねえ。あの子たちには、言えたよね'], ...(said.yori.length ? said.yori.map((t, n) => [O, `『${t}』${n === said.yori.length - 1 ? 'って。……何度も' : 'って'}`])
