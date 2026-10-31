@@ -3010,6 +3010,22 @@
   const RAIN_RATE = { fast: .5, normal: .72, slow: 1, slower: 1.3 };
   const rainRate = () => RAIN_RATE[RAIN_SPEED[P.textSpeed] || 'slow'];
   function fxSkip(key) { const k = 'fx|' + key, seen = READ.has(k); markRead(k); return !!(P.skip && seen && !(R && R.forceRead)); }
+  // 言葉を、1行に maxC 字までの行に分ける。切るのは句読点のあと、なければ助詞などの文節の切れ目のあと（字の途中や「」の直前では切らない）
+  function rainSplit(t, maxC) {
+    if (t.length <= maxC) return [t];
+    // 句読点のあと＝3、助詞のあと＝2。「思って／る」のように語の途中になる所や、うしろに2字も残らない所では切らない
+    const good = i => t.slice(i).replace(/[」…、。？！]/g, '').length < 3 ? 0
+                    : '、。？！…'.includes(t[i - 1]) && !'…、。'.includes(t[i]) ? 3
+                    : 'はがをにでもへとのかて'.includes(t[i - 1]) && !'、。？！」…るいたよねんじゃ'.includes(t[i]) ? 2 : 0;
+    const out = []; let rest = t;
+    while (rest.length > maxC) {
+      t = rest; let best = 0, score = -1;
+      for (let i = 2; i <= maxC && i < t.length - 1; i++) { const g = good(i); if (g && g * 100 + i > score) { score = g * 100 + i; best = i; } }
+      if (!best) { best = Math.min(maxC, t.length - 2); if (t.length - best < 4) { out.push(t); return out; } }   // 切れ目がなく、残りが1〜2字になるときは、少しはみ出しても一行のまま
+      out.push(t.slice(0, best)); rest = t.slice(best);
+    }
+    out.push(rest); return out;
+  }
   async function wordRain(extra = [], soft = []) {
     if (replay) return;   // 早送り中は出さない
     // 初めて見るときは、既読スキップがONでも早回しにせず、雨の速さ（文字の速さより一段階ゆっくり）で流す。2回目以降で既読スキップがONなら、早回し
@@ -3033,6 +3049,7 @@
     longs.push(...soft);
     // 押すと早回しにできるのは、2回目以降だけ（初めて見るときは、文章を進めるつもりで押しても速くしない）
     let fast = quick; box.onclick = () => { if (quick) fast = true; };
+    let rainLive = [];   // いま画面に出ている長い言葉の場所（重ならないように）
     const drop = (t, cls) => {
       const e = document.createElement('span'); e.className = 'rw ' + cls + (cls === 'short' ? ' neg ' + rainFont() : ''); e.textContent = t;
       if (cls === 'short') { e.style.fontSize = (11 + Math.random() * 6) + 'px'; e.style.rotate = (Math.random() * 10 - 5).toFixed(1) + 'deg'; }
@@ -3050,16 +3067,29 @@
         const how = pick(['in-fade', 'in-blur', 'in-drop', 'in-slide', 'in-zoom', 'in-type']);
         const e = document.createElement('p'); e.className = `rw long ${k} ${rainFont()} ${how}`;
         const t = `「${l}」`;
-        if (how === 'in-type') e.innerHTML = [...t].map((c, i) => `<span style="animation-delay:${i * 55}ms">${c}</span>`).join('');
-        else e.textContent = t;
-        e.style.top = (14 + Math.random() * 62) + '%';
-        box.appendChild(e);
-        { const W = box.clientWidth, room = W * .92;
-          if (e.offsetWidth > room) { e.style.whiteSpace = 'normal'; e.style.width = room + 'px'; }   // 収まらない長さは、字を小さくせずに二行にする
-          e.style.left = (W * .04 + Math.random() * Math.max(0, room - e.offsetWidth)) + 'px'; }
+        const put = lines => {
+          let n = 0;
+          if (how === 'in-type') e.innerHTML = lines.map(ln => [...ln].map(c => `<span style="animation-delay:${n++ * 55}ms">${c}</span>`).join('')).join('<br>');
+          else e.innerHTML = lines.map(ln => ln.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])).join('<br>');
+        };
+        put([t]); e.style.visibility = 'hidden'; box.appendChild(e);
+        { const W = box.clientWidth, H = box.clientHeight, room = W * .92;
+          // 収まらない長さは、字を小さくせずに、句読点や文節の切れ目で改行する
+          if (e.offsetWidth > room) put(rainSplit(t, Math.max(4, Math.floor(room / (e.offsetWidth / t.length)))));
+          // 前に出て、まだ見えている言葉と重ならない場所を探す（見つからなければ、いちばん重なりの少ない場所）
+          const w = e.offsetWidth, h = e.offsetHeight, gap = 8;
+          const hit = (x, y) => rainLive.reduce((a, q) => a + Math.max(0, Math.min(x + w + gap, q.x + q.w) - Math.max(x - gap, q.x)) * Math.max(0, Math.min(y + h + gap, q.y + q.h) - Math.max(y - gap, q.y)), 0);
+          let bx = 0, by = 0, bh = Infinity;
+          for (let k = 0; k < 40 && bh > 0; k++) {
+            const x = W * .04 + Math.random() * Math.max(0, room - w), y = H * .12 + Math.random() * Math.max(0, H * .74 - h), v = hit(x, y);
+            if (v < bh) { bh = v; bx = x; by = y; }
+          }
+          e.style.left = bx + 'px'; e.style.top = by + 'px'; e.style.visibility = '';
+          const me = { x: bx, y: by, w, h }; rainLive.push(me);
+          e._live = me; }
         const hold = (1700 + Math.random() * 1600) * r;
         setTimeout(() => e.classList.add(pick(['out-fade', 'out-blur', 'out-sink', 'out-drift'])), hold);
-        setTimeout(() => e.remove(), hold + 1500);
+        setTimeout(() => { e.remove(); rainLive = rainLive.filter(q => q !== e._live); }, hold + 1500);
         await sleep(fast ? 90 : (800 + Math.random() * 900) * r);
       }
       await sleep(fast ? 100 : 900 * r);
