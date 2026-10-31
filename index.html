@@ -445,6 +445,7 @@
   .roof-fx.rain.sink { background: #000; }
   .roof-fx.dark { background: #000; opacity: 0; transition: opacity 1.6s ease; }
   .roof-fx.dark.on { opacity: 1; }
+  .type-rest { visibility: hidden; }
   .rw { position: absolute; margin: 0; color: #d9d2c6; font-family: var(--serif); white-space: nowrap; transition: opacity 1s ease; }
   .rw.gone { opacity: 0; }
   .rw.short { font-size: 13px; opacity: .6; animation: rwfall linear forwards; }
@@ -1150,7 +1151,12 @@
         advance = null; more.hidden = true; res();
       };
       if (reduce || !charMs()) finish();
-      else { txt.textContent = ''; timer = setInterval(() => { if (g !== gen) { clearInterval(timer); return; } i++; txt.textContent = full.slice(0, i); if (i >= full.length) finish(); }, charMs()); }
+      else {
+        // まだ出ていない字も、見えないまま置いておく（全文の行の折り返しと字の間隔を、最初から決めておく。1字ずつ足すと、行末の禁則で字が行をまたいでがたつくため）
+        const shown = document.createTextNode(''), rest = document.createElement('span'); rest.className = 'type-rest'; rest.textContent = full;
+        txt.textContent = ''; txt.append(shown, rest);
+        timer = setInterval(() => { if (g !== gen) { clearInterval(timer); return; } i++; shown.data = full.slice(0, i); rest.textContent = full.slice(i); if (i >= full.length) finish(); }, charMs());
+      }
     });
   }
   // 立ち絵の表情差分：normal（警戒）/ angry / surprise / sad / down / smile
