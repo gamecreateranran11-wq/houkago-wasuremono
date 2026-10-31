@@ -3024,11 +3024,17 @@
     const endNote = end[0] === 'BAD9' ? 'この放課後は、ここで終わった。……握っていた手のぬくもりだけが、まだ指に残っている。'
                   : hasLeft ? 'この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。' : 'この放課後は、ここで終わった。';
     if (dawnEnd) await endRoll(end[0]);
+    // 初めての放課後を見送らずに終えたとき（1周目はかならずここ）：届かなかったのは作りどおりだと、しくみの案内で一度だけ伝える（2026-11-01・作者の指示。離脱を減らすため。台詞ではなく、しくみの案内として）
+    let firstNote = '';
+    if (!dawnEnd && !P.firstEndTold && (P.runs || 0) <= 1) {   // 前から遊んでいる人（2周目以降の結末）には出さない
+      P.firstEndTold = true; saveP();
+      firstNote = `<p class="eyebrow">しくみ</p><p class="note">最初の放課後では、まだ誰の心にも届ききりません。<br>${hasLeft ? '消えた子が残したわすれものを持って、もう一度放課後を歩くと、届かなかった言葉の先へ進めます。' : '心を閉ざした子とも、言葉を変えれば、別の道が開けるかもしれません。'}<br>ここまでが、物語のはじまりです。</p>`;
+    }
     const head = dawnEnd ? `<div class="end-ttl"><p class="end-kind">${end[0].replace('2', '')} END</p><h1 class="end-name">${end[1]}</h1></div>`
                          : `<div class="fade" style="display:flex;flex-direction:column;gap:12px"><p class="eyebrow">BAD END「${end[1]}」</p></div>`;
     overlayWait(`${head}
       ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。</p>` : ''}
-      <p class="note">${endNote}</p>${achNote(got)}
+      <p class="note">${endNote}</p>${firstNote}${achNote(got)}
       `,
       dawnEnd ? 'dawn endcard' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
