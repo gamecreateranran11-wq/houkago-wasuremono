@@ -3752,10 +3752,10 @@
   // 毎回ランダムにすると、セーブから再開したときに選んだ答えがずれるため、固定の並びにする（慰めるは2ループ目以降だけ出る）
   const ASK_ORDER = {
     art:       { 1: ['seiron', 'oitsu', 'yori'], 2: ['yori', 'oitsu', 'nagu', 'seiron'], 3: ['oitsu', 'key', 'nagu', 'pity', 'seiron'] },
-    music:     { 1: ['seiron', 'oitsu', 'yori'], 2: ['yori', 'nagu', 'seiron', 'oitsu'], 3: ['key', 'oitsu', 'nagu', 'seiron'] },
-    library:   { 1: ['yori', 'oitsu', 'seiron'], 2: ['oitsu', 'seiron', 'nagu', 'yori'], 3: ['oitsu', 'nagu', 'seiron', 'key'] },
-    gym:       { 1: ['oitsu', 'seiron', 'yori'], 2: ['seiron', 'nagu', 'yori', 'oitsu'], 3: ['seiron', 'oitsu', 'key', 'nagu'] },
-    infirmary: { 1: ['seiron', 'yori', 'oitsu'], 2: ['nagu', 'yori', 'oitsu', 'seiron'], 3: ['nagu', 'key', 'seiron', 'oitsu'] }
+    music:     { 1: ['seiron', 'oitsu', 'yori'], 2: ['yori', 'nagu', 'seiron', 'oitsu'], 3: ['key', 'oitsu', 'nagu', 'pity', 'seiron'] },
+    library:   { 1: ['yori', 'oitsu', 'seiron'], 2: ['oitsu', 'seiron', 'nagu', 'yori'], 3: ['oitsu', 'nagu', 'pity', 'seiron', 'key'] },
+    gym:       { 1: ['oitsu', 'seiron', 'yori'], 2: ['seiron', 'nagu', 'yori', 'oitsu'], 3: ['seiron', 'pity', 'oitsu', 'key', 'nagu'] },
+    infirmary: { 1: ['seiron', 'yori', 'oitsu'], 2: ['nagu', 'yori', 'oitsu', 'seiron'], 3: ['nagu', 'pity', 'key', 'seiron', 'oitsu'] }
   };
   async function ask(opts, stage) {
     askCount++;
@@ -4409,7 +4409,7 @@
       } else {
         await line('ヒナは長袖の上から、左の手首をそっと押さえた。', false);
       }
-      // 同情（2026-11-01・作者の案）：1章の手首の場面だけにある答え。事情をまだ何も聞いていないうちから「〜してあげる」と手を差し出し、相手を「かわいそうな子」として見下ろしてしまう（優しい自分に酔う形）。正論と同じく届かない
+      // 同情（2026-11-01・作者の案）：各章の3段目にある答え（わすれものを持っていない周回だけ）。事情をまだ何も聞いていないうちから「〜してあげる」と手を差し出し、相手を「かわいそうな子」として見下ろしてしまう（優しい自分に酔う形）。正論と同じく届かない
       const opts = [['傷つけても、苦しいのは消えないよ', 'seiron'], ['……痛かったね', 'nagu'], ['……大丈夫。これからは、相談に乗ってあげるから', 'pity'], ['もう二度としないって、約束して', 'oitsu']];
       // わすれものを持っているときは、同情の答えの代わりにわすれものの答えを出す（選択肢が5つに増えないように）
       if (hasKey('hina')) opts.splice(1, 0, ['だから、自画像の顔だけ描けなかったんだね', 'key']), opts.splice(opts.findIndex(o => o[1] === 'pity'), 1);
@@ -5118,8 +5118,8 @@
         await line(['ソウタ', 'だから俺は、もう弾いちゃいけないんだ', 'sad'], false);
       }
       if (R.know.has('halMom')) await say(['（……菊のカード。「あなたと弾く火曜日を、いつも楽しみにしていました」）']);
-      const opts = [['ピアノを続けるかどうかは、ソウタくんが自分で決めることだよ', 'seiron'], ['……そんなことないよ。ハルくんもきっと許してくれてる', 'nagu'], ['ハルくんなら、ソウタくんにピアノを続けてほしいって思ってるよ', 'oitsu']];
-      if (hasKey('sota')) opts.splice(1, 0, ['ハルくん、仲直りするつもりだったんだと思う。楽譜の裏に書いてあった', 'key']);
+      const opts = [['ピアノを続けるかどうかは、ソウタくんが自分で決めることだよ', 'seiron'], ['……そんなことないよ。ハルくんもきっと許してくれてる', 'nagu'], ['……大丈夫。これからは、ハルくんの分まで隣で聴くよ', 'pity'], ['ハルくんなら、ソウタくんにピアノを続けてほしいって思ってるよ', 'oitsu']];
+      if (hasKey('sota')) opts.splice(1, 0, ['ハルくん、仲直りするつもりだったんだと思う。楽譜の裏に書いてあった', 'key']), opts.splice(opts.findIndex(o => o[1] === 'pity'), 1);   // わすれものを持っているときは、同情の答えの代わりに（選択肢は最大4つ）
       a = await ask(opts, 3);
       if (a === 'oitsu') { if (await hurt([['ソウタ', '……じゃあ、どうしろって言うんだよ', 'angrySad'],
                                 ['', 'ソウタの声が途中でかすれた。握りしめていた手から、ゆっくり力が抜けていく。', 'down'],
@@ -5139,6 +5139,11 @@
         R.cons++;
         await say([['ソウタ', '……勝手に決めんなよ', 'angry'], ['ソウタ', 'ハルがどう思ってたかなんて、もう誰にもわかんないんだよ', 'angrySad'],
                    'ソウタはピアノの上のスマホに目をやった。', ...missing]);
+        return lastWrong();
+      }
+      if (a === 'pity') {
+        await say([['ソウタ', '……同情なら、いらねえよ', 'angry'],
+                   ['ソウタ', 'あいつの分なんて、誰にも埋められねえんだよ', 'down'], ...missing]);
         return lastWrong();
       }
       if (a === 'seiron') {
@@ -5755,8 +5760,8 @@
       } else {
         await line(['ミオ', 'でも、謝ったら、許してもらうのを待つことになる。……私に、そんな資格ない', 'frown'], false);
       }
-      const opts = [['資格がなくても、謝るべきだよ', 'seiron'], ['ツムギさんも、きっともう許してくれてるよ', 'nagu'], ['このまま何もしなかったら、ミオさんがずっと苦しいままだよ', 'oitsu']];
-      if (hasKey('mio')) opts.splice(1, 0, ['一年のとき、ここで最初に話しかけてくれたのはツムギさんだったんだね', 'key']);
+      const opts = [['資格がなくても、謝るべきだよ', 'seiron'], ['ツムギさんも、きっともう許してくれてるよ', 'nagu'], ['……大丈夫。ツムギさんには、こっちから話しておくよ', 'pity'], ['このまま何もしなかったら、ミオさんがずっと苦しいままだよ', 'oitsu']];
+      if (hasKey('mio')) opts.splice(1, 0, ['一年のとき、ここで最初に話しかけてくれたのはツムギさんだったんだね', 'key']), opts.splice(opts.findIndex(o => o[1] === 'pity'), 1);   // わすれものを持っているときは、同情の答えの代わりに（選択肢は最大4つ）
       a = await ask(opts, 3);
       if (a === 'oitsu') { if (await hurt([['ミオ', '……何もしないのが、いちばん迷惑かけないでしょ', 'shadow'],
                                 ['ミオ', '……こんな私に、椅子を運んでもらう資格なんてない', 'despair'],
@@ -5775,6 +5780,11 @@
       if (a === 'nagu') {
         R.cons++;
         await say([['ミオ', '……勝手に決めないで', 'angry'], ['ミオ', 'ツムギがどう思ってるかなんて、ツムギにしかわからないよ', 'angry'], ...missing]);
+        return lastWrong();
+      }
+      if (a === 'pity') {
+        await say([['ミオ', '……そんな顔、しないで', 'frown'],
+                   ['ミオ', '私が自分で謝らなきゃ、意味がないの', 'down'], ...missing]);
         return lastWrong();
       }
       if (a === 'seiron') {
@@ -6321,8 +6331,8 @@
       }
       if (R.know.has('motto')) await say([['ケイ', '……お守りの字、見た？ うちの家訓。『問題は、人に頼らず、自分で』', 'sadGrip'], ['ケイ', 'ガキのころから、それが当たり前だったんだ。……頼ったら、負けなんだって', 'sadGrip']]);
       if (R.know.has('senpai')) await say(['（……バッグのスマホの、佐伯先輩からの「ひとりで抱えんなよ」）']);
-      const opts = [['休むのも、部長の仕事だよ', 'seiron'], ['後輩たちなら、きっと大丈夫だよ', 'nagu'], ['土曜の試合まで、あと少しだよ。それまでいっしょにがんばろう', 'oitsu']];
-      if (hasKey('kei')) opts.splice(1, 0, ['「もう守ってあげられない」なんて、誰かに謝らなくていい', 'key']);
+      const opts = [['休むのも、部長の仕事だよ', 'seiron'], ['後輩たちなら、きっと大丈夫だよ', 'nagu'], ['……大丈夫。後輩のことは、任せて', 'pity'], ['土曜の試合まで、あと少しだよ。それまでいっしょにがんばろう', 'oitsu']];
+      if (hasKey('kei')) opts.splice(1, 0, ['「もう守ってあげられない」なんて、誰かに謝らなくていい', 'key']), opts.splice(opts.findIndex(o => o[1] === 'pity'), 1);   // わすれものを持っているときは、同情の答えの代わりに（選択肢は最大4つ）
       a = await ask(opts, 3);
       if (a === 'oitsu') { if (await hurt([['ケイ', '……うん。そのつもりだった', 'shadow'],
                                 ['ケイ', '土曜の試合で俺が倒れれば、顧問も少しは懲りるだろ', 'despair'],
@@ -6341,6 +6351,11 @@
       if (a === 'nagu') {
         R.cons++;
         await say([['ケイ', '……あいつらのこと、何も知らないくせに', 'angry'], ['ケイ', '大丈夫じゃないから、俺が前に立ってるんだよ', 'angry'], ...missing]);
+        return lastWrong();
+      }
+      if (a === 'pity') {
+        await say([['ケイ', '……はは。気持ちだけ、もらっとく', 'reject'],
+                   ['ケイ', '会ったばっかのやつに、あいつらを任せられるかよ', 'down'], ...missing]);
         return lastWrong();
       }
       if (a === 'seiron') {
@@ -7052,8 +7067,8 @@
       } else {
         await line(['ツムギ', '私なんか、いてもいなくても同じだもん', 'sad'], false);
       }
-      const opts = [['迷惑かどうかは、相手が決めることだよ', 'seiron'], ['……ツムギさんがいなくなったら、さびしいよ', 'nagu'], ['逃げてもいいんだよ。つらい場所からは', 'oitsu']];
-      if (hasKey('tsumugi')) opts.splice(1, 0, ['今日は保健室じゃなくて、図書室に行くつもりだったんだね', 'key']);
+      const opts = [['迷惑かどうかは、相手が決めることだよ', 'seiron'], ['……ツムギさんがいなくなったら、さびしいよ', 'nagu'], ['……大丈夫。入院しても、毎日お見舞いに行くから', 'pity'], ['逃げてもいいんだよ。つらい場所からは', 'oitsu']];
+      if (hasKey('tsumugi')) opts.splice(1, 0, ['今日は保健室じゃなくて、図書室に行くつもりだったんだね', 'key']), opts.splice(opts.findIndex(o => o[1] === 'pity'), 1);   // わすれものを持っているときは、同情の答えの代わりに（選択肢は最大4つ）
       a = await ask(opts, 3);
       if (a === 'oitsu') { if (await hurt([['ツムギ', '……うん。そうだよね', 'shadow'], ['ツムギ', '教室からも、ここからも、逃げてきた', 'despair'],
                                       ['ツムギ', 'だったら、最後まで逃げちゃえばいいよね', 'despair'], ['ツムギ', '……ミオ、またね', 'despair']])) return; a = await ask(opts.filter(o => o[1] !== 'oitsu'), 3); }
@@ -7065,6 +7080,7 @@
         return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
       }
       if (a === 'nagu') { R.cons++; await say([['ツムギ', '……ありがと', 'normal'], ['ツムギ', 'でも、みんなそう言うの。いなくなるまでは', 'sad'], ...missing]); return lastWrong(); }
+      if (a === 'pity') { await say([['ツムギ', '……病気だから、優しくしてくれるの？', 'smile'], ['ツムギ', 'そういうの、慣れてるから。……いいよ、べつに', 'sad'], ...missing]); return lastWrong(); }
       if (a === 'seiron') { await say([['ツムギ', '……相手が、決めること', 'down'], ['ツムギ', 'だったら、なおさら行けないよ。……答えを聞くのが、こわいもん', 'sad'], ...missing]); return lastWrong(); }
       /* 3段目の追い詰めるは、選んだ直後に hurt() で */
       // わすれもの（来室カードの空欄）から出る言葉
