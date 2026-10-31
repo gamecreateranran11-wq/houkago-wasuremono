@@ -445,6 +445,8 @@
   .roof-fx.rain.sink { background: #000; }
   .roof-fx.dark { background: #000; opacity: 0; transition: opacity 1.6s ease; }
   .roof-fx.dark.on { opacity: 1; }
+  .roof-fx.white { background: #f6f1e7; opacity: 0; transition: opacity .9s ease; }
+  .roof-fx.white.on { opacity: 1; }
   .type-rest { visibility: hidden; }
   .rw { position: absolute; margin: 0; color: #d9d2c6; font-family: var(--serif); white-space: nowrap; transition: opacity 1s ease; }
   .rw.gone { opacity: 0; }
@@ -754,6 +756,8 @@
   .roll-title.end { margin: 110px 0 0; }
   .roll-thanks { margin: 70px 0 0; font-size: 15.5px; color: #d6ccba; }
   .roll-in .roll-care { margin: 90px auto 0; max-width: 34em; font-size: 12px; line-height: 2; letter-spacing: .06em; color: #a89f8f; }
+  .roll-in .roll-care.last { margin-top: 26px; font-size: 13px; color: #c9bfae; }
+  .roll-in .ph { display: inline-block; }
   .roll-ff { position: absolute; right: 118px; bottom: 18px; background: none; border: 0; border-bottom: 1px solid #8f887c; color: #b9ad99; font: inherit; font-size: 13px; letter-spacing: .2em; padding: 6px 4px; cursor: pointer; animation: rise .8s ease both; }
   .roll-ff[aria-pressed="true"] { color: #e9e2d6; border-bottom-color: #e9e2d6; }
   .roll-skip { position: absolute; right: 18px; bottom: 18px; background: none; border: 0; border-bottom: 1px solid #8f887c; color: #b9ad99; font: inherit; font-size: 13px; letter-spacing: .2em; padding: 6px 4px; cursor: pointer; animation: rise .8s ease both; }
@@ -1332,6 +1336,10 @@
     if (DARK_CUTS.has(name) && R && R.taken && R.taken.dark) name += '_dark';
     const el = $('#cutin');
     el.innerHTML = name === 'clock' ? clockSVG() : `<img src="${imgSrc(name)}" alt="">`;
+    if (name === 'clock') {   // 時計の絵を読み込み終えてから、針を出す（針だけが先に見えないように）
+      const im = el.querySelector('img'), hs = el.querySelector('svg');
+      if (im && hs && !(im.complete && im.naturalWidth)) { hs.style.visibility = 'hidden'; im.onload = im.onerror = () => { hs.style.visibility = ''; }; }
+    }
     el.classList.add('show');
     $('#scene').classList.add('cut');
   }
@@ -2658,6 +2666,7 @@
     const room = chs.find(ch => ch.bgClock && (src === `img/${ch.bg}.webp` || src === `img/${ch.bg}_unlit.webp` || src === `img/${ch.bg}_morning.webp` || src === `img/${ch.bg}_1830_dark.webp` || src === `img/${ch.bg}_1830_lit.webp`)), ck = room && room.bgClock;
     sv.style.display = ck ? '' : 'none';
     if (!ck) return;
+    if (!(bg.complete && bg.naturalWidth)) { sv.style.display = 'none'; bg.addEventListener('load', syncBgClock, { once: true }); return; }   // 背景より先に針だけが出ないように
     sv.style.opacity = bg.style.opacity;
     // 遊んでいる章の部屋ならその章の時刻、ほかの部屋なら画面の時計と同じ時刻
     const [hh, mm] = (bgClockOverride || $('#clock').textContent || '16:00').split(':').map(Number);
@@ -3003,6 +3012,15 @@
     const d = fxLayer('dark'); await wait(40); d.classList.add('on'); await wait(inMs);
     spk.hidden = true; txt.textContent = ''; chs.innerHTML = ''; more.hidden = true;   // 暗転のあいだに、前の文を消す
     await endScene(img); await wait(holdMs);
+    d.classList.remove('on'); await wait(outMs); fxEnd(d);
+  }
+  // 明転：画面を白くフェードし、そのあいだに切り替えて、白から戻す（同じ場所で時間がたつところ）
+  async function whiteSwap(fn, inMs = 900, holdMs = 350, outMs = 1100) {
+    if (replay) { fn(); return; }
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const d = fxLayer('white'); await wait(40); d.classList.add('on'); await wait(inMs);
+    spk.hidden = true; txt.textContent = ''; chs.innerHTML = ''; more.hidden = true;
+    fn(); await wait(holdMs);
     d.classList.remove('on'); await wait(outMs); fxEnd(d);
   }
   function fxEnd(box) { box.remove(); if (!document.querySelector('.roof-fx')) document.body.classList.remove('fx-on'); }
@@ -3377,9 +3395,11 @@
                ...({ straight: ['ツムギは朝のうちに、3組へ行ったらしい。……ミオの隣の席に。'],
                     awk: ['ツムギは朝、少し迷ってから、3組へ行ったらしい。……ミオの隣の席は、まだ少し遠かったみたいだ。'],
                     split: ['ツムギは今日も保健室にいた。隣のベッドのふちに座って、窓の外を見ていた。'] }[kind]),
-               () => { bgClockOverride = '10:50'; syncBgClock(); }, '昼前、急に重さが戻ってきた。', '理由はわからない。ただ、息が浅くなった。', '（……やっぱり、何も変わってないのかもしれない）',
+               ]);
+    await whiteSwap(() => { bgClockOverride = '10:50'; syncBgClock(); });   // 8:30 → 10:50（明転）
+    await say(['昼前、急に重さが戻ってきた。', '理由はわからない。ただ、息が浅くなった。', '（……やっぱり、何も変わってないのかもしれない）',
                kind === 'split' ? 'ツムギは何も言わずに、ただそこにいてくれた。' : '養護の先生は何も言わずに、ただそこにいてくれた。']);
-    bgClockOverride = '11:10'; syncBgClock();
+    await whiteSwap(() => { bgClockOverride = '11:10'; syncBgClock(); });   // 10:50 → 11:10（明転）
     await say(['終業式が終わって、扉が叩かれた。',
                ...({ straight: ['入ってきたのは、ヒナと、ソウタと、ケイ。それからミオとツムギが、二人で。', 'ミオは丸椅子をひとつ運んできて、ツムギの隣に置いて座った。'],
                     awk: ['入ってきたのは、ヒナと、ソウタと、ケイ。少し遅れて、ミオとツムギ。', '二人は隣に座ったけれど、あいだに少しすき間があった。',
@@ -3489,6 +3509,8 @@
     else extra.push('chime_sky_1830');
     return [...new Set([...seen, ...extra])];
   }
+  // 文節ごとにまとめて、一続きの言葉の途中では折り返さない（| で区切る）
+  const ph = t => t.split('|').map(w => `<span class="ph">${w}</span>`).join('');
   function endRollHTML(tag) {
     const sec = (h, items) => items.length ? `<section>${h ? `<h3>${h}</h3>` : ''}${items.map(t => `<p>${t}</p>`).join('')}</section>` : '';
     const chars = ORDER.map(id => CHAPTERS[id].name).concat(tag === 'TRUE' ? ['もう一人の自分'] : []);
@@ -3499,9 +3521,10 @@
       ${sec('登場人物', chars)}
       ${sec('フォント', ['Shippori Mincho B1', 'Klee One', 'Zen Kurenaido', 'Yomogi', 'Zen Kaku Gothic New'])}
       <section><p class="sub">いずれも SIL Open Font License のもとで使用しています。</p></section>
-      <p class="roll-thanks">最後まで、見届けてくれて、ありがとう。</p>
+      <p class="roll-thanks">${ph('最後まで、|見届けてくれて、|ありがとう。')}</p>
       <p class="roll-title end">放課後のわすれもの</p>
-      <p class="roll-care">話したくないことは、話さなくてもかまいません。話す力が残っていないときは、ただ休むだけでもいい。<br>それでも、もし誰かに聞いてほしくなったときは、身近な人や、相談できる場所があります。<br>声に出さなくても、文字で相談できるところもあります。</p></div>`;
+      <p class="roll-care">${ph('話したくないことは、|話さなくても|かまいません。')}<br>${ph('話す力が|残っていないときは、|ただ休むだけでもいい。')}<br>${ph('それでも、|もし誰かに|聞いてほしくなったときは、')}<br>${ph('身近な人や、|相談できる場所があります。')}<br>${ph('声に出さなくても、|文字で相談できるところも|あります。')}</p>
+      <p class="roll-care last">${ph('あなたは、|ひとりじゃない。')}<br>${ph('一度で|わかってもらえなくても、|どうか、|あきらめないで。')}<br>${ph('あなたに|寄り添ってくれる人に、|出会えますように。')}</p></div>`;
   }
   function endRoll(tag) {
     return new Promise(res => {
