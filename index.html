@@ -7520,6 +7520,14 @@
     // 前の放課後を、五人を見送る結末（TRUE・GOOD・それぞれの朝）で終えていたら、悔いや「今度は」を言わない。
     // 結末を記録する前のセーブは、五つの章がすべてほどけていたかで見分ける
     const prevEnd = P.lastRun && (P.lastRun.end || (last.length >= ORDER.length && last.every(r => r === 'saved') ? (P.lastRun.cur.mtSplit ? 'NORMAL2' : 'GOOD') : null));
+    // 屋上で終わった（BAD7・BAD8）：五人の話は最後まで聞いて、見送っている。届かなかったのは、自分の話のほう（2026-11-01）
+    if (prevEnd === 'BAD7' || prevEnd === 'BAD8') {
+      L.push('（五人の背中を、校門の向こうへ見送った）',
+             prevEnd === 'BAD7' ? '（……屋上で、手帳から目をそらしたことを、覚えている）' : '（……屋上で聞いた、あの声を、まだ覚えている）');
+      if (carry) L.push('（手の中に、あの子たちが残していったものがある）');
+      L.push(prevEnd === 'BAD7' ? '（……もう一度。今度は、目をそらさない）' : '（……もう一度。今度は、自分の話を途中でやめない）');
+      return L;
+    }
     if (prevEnd === 'TRUE' || prevEnd === 'GOOD' || prevEnd === 'NORMAL2') {
       if (prevEnd === 'TRUE') L.push('（あの屋上で迎えた朝を、まだ覚えている）');
       else if (prevEnd === 'GOOD') L.push('（五人の背中を、校門の向こうへ見送った）', '（足もとに落ちていた生徒手帳を、まだ覚えている）');
