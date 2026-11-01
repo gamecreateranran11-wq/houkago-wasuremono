@@ -3516,13 +3516,13 @@
       const im = new Image(); im.src = 'img/protag_notebook.webp'; await (im.decode ? im.decode() : new Promise(r => { im.onload = r; }));
       const c = document.createElement('canvas'); c.width = 1536; c.height = 1024;
       const x = c.getContext('2d'); x.drawImage(im, 0, 0);
-      // 右ページの点線の丸（中心 945,690）。ページの傾きに合わせて少し回し、遠近で縦をつぶす
-      x.translate(945, 690); x.rotate(-5 * Math.PI / 180); x.scale(1, 0.88);
+      // 名前は、右ページの点線の丸（中心 948,690）の中ではなく、丸のすぐ下に書く（丸は顔の枠で、ヒナの「ここは、空けとくね」のとおり空けたまま。
+      // ほかの5人も、顔の横に名前を書いている）。罫線の傾き（右下がり約13°）に合わせて回す。右下の葉の落書きにかからない幅に収める
+      x.translate(936, 752); x.rotate(13 * Math.PI / 180);
       x.fillStyle = 'rgba(58, 63, 110, .88)'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      const lines = name.length <= 5 ? [name] : [name.slice(0, Math.ceil(name.length / 2)), name.slice(Math.ceil(name.length / 2))];
-      const size = lines.length > 1 ? 22 : name.length <= 3 ? 34 : 26;
+      const size = Math.max(12, Math.min(22, Math.floor(88 / name.length)));
       x.font = `${size}px ${NB_FONT}`;
-      lines.forEach((l, i) => x.fillText(l, 0, (i - (lines.length - 1) / 2) * size * 1.15, 106));
+      x.fillText(name, 0, 0, 92);
       NB_NAMED = c.toDataURL('image/png');
     } catch (e) { NB_NAMED = null; }
   }
