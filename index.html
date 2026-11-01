@@ -76,7 +76,7 @@
   .nbz-in.far { transform: none; transition: none; }
   .cutin .nbz-in img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .nbz-row { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .nbz-row::after { content: ""; position: absolute; left: 0; top: 18%; bottom: 14%; width: 0; border-radius: 999px; background: linear-gradient(90deg, rgba(255, 238, 200, 0), rgba(255, 238, 200, .42) 12%, rgba(255, 238, 200, .42) 88%, rgba(255, 238, 200, 0)); mix-blend-mode: screen; transition: width .9s ease; }
+  .nbz-row::after { content: ""; position: absolute; left: 0; top: 18%; bottom: 14%; width: 0; border-radius: 999px; background: linear-gradient(90deg, rgba(255, 226, 170, 0), rgba(255, 226, 170, .2) 12%, rgba(255, 226, 170, .2) 88%, rgba(255, 226, 170, 0)); mix-blend-mode: screen;   /* なぞったあとも字が読めるくらいの、うすい光 */ transition: width .9s ease; }
   .nbz-row.traced::after { width: 100%; }
   .nbz-row:not(.traced):not(.blank):not(:disabled)::before { content: ""; position: absolute; inset: 20% 0 16%; border-radius: 999px; background: rgba(255, 238, 200, .16); mix-blend-mode: screen; opacity: 0; animation: nbzHint 2.8s ease-in-out infinite; }
   @keyframes nbzHint { 50% { opacity: 1; } }
