@@ -78,7 +78,9 @@
   .nbz-row { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
   .nbz-row::after { content: ""; position: absolute; left: 0; top: 18%; bottom: 14%; width: 0; border-radius: 999px; background: linear-gradient(90deg, rgba(255, 226, 170, 0), rgba(255, 226, 170, .2) 12%, rgba(255, 226, 170, .2) 88%, rgba(255, 226, 170, 0)); mix-blend-mode: screen;   /* なぞったあとも字が読めるくらいの、うすい光 */ transition: width .9s ease; }
   .nbz-row.traced::after { width: 100%; }
-  .nbz-row:not(.traced):not(.blank):not(:disabled)::before { content: ""; position: absolute; inset: 20% 0 16%; border-radius: 999px; background: rgba(255, 238, 200, .16); mix-blend-mode: screen; opacity: 0; animation: nbzHint 2.8s ease-in-out infinite; }
+  /* なぞり終えた名前：光らせず、少しだけ暗く沈ませる（まだなぞれる名前の、明滅する光と見分けるため） */
+  .nbz-row.done::before { content: ""; position: absolute; inset: 14% -2% 10%; border-radius: 999px; background: rgba(30, 14, 24, .3); mix-blend-mode: multiply; }
+  .nbz-row:not(.traced):not(.done):not(.blank):not(:disabled)::before { content: ""; position: absolute; inset: 20% 0 16%; border-radius: 999px; background: rgba(255, 238, 200, .16); mix-blend-mode: screen; opacity: 0; animation: nbzHint 2.8s ease-in-out infinite; }
   @keyframes nbzHint { 50% { opacity: 1; } }
   .nbz-row:focus-visible { outline: 1px solid rgba(255, 238, 200, .8); outline-offset: 0; }
   .nbz-row:disabled { cursor: default; }
@@ -1370,7 +1372,7 @@
     return new Promise(res => {
       const el = $('#cutin');
       el.innerHTML = `<div class="nbz-in${zoom ? ' far' : ''}"><img src="${imgSrc('protag_notebook_dusk')}" alt="夕焼けの屋上に落ちている生徒手帳。五人の名前が並んでいる">${NB_ROWS.map(([k, cx, cy, w, h, deg]) =>
-        `<button type="button" class="nbz-row${done.includes(k) ? ' traced' : ''}${k === 'blank' ? ' blank' : ''}" data-k="${k}" style="left:${(cx - w / 2) / 15.36}%;top:${(cy - h / 2) / 10.24}%;width:${w / 15.36}%;height:${h / 10.24}%;transform:rotate(${deg}deg)" aria-label="${k === 'blank' ? '6行目' : ({ art: '春日ヒナ', music: '井上ソウタ', library: '水野ミオ', gym: '三浦ケイ', infirmary: '白石ツムギ' })[k]}"${done.includes(k) ? ' disabled' : ''}></button>`).join('')}</div>
+        `<button type="button" class="nbz-row${done.includes(k) ? ' done' : ''}${k === 'blank' ? ' blank' : ''}" data-k="${k}" style="left:${(cx - w / 2) / 15.36}%;top:${(cy - h / 2) / 10.24}%;width:${w / 15.36}%;height:${h / 10.24}%;transform:rotate(${deg}deg)" aria-label="${k === 'blank' ? '6行目' : ({ art: '春日ヒナ', music: '井上ソウタ', library: '水野ミオ', gym: '三浦ケイ', infirmary: '白石ツムギ' })[k]}"${done.includes(k) ? ' disabled' : ''}></button>`).join('')}</div>
         <p class="nbz-cap">名前に触れて、なぞる</p>`;
       el.classList.add('show', 'nbz'); $('#scene').classList.add('cut');
       if (zoom) requestAnimationFrame(() => requestAnimationFrame(() => { const z = el.querySelector('.nbz-in'); if (z) z.classList.remove('far'); }));
