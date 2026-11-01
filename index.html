@@ -3516,13 +3516,13 @@
       const im = new Image(); im.src = 'img/protag_notebook.webp'; await (im.decode ? im.decode() : new Promise(r => { im.onload = r; }));
       const c = document.createElement('canvas'); c.width = 1536; c.height = 1024;
       const x = c.getContext('2d'); x.drawImage(im, 0, 0);
-      // 名前は、右ページの点線の丸（中心 948,690）の中ではなく、丸のすぐ下に書く（丸は顔の枠で、ヒナの「ここは、空けとくね」のとおり空けたまま。
+      // 名前は、右ページの点線の丸（中心 941,682。11/01 に一回り小さくして上へ寄せ、下に名前の余白を作った）の中ではなく、丸のすぐ下に書く（丸は顔の枠で、ヒナの「ここは、空けとくね」のとおり空けたまま。
       // ほかの5人も、顔の横に名前を書いている）。罫線の傾き（右下がり約13°）に合わせて回す。右下の葉の落書きにかからない幅に収める
-      x.translate(936, 752); x.rotate(13 * Math.PI / 180);
+      x.translate(936, 731); x.rotate(13 * Math.PI / 180);
       x.fillStyle = 'rgba(58, 63, 110, .88)'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      const size = Math.max(12, Math.min(22, Math.floor(88 / name.length)));
+      const size = Math.max(11, Math.min(21, Math.floor(82 / name.length)));
       x.font = `${size}px ${NB_FONT}`;
-      x.fillText(name, 0, 0, 92);
+      x.fillText(name, 0, 0, 84);
       NB_NAMED = c.toDataURL('image/png');
     } catch (e) { NB_NAMED = null; }
   }
