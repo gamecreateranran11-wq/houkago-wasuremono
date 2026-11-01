@@ -70,9 +70,9 @@
   .cutin.show { opacity: 1; transform: none; }
   .cutin img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; max-width: none; }
   .cutin .clock-hands { position: absolute; inset: 0; width: 100%; height: 100%; }
-  /* 屋上の手帳をなぞる：名前のところへ寄る（中心 880,737・4.4倍） */
+  /* 屋上の手帳をなぞる：拾って開いた手帳の絵（protag_notebook_front）で、右ページの名前のところへ寄る（中心 930,440・2倍） */
   .cutin.nbz { pointer-events: auto; }
-  .nbz-in { position: absolute; inset: 0; transform-origin: 57.29% 71.97%; transform: translate(-7.29%, -21.97%) scale(4.4); transition: transform 1.4s cubic-bezier(.3, .6, .2, 1); }
+  .nbz-in { position: absolute; inset: 0; transform-origin: 60.55% 42.97%; transform: translate(-10.55%, 7.03%) scale(2); transition: transform 1.4s cubic-bezier(.3, .6, .2, 1); }
   .nbz-in.far { transform: none; transition: none; }
   .cutin .nbz-in img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .nbz-row { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -1361,7 +1361,7 @@
     $('#scene').classList.add('cut');
   }
   // 屋上の手帳：名前の行に触れてなぞる。done はなぞり終えた子。返り値は子の id か 'blank'（6行目）
-  const NB_ROWS = [['art', 885, 673, 112, 24, 11], ['music', 874, 701, 94, 18, 11.9], ['library', 851, 716, 64, 15, 13.2], ['gym', 845, 740, 82, 24, 14.4], ['infirmary', 848, 765, 108, 24, 15.3], ['blank', 847, 790, 108, 22, 16.2]];   // [子, 中心x, 中心y, 長さ, 高さ, 罫線の傾き(度)]。字は罫線に沿って右下がり
+  const NB_ROWS = [['art', 859, 336, 123, 30, -3.8], ['music', 869, 380, 135, 30, -3.8], ['library', 856, 432, 99, 26, -3.8], ['gym', 846, 480, 108, 24, -3.8], ['infirmary', 862, 509, 132, 22, -3.8], ['blank', 880, 545, 140, 24, -3.8]];   // [子, 中心x, 中心y, 長さ, 高さ, 罫線の傾き(度)]。座標は protag_notebook_front（手帳を拾って両手で開いた絵）1536×1024 基準。罫線はわずかに右上がり
   function traceName(done, zoom) {
     const order = NB_ROWS.map(r => r[0]).filter(k => k !== 'blank' && !done.includes(k));
     if (replay) {   // 早送り：記録した名前を使う（この仕組みより前のセーブには記録がないので、上から順に）
@@ -1371,7 +1371,7 @@
     }
     return new Promise(res => {
       const el = $('#cutin');
-      el.innerHTML = `<div class="nbz-in${zoom ? ' far' : ''}"><img src="${imgSrc('protag_notebook_dusk')}" alt="夕焼けの屋上に落ちている生徒手帳。五人の名前が並んでいる">${NB_ROWS.map(([k, cx, cy, w, h, deg]) =>
+      el.innerHTML = `<div class="nbz-in${zoom ? ' far' : ''}"><img src="${imgSrc('protag_notebook_front')}" alt="夕焼けの屋上で、拾った生徒手帳を開いている。右ページに五人の名前が並び、人差し指がページに触れている">${NB_ROWS.map(([k, cx, cy, w, h, deg]) =>
         `<button type="button" class="nbz-row${done.includes(k) ? ' done' : ''}${k === 'blank' ? ' blank' : ''}" data-k="${k}" style="left:${(cx - w / 2) / 15.36}%;top:${(cy - h / 2) / 10.24}%;width:${w / 15.36}%;height:${h / 10.24}%;transform:rotate(${deg}deg)" aria-label="${k === 'blank' ? '6行目' : ({ art: '春日ヒナ', music: '井上ソウタ', library: '水野ミオ', gym: '三浦ケイ', infirmary: '白石ツムギ' })[k]}"${done.includes(k) ? ' disabled' : ''}></button>`).join('')}</div>
         <p class="nbz-cap">名前に触れて、なぞる</p>`;
       el.classList.add('show', 'nbz'); $('#scene').classList.add('cut');
