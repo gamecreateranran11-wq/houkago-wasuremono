@@ -2954,6 +2954,7 @@
   // 章の結果を記録して、次の章を返す（なければ null＝周回の終わり）
   function recordResult(kind) {
     P.cur.results[C.key] = kind; P.played = true; saveP();
+    tel('ch_end', { c: C.id, res: kind, loops: R ? R.loop : null });
     const i = ORDER.indexOf(C.id);
     return ORDER[i + 1] ? CHAPTERS[ORDER[i + 1]] : null;
   }
@@ -2961,6 +2962,7 @@
   // 周回を締めくくる。count=true のとき周回に数える（エンディングを見て放課後が終わった回数。BAD1・手動のやり直しは数えない）。
   // 周回数はタイトルには出さず、内部の記録にとどめる
   function finishRun(count, end) {
+    tel('run_end', { tag: end || null, count: count ? 1 : 0 }); telFlush();
     if (count) P.runs = (P.runs || 0) + 1;
     P.lastRun = { runNo: P.runNo || 1, cur: JSON.parse(JSON.stringify(P.cur || { results: {} })), end: end || null };   // end：その周回で見た結末（次の放課後のはじめの文を変える）   // 「放課後を思い返す」で、終えた周回の章に戻るため
     P.runNo = (P.runNo || 1) + 1; P.cur = { results: {} }; saveP(); clearRun();
@@ -2968,6 +2970,35 @@
   // 本実装版に切り替えるときは RELEASE を true にする：タイトルの「試作版　第一章〜」をやめて「ver 〇〇」を小さく出し、
   // GOOD の結末の「（屋上への道は、製品版で開きます）」を消す（屋上・TRUE の場面ができてから）
   const RELEASE = false, VERSION = '1.0';
+  /* ---------- 遊び方の記録（正式リリース用。同意した人だけ。名前・選んだ文・自由入力は送らない） ---------- */
+  const TELEMETRY_URL = '';   // Google Apps Script のウェブアプリの URL（https://script.google.com/macros/s/…/exec）。空なら何も送らない
+  const telOn = () => !!TELEMETRY_URL && P.telemetry === true;
+  const TEL_SESSION = Math.random().toString(36).slice(2, 10);
+  let telQ = [], telTimer = 0;
+  function tel(ev, d = {}) {
+    if (!telOn() || replay) return;   // 同意がない／ロード直後の早送り中は送らない
+    if (!P.tid) { P.tid = Math.random().toString(36).slice(2, 12); saveP(); }   // 端末ごとのランダムな番号（名前などとは結びつかない）
+    telQ.push({ d: P.tid, s: TEL_SESSION, t: Date.now(), v: VERSION, e: ev, r: P.runNo || 1, ...d });
+    clearTimeout(telTimer);
+    if (telQ.length >= 20) telFlush(); else telTimer = setTimeout(telFlush, 8000);
+  }
+  function telFlush() {
+    clearTimeout(telTimer);
+    if (!telQ.length || !TELEMETRY_URL) { telQ = []; return; }
+    const body = JSON.stringify(telQ); telQ = [];
+    try { if (!(navigator.sendBeacon && navigator.sendBeacon(TELEMETRY_URL, new Blob([body], { type: 'text/plain' })))) fetch(TELEMETRY_URL, { method: 'POST', body, mode: 'no-cors', keepalive: true }).catch(() => {}); } catch (e) {}
+  }
+  addEventListener('pagehide', telFlush);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') telFlush(); });
+  // 同意を聞く（はじめて放課後に入るときに一度だけ。設定からいつでも変えられる）
+  async function askTelemetry() {
+    if (!TELEMETRY_URL || P.telemetry !== undefined) return;
+    const v = await uiWait(`<p class="eyebrow">はじめる前に</p><h2>遊び方の記録について</h2>
+      <p>作品をよりよくするために、どの章をどう遊んだか（章の始まりと終わり、結末、選んだ答えの種類など）の記録を送ってもよいですか？</p>
+      <p class="note">名前・主人公に付けた名前・選んだ文そのものは送りません。誰が遊んだかは分かりません。あとから、タイトルの「設定」でいつでも止められます。</p>`, '', ['送ってもよい', '送らない']);
+    P.telemetry = v === 0; saveP();
+    if (P.telemetry) tel('consent');
+  }
   const TRIAL = ORDER_LEN => ORDER_LEN < 5;
   // 5章（試作版では最後の章）が終わったとき：結果からエンディングを決める
   async function runEnd() {
@@ -3233,7 +3264,7 @@
     // 上の欄：時刻は18:30のまま。チャイムの残りとヒント・チャイムを待つ・セーブは使わない
     $('#clock').textContent = '18:30'; $('#remain').textContent = ''; $('#bells').style.visibility = 'hidden';
     ['#btnHint', '#btnWait'].forEach(q => { $(q).disabled = true; });
-    if (!onRoof()) { beginScript('roof:' + (split ? 'split' : 'straight')); saveRoofStart(true); }   // 屋上もセーブできる（答えを記録して、ロードで早送り）。新しく屋上に来たときは、屋上のはじまりを今の分岐で記録し直す（「思い返す」で古い分岐に戻らないように）
+    if (!onRoof()) { tel('roof_start', { kind: split ? 'split' : 'straight' }); beginScript('roof:' + (split ? 'split' : 'straight')); saveRoofStart(true); }   // 屋上もセーブできる（答えを記録して、ロードで早送り）。新しく屋上に来たときは、屋上のはじまりを今の分岐で記録し直す（「思い返す」で古い分岐に戻らないように）
     syncSave();
     bgm(null);
     // 屋上のはじまりは、雨も風もやんでいる（タイトルや中断から持ちこした雨の音・演出を消す）。雨は、このあと雲が出てから降り出す
@@ -3728,6 +3759,7 @@
                '自分の名前を、思い出せなくなっていた。……それでも、放課後は終わらなかった。']);
     keepMem();
     R.over = true; clearRun(); P.endings.BAD1 = true; saveP(); render(); idle();
+    tel('bad', { c: C.id, tag: 'BAD1', loops: R.loop });
     const got = achGain('BAD1');
     await touchRecall();
     const v = await overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
@@ -3745,6 +3777,7 @@
     await say(lines);
     keepMem();
     R.over = true; clearRun(); P.endings[tag] = true; saveP(); render(); idle();
+    tel('bad', { c: C.id, tag, loops: R.loop });
     const got = achGain(tag);
     await touchRecall();
     // BAD1と同じく、その章のはじめから（謎解きは飛ばして）やり直せる。「放課後をやり直す」を選んだときだけ、周回を締めくくって美術室から
@@ -3778,6 +3811,7 @@
     const i = await choose(list.map(([t]) => t));
     const kind = list[i][1];
     saidNote(list[i][0], kind, stage);
+    tel('answer', { c: C.id, st: stage, k: kind, loop: R ? R.loop : null });
     if (stage === 1 && kind === 'yori') { R.touched = true; bgm(null); pendingCore = C.coreAt || 2; try { loadFileBgm('core'); } catch (e) {} }   // 核心の曲は、選んだすぐあとからほどいておく   // coreAt：選択のあと何文目で核心の曲を始めるか（章ごと）
     if (stage >= 2 && (kind === 'yori' || kind === 'nagu' || kind === 'key')) R.touched = true;
     if (kind !== 'yori' && kind !== 'key') nmMark('miss');
@@ -3839,7 +3873,9 @@
   // 同情の答えのあと：突き返され、「わからないくせに」と言われる。同じところに立とうとすれば身代わり（BAD2）、何も言えなければ、今までどおり届かない
   async function pityBranch(lines, missing) {
     await say(lines);
-    if (await choose(['「……だったら、同じところに立てばわかる？」', '（……何も言えない）']) === 0) {
+    const pv = await choose(['「……だったら、同じところに立てばわかる？」', '（……何も言えない）']);
+    tel('pity_branch', { c: C.id, k: pv === 0 ? 'stand' : 'silent' });
+    if (pv === 0) {
       bgm('coreHeavy'); await say(C.badSubTalk); return chapterBad('BAD2', '身代わり', C.badSub, 'coreHeavy');
     }
     return lastWrong();   // 「何か、あと一つ足りない気がする」は出さない（届かなかったのは向き合い方のせいで、わすれものが足りないからではない）
@@ -7369,6 +7405,7 @@
     }
   }
   async function startRun(ch, opt = {}) {
+    await askTelemetry();
     if (!P.diffSet && ch === ORDER[0] && !opt.skipPuzzle) await chooseDiff();
     // 2周目以降の放課後に入るとき：黒い画面に、主人公の決意を短く出す（前の周回の終わり方と、持っていくわすれもので変える）
     if (ch === ORDER[0] && !opt.skipPuzzle && !opt.recall && (P.runNo || 1) > 1 && !Object.keys(P.cur.results).length && !P.cur.resolved) { P.cur.resolved = true; saveP(); await voidWait(resolveLines()); }
@@ -7381,6 +7418,7 @@
     if (P.mem[ch] && P.mem[ch].length) { P.mem[ch].forEach(k => R.know.add(k)); R.memIn = true; }
     render(); bgm('explore');
     busy = false;
+    tel('ch_start', { c: ch, skip: opt.skipPuzzle ? 1 : 0, recall: opt.recall ? 1 : 0, diff: P.diff === 'easy' ? 'easy' : 'normal' });
     act(scriptFn('intro'), 'intro');
   }
   // splash：最初はタイトルと背景だけを出し、タップしたらメニューを出す
@@ -7965,6 +8003,8 @@
         <div class="set-row"><span class="set-label">文字の速さ</span><div class="seg" id="setSpeed"></div></div>
         <div class="set-row"><span class="set-label">謎解き</span><div class="seg" id="setDiff">
           <button type="button" data-diff="easy" aria-pressed="${P.diff === 'easy'}">やさしい</button><button type="button" data-diff="normal" aria-pressed="${P.diff !== 'easy'}">普通</button></div></div>
+        ${TELEMETRY_URL ? `<div class="set-row"><span class="set-label">遊び方の記録</span><div class="seg" id="setTel">
+          <button type="button" data-tel="1" aria-pressed="${P.telemetry === true}">送る</button><button type="button" data-tel="0" aria-pressed="${P.telemetry !== true}">送らない</button></div></div>` : ''}
         <div class="set-row"><span class="set-label">音量</span>
           <label class="vol">BGM<input id="sVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
           <label class="vol">効果音<input id="sVolSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label></div>
@@ -7979,6 +8019,10 @@
     card.querySelectorAll('#setDiff [data-diff]').forEach(b => b.onclick = () => {
       P.diff = b.dataset.diff; P.diffSet = true; saveP(); if (P.diff === 'easy' && R && R.ch && !R.over) nmMark('easy');
       card.querySelectorAll('#setDiff [data-diff]').forEach(x => x.setAttribute('aria-pressed', x.dataset.diff === P.diff ? 'true' : 'false'));
+    });
+    card.querySelectorAll('#setTel [data-tel]').forEach(b => b.onclick = () => {
+      P.telemetry = b.dataset.tel === '1'; saveP(); if (P.telemetry) tel('consent'); else telQ = [];
+      card.querySelectorAll('#setTel [data-tel]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.tel === '1') === P.telemetry ? 'true' : 'false'));
     });
     wireVol($('#sVolBgm'), $('#sVolSe'));
     $('#setBack').onclick = () => showTitle();
