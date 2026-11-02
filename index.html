@@ -2971,7 +2971,7 @@
   // GOOD の結末の「（屋上への道は、製品版で開きます）」を消す（屋上・TRUE の場面ができてから）
   const RELEASE = false, VERSION = '1.0';
   /* ---------- 遊び方の記録（正式リリース用。同意した人だけ。名前・選んだ文・自由入力は送らない） ---------- */
-  const TELEMETRY_URL = '';   // Google Apps Script のウェブアプリの URL（https://script.google.com/macros/s/…/exec）。空なら何も送らない
+  const TELEMETRY_URL = 'https://script.google.com/macros/s/AKfycbwhibSWXPMC7iAH-braaS1qTjKDtMkiErBQtg7_F8e9s2XBxNajflSLkMyWpjH1Nd3h/exec';   // 2026-11-02 作者が作った受け取り口（スマホ用コード。記録用のスプレッドシートは作者のドライブに自動で作られる）   // Google Apps Script のウェブアプリの URL（https://script.google.com/macros/s/…/exec）。空なら何も送らない
   const telOn = () => !!TELEMETRY_URL && P.telemetry === true;
   const TEL_SESSION = Math.random().toString(36).slice(2, 10);
   let telQ = [], telTimer = 0;
