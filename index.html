@@ -3796,10 +3796,17 @@
       const died = P.cur.results[ch.key] === 'died';
       await show(died ? `${ch.hall}_1830_dark` : `${ch.hall}_1830_lit`);
       await line(died ? `${ch.room}の扉。窓の明かりは消えていた。ノックをしても、もう返事はない。` : `${ch.room}の扉。ノックをしても、${ch.name}の名前を呼んでも、返事はない。`);
+      if (ch.id === 'infirmary') {
+        // 保健室前の窓から見える特別教室棟の明かり：息を引き取った子の部屋だけ消えている
+        const lit = ['art', 'music', 'library'].filter(id => P.cur.results[CHAPTERS[id].key] !== 'died');
+        await Promise.all(lit.map(id => { const im = new Image(); im.src = `img/hi_light_${id}.webp`; im.alt = ''; im.className = 'bg'; im.style.position = 'absolute'; im.dataset.hiLight = '1'; bg.after(im); return (im.decode ? im.decode() : Promise.resolve()).catch(() => {}); }));
+        await line(lit.length ? '窓の向こうの特別教室棟に、明かりの残った窓が見えた。' : '窓の向こうの特別教室棟は、どの窓も暗かった。');
+      }
     }
     await line('どの扉も、もう開かない。');
     bell();
     await say(['チャイムが鳴る。何度鳴っても、誰も出てこない。', '……誰にも届かない言葉をずっと抱えていたのは、誰だったんだろう。']);
+    document.querySelectorAll('[data-hi-light]').forEach(e => e.remove());
     bg.style.opacity = '';
   }
   // BAD1 終わらない放課後：一度も心に触れないまま時間切れ、または「力不足」。その章のはじめから、謎解きを飛ばして再開できる
