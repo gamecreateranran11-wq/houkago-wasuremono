@@ -2729,6 +2729,26 @@
       ${hand(hAng, 42, 8, 9)}${hand(mAng, 66, 10, 5.5)}<circle r="6"/></g>`;
   }
   new MutationObserver(() => syncBgClock()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src', 'style'] });
+  // 保健室前の廊下の窓から見える特別教室棟の明かり。背景が変わるたびに、その周回の結果に合わせて重ねる
+  // 18:00：まだ行っていない教室と閉め出された教室だけ点く（外が明るいので弱く見える）。18:30（BAD4）：息を引き取った子の部屋だけ消える
+  (function () {
+    const bg = $('#bgImg');
+    const clear = () => document.querySelectorAll('[data-hi-light]').forEach(e => e.remove());
+    const follow = () => document.querySelectorAll('[data-hi-light]').forEach(e => { e.style.opacity = bg.style.opacity === '0' ? '0' : e.dataset.hiLight; });
+    const sync = () => {
+      clear();
+      const m = (bg.getAttribute('src') || '').match(/img\/(hall_infirmary|hall_tsumugi)(_1830_lit|_1830_dark|_unlit)?\.webp$/);
+      if (!m || !P.cur || !P.cur.results) return;
+      const late = /1830/.test(m[2] || '');
+      ['art', 'music', 'library'].forEach(id => {
+        const r = P.cur.results[CHAPTERS[id].key];
+        if (late ? r === 'died' : (r && r !== 'shut')) return;
+        const im = new Image(); im.src = `img/hi_light_${id}.webp`; im.alt = ''; im.className = 'bg'; im.style.position = 'absolute'; im.style.pointerEvents = 'none';
+        im.dataset.hiLight = late ? '1' : '.6'; im.style.opacity = bg.style.opacity === '0' ? '0' : im.dataset.hiLight; bg.after(im);
+      });
+    };
+    new MutationObserver(ms => { if (ms.some(x => x.attributeName === 'src')) sync(); else follow(); }).observe(bg, { attributes: true, attributeFilter: ['src', 'style'] });
+  })();
   // 屋上の雨：背景が rooftop_rain のあいだだけ、絵の座標（1536×1024）で動く雨を重ねる。奥・中・手前の3層で、中と手前は床で跳ねる。強さは2段階（h＝0 雨、h＝1 強い雨。rainHeavier で強い雨へ）
   const roofRain = (() => {
     const cv = $('#bgRain'), W = 1536, H = 1024, FLOOR = 716, small = Math.min(innerWidth, innerHeight) < 560, q = small ? .75 : 1;
@@ -3775,26 +3795,6 @@
     await say(['夕焼けの空の下で、ひとり立ち尽くしていた。', '……チャイムは、もう鳴らない。', '夕焼けだけが、音もなく校舎を染めている。', '返事をする人は、もう誰もいなかった。']);
     bg.style.opacity = '';
   }
-  // 保健室前の廊下の窓から見える特別教室棟の明かり。背景が変わるたびに、その周回の結果に合わせて重ねる
-  // 18:00：まだ行っていない教室と閉め出された教室だけ点く（外が明るいので弱く見える）。18:30（BAD4）：息を引き取った子の部屋だけ消える
-  (function () {
-    const bg = $('#bgImg');
-    const clear = () => document.querySelectorAll('[data-hi-light]').forEach(e => e.remove());
-    const follow = () => document.querySelectorAll('[data-hi-light]').forEach(e => { e.style.opacity = bg.style.opacity === '0' ? '0' : e.dataset.hiLight; });
-    const sync = () => {
-      clear();
-      const m = (bg.getAttribute('src') || '').match(/img\/(hall_infirmary|hall_tsumugi)(_1830_lit|_1830_dark|_unlit)?\.webp$/);
-      if (!m || !P.cur || !P.cur.results) return;
-      const late = /1830/.test(m[2] || '');
-      ['art', 'music', 'library'].forEach(id => {
-        const r = P.cur.results[CHAPTERS[id].key];
-        if (late ? r === 'died' : (r && r !== 'shut')) return;
-        const im = new Image(); im.src = `img/hi_light_${id}.webp`; im.alt = ''; im.className = 'bg'; im.style.position = 'absolute'; im.style.pointerEvents = 'none';
-        im.dataset.hiLight = late ? '1' : '.6'; im.style.opacity = bg.style.opacity === '0' ? '0' : im.dataset.hiLight; bg.after(im);
-      });
-    };
-    new MutationObserver(ms => { if (ms.some(x => x.attributeName === 'src')) sync(); else follow(); }).observe(bg, { attributes: true, attributeFilter: ['src', 'style'] });
-  })();
   // BAD4 閉ざされた校舎：全員に閉め出されたあと、それぞれの教室の前の廊下を順に歩く
   async function closedSchool() {
     closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = '';
