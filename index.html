@@ -1203,7 +1203,8 @@
     const set = (STAND_SET[key] || '').split(' ');
     let s = suf;
     if (s !== 'bust' && !set.includes(s)) s = STAND_NEAR[s] && set.includes(STAND_NEAR[s]) ? STAND_NEAR[s] : 'bust';
-    return s === 'bust' ? `${key}_p` : `${key}_p_${s}`;
+    const name = s === 'bust' ? `${key}_p` : `${key}_p_${s}`;
+    return key === 'mio' && C && C.id === 'infirmary' ? `${name}_inf` : name;   // 第五章の保健室にいるミオは、保健室の光を当てた絵
   }
   // 地の文で子どもが立ち上がったら、そこから立った絵にする（「立ち上がりかけて」「立ち上がろうと」は座ったまま）
   const STAND_RE = /立ち上がっ|立ち上がると/, STAND_NOT = /立ち上がりかけ|立ち上がろう|丸椅子から、そっと立ち上がって/;  // 表情の絵を読み込んで持っておく（切り替えの瞬間に前の絵が残らないように）
