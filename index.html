@@ -3775,6 +3775,26 @@
     await say(['夕焼けの空の下で、ひとり立ち尽くしていた。', '……チャイムは、もう鳴らない。', '夕焼けだけが、音もなく校舎を染めている。', '返事をする人は、もう誰もいなかった。']);
     bg.style.opacity = '';
   }
+  // 保健室前の廊下の窓から見える特別教室棟の明かり。背景が変わるたびに、その周回の結果に合わせて重ねる
+  // 18:00：まだ行っていない教室と閉め出された教室だけ点く（外が明るいので弱く見える）。18:30（BAD4）：息を引き取った子の部屋だけ消える
+  (function () {
+    const bg = $('#bgImg');
+    const clear = () => document.querySelectorAll('[data-hi-light]').forEach(e => e.remove());
+    const follow = () => document.querySelectorAll('[data-hi-light]').forEach(e => { e.style.opacity = bg.style.opacity === '0' ? '0' : e.dataset.hiLight; });
+    const sync = () => {
+      clear();
+      const m = (bg.getAttribute('src') || '').match(/img\/(hall_infirmary|hall_tsumugi)(_1830_lit|_1830_dark|_unlit)?\.webp$/);
+      if (!m || !P.cur || !P.cur.results) return;
+      const late = /1830/.test(m[2] || '');
+      ['art', 'music', 'library'].forEach(id => {
+        const r = P.cur.results[CHAPTERS[id].key];
+        if (late ? r === 'died' : (r && r !== 'shut')) return;
+        const im = new Image(); im.src = `img/hi_light_${id}.webp`; im.alt = ''; im.className = 'bg'; im.style.position = 'absolute'; im.style.pointerEvents = 'none';
+        im.dataset.hiLight = late ? '1' : '.6'; im.style.opacity = bg.style.opacity === '0' ? '0' : im.dataset.hiLight; bg.after(im);
+      });
+    };
+    new MutationObserver(ms => { if (ms.some(x => x.attributeName === 'src')) sync(); else follow(); }).observe(bg, { attributes: true, attributeFilter: ['src', 'style'] });
+  })();
   // BAD4 閉ざされた校舎：全員に閉め出されたあと、それぞれの教室の前の廊下を順に歩く
   async function closedSchool() {
     closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = '';
@@ -3799,14 +3819,12 @@
       if (ch.id === 'infirmary') {
         // 保健室前の窓から見える特別教室棟の明かり：息を引き取った子の部屋だけ消えている
         const lit = ['art', 'music', 'library'].filter(id => P.cur.results[CHAPTERS[id].key] !== 'died');
-        await Promise.all(lit.map(id => { const im = new Image(); im.src = `img/hi_light_${id}.webp`; im.alt = ''; im.className = 'bg'; im.style.position = 'absolute'; im.dataset.hiLight = '1'; bg.after(im); return (im.decode ? im.decode() : Promise.resolve()).catch(() => {}); }));
         await line(lit.length ? '窓の向こうの特別教室棟に、明かりの残った窓が見えた。' : '窓の向こうの特別教室棟は、どの窓も暗かった。');
       }
     }
     await line('どの扉も、もう開かない。');
     bell();
     await say(['チャイムが鳴る。何度鳴っても、誰も出てこない。', '……誰にも届かない言葉をずっと抱えていたのは、誰だったんだろう。']);
-    document.querySelectorAll('[data-hi-light]').forEach(e => e.remove());
     bg.style.opacity = '';
   }
   // BAD1 終わらない放課後：一度も心に触れないまま時間切れ、または「力不足」。その章のはじめから、謎解きを飛ばして再開できる
