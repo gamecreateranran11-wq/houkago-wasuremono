@@ -2672,7 +2672,7 @@
   }
   // 雨が強くなる（もう一人の自分の独白の途中）
   function rainHeavier(k = 1.45, sec = 3) {
-    roofRain.heavier(k);
+    roofRain.heavier();
     if (replay || !rainNodes) return;
     clearInterval(rainNodes.timer2); rainNodes.timer2 = 0;   // スマホ：雨が強まったら、水の跳ねる音は止める
     try { const a = audio(), t = a.currentTime, g = rainNodes.g; rainNodes.base *= k;
@@ -2729,33 +2729,33 @@
       ${hand(hAng, 42, 8, 9)}${hand(mAng, 66, 10, 5.5)}<circle r="6"/></g>`;
   }
   new MutationObserver(() => syncBgClock()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src', 'style'] });
-  // 屋上の雨：背景が rooftop_rain のあいだだけ、絵の座標（1536×1024）で動く雨を重ねる。奥・中・手前の3層で、中と手前は床で跳ねる
+  // 屋上の雨：背景が rooftop_rain のあいだだけ、絵の座標（1536×1024）で動く雨を重ねる。奥・中・手前の3層で、中と手前は床で跳ねる。強さは2段階（h＝0 雨、h＝1 強い雨。rainHeavier で強い雨へ）
   const roofRain = (() => {
     const cv = $('#bgRain'), W = 1536, H = 1024, FLOOR = 716, small = Math.min(innerWidth, innerHeight) < 560, q = small ? .75 : 1;
     cv.width = W * q; cv.height = H * q;
     const x = cv.getContext('2d'), R = (a, b) => a + Math.random() * (b - a);
     const LAYER = [
-      { n: small ? 130 : 190, len: [18, 38], v: [1050, 1350], w: 1.2, a: .26, end: [FLOOR - 70, FLOOR + 6], hit: 0 },
-      { n: small ? 100 : 140, len: [42, 80], v: [1650, 2050], w: 1.8, a: .36, end: [FLOOR + 6, 900], hit: .55 },
-      { n: small ? 26 : 36, len: [100, 170], v: [2500, 3100], w: 2.8, a: .42, end: [890, 1060], hit: 1 }
+      { n: small ? 190 : 300, len: [18, 38], v: [1050, 1350], w: 1.2, a: .26, end: [FLOOR - 70, FLOOR + 6], hit: 0 },
+      { n: small ? 150 : 220, len: [42, 80], v: [1650, 2050], w: 1.8, a: .36, end: [FLOOR + 6, 900], hit: .55 },
+      { n: small ? 40 : 56, len: [100, 170], v: [2500, 3100], w: 2.8, a: .42, end: [890, 1060], hit: 1 }
     ];
     const drops = [], hits = [];
     const reset = (d, first) => { const L = d.L; d.len = R(L.len[0], L.len[1]); d.v = R(L.v[0], L.v[1]); d.end = R(L.end[0], L.end[1]);
       d.y = first ? R(-d.len, d.end) : R(-260, -d.len); d.x = R(-40, W + 260); };
     LAYER.forEach(L => { for (let i = 0; i < L.n; i++) { const d = { L, i }; reset(d, true); drops.push(d); } });
-    let raf = 0, on = false, last = 0, k = 1, target = 1;
+    let raf = 0, on = false, last = 0, h = 0, target = 0;
     function frame(now) {
       const dt = Math.min(.05, (now - last) / 1000 || 0); last = now;
-      k += (target - k) * Math.min(1, dt / 1.2);
-      const gust = -.1 - .025 * Math.sin(now / 2600), share = Math.min(1, .68 * k);
+      h += (target - h) * Math.min(1, dt / 1.2);
+      const gust = -.1 - .07 * h - (.025 + .03 * h) * Math.sin(now / 2600), share = .45 + .55 * h, fast = 1 + .18 * h, long = 1 + .35 * h, bright = 1 + .3 * h;
       x.setTransform(q, 0, 0, q, 0, 0); x.clearRect(0, 0, W, H); x.lineCap = 'round';
       LAYER.forEach(L => {
-        x.beginPath(); x.lineWidth = L.w; x.strokeStyle = `rgba(196,210,230,${L.a})`;
+        x.beginPath(); x.lineWidth = L.w; x.strokeStyle = `rgba(196,210,230,${L.a * bright})`;
         const lim = L.n * share;
         drops.forEach(d => { if (d.L !== L) return;
-          const s = d.v * dt * (.92 + k * .08); d.y += s; d.x += s * gust;
-          if (d.y >= d.end) { if (L.hit && d.i < lim && hits.length < 160) hits.push({ x: d.x, y: d.end, t: 0, life: R(.16, .3), s: L.hit * (.6 + (d.end - FLOOR) / 340) }); reset(d); }
-          if (d.i < lim) { x.moveTo(d.x, d.y); x.lineTo(d.x - d.len * gust, d.y - d.len); }
+          const s = d.v * dt * fast; d.y += s; d.x += s * gust;
+          if (d.y >= d.end) { if (L.hit && d.i < lim && hits.length < 240) hits.push({ x: d.x, y: d.end, t: 0, life: R(.16, .3), s: L.hit * (.6 + (d.end - FLOOR) / 340) }); reset(d); }
+          if (d.i < lim) { x.moveTo(d.x, d.y); x.lineTo(d.x - d.len * long * gust, d.y - d.len * long); }
         });
         x.stroke();
       });
@@ -2773,10 +2773,10 @@
       const want = /rooftop_rain\.webp$/.test($('#bgImg').getAttribute('src') || '');
       if (want === on) return; on = want; cv.style.display = on ? 'block' : 'none'; cancelAnimationFrame(raf);
       if (on) { last = performance.now(); raf = requestAnimationFrame(frame); }   // 動きを減らす設定では、止まった雨を1枚だけ描く
-      else { k = target = 1; hits.length = 0; }
+      else { h = target = 0; hits.length = 0; }
     }
     new MutationObserver(sync).observe($('#bgImg'), { attributes: true, attributeFilter: ['src'] });
-    return { heavier(m) { target = Math.min(1.47, target * m); } };
+    return { heavier() { target = 1; } };
   })();
 
   /* ---------- render ---------- */
