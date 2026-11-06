@@ -857,8 +857,8 @@
   var OFFLINE_BUILD = false;
   if (OFFLINE_BUILD || location.protocol === 'file:') document.documentElement.classList.add('offline');
 </script>
-<div id="veil" class="veil"><div class="loading" aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span><small class="load-note">通信環境により、時間がかかる場合があります</small></div><div id="veilErr" class="veil-err" role="alert" hidden><p style="margin:0">通信エラーが発生しました。<br>通信環境を確認して、もう一度読み込んでください。</p><button type="button" class="btn" onclick="location.reload()">もう一度読み込む</button></div></div>
-<div id="netToast" class="net-toast" role="status" hidden>通信エラーが発生しました。通信環境を確認してください。</div>
+<div id="veil" class="veil"><div class="loading" aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span><small class="load-note">通信環境により、時間がかかる場合があります</small></div><div id="veilErr" class="veil-err" role="alert" hidden><p style="margin:0">通信エラーが発生しました。<br>通信環境を確認して、<br>もう一度読み込んでください。</p><button type="button" class="btn" onclick="location.reload()">もう一度読み込む</button></div></div>
+<div id="netToast" class="net-toast" role="status" hidden>通信エラーが発生しました。<br>通信環境を確認してください。</div>
 <div id="app">
   <header class="bar">
     <div class="clock">
