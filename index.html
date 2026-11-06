@@ -591,6 +591,7 @@
   .veil { position: fixed; inset: 0; z-index: 1000; background: var(--ground); }
   .veil-err { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); width: min(86vw, 420px); text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; font-size: 14px; line-height: 1.8; }
   .net-toast { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 1001; width: max-content; max-width: 90vw; box-sizing: border-box; padding: 7px 14px; font-size: 12.5px; line-height: 1.6; color: #fbf7ee; background: rgba(40, 32, 44, .92); pointer-events: none; }
+  .walk-toast { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 1001; width: max-content; max-width: 90vw; box-sizing: border-box; padding: 7px 14px; font-size: 12.5px; line-height: 1.6; color: #fbf7ee; background: rgba(40, 32, 44, .92); pointer-events: none; }
   .offline .net-toast, .offline .veil-err { display: none !important; }
   /* アルバムの絵の枠：読みこむあいだと、読みこめなかったとき */
   img.img-wait, img.img-fail { aspect-ratio: 3 / 2; color: transparent; background-color: #e6dcc7; background-position: center; background-repeat: no-repeat; }
@@ -858,6 +859,7 @@
   if (OFFLINE_BUILD || location.protocol === 'file:') document.documentElement.classList.add('offline');
 </script>
 <div id="veil" class="veil"><div class="loading" aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span><small class="load-note">通信環境により、時間がかかる場合があります</small></div><div id="veilErr" class="veil-err" role="alert" hidden><p style="margin:0">通信エラーが発生しました。<br>通信環境を確認して、<br>もう一度読み込んでください。</p><button type="button" class="btn" onclick="location.reload()">もう一度読み込む</button></div></div>
+<div id="walkToast" class="walk-toast" role="status" hidden></div>
 <div id="netToast" class="net-toast" role="status" hidden>通信エラーが発生しました。<br>通信環境を確認してください。</div>
 <div id="app">
   <header class="bar">
@@ -2914,8 +2916,8 @@
   // 場所（屋上・高さ・フェンス）はわからせず、「何か紙のもの」だけを手がかりにする。手帳が手から落ちるのは序章の一度だけ
   const VOID_LINES = {
     art: ['チャイムが鳴っている。', '風の音。', '手の中から、何かが落ちた。'],
-    music: ['……どこかで、風の音がした。'],
-    library: ['指先に、紙のふちの感触が残っている気がした。'],
+    music: ['チャイムは、まだ鳴っている。', '……どこかで、風の音がした。'],
+    library: ['指先に、紙のふちの感触が残っている気がした。', '（……どうして、手を放したんだろう）'],
     gym: ['どこかで、ページをめくる音がした。'],
     infirmary: ['足もとで、紙が風にあおられている音がした。'],
   };
@@ -3054,6 +3056,45 @@
   const locked = room => ['扉に手をかけた。……開かない。',
                           '内側のつまみは鍵が開いている向きを指している。回してみても、扉はびくともしない。まるで向こう側から誰かに押さえられているみたいに。',
                           `（この放課後が終わるまで、${room}からは出られない気がする）`];
+  // 章の終わりを結果の画面で止めず、廊下を歩いて次の教室の扉まで続ける（2026-11-06 作者の指示。まず第1章→第2章、第2章→第3章）
+  const WALKS = {
+    art: { hall: 'hall_music', arrive: ['音楽室の前まで来た。', '扉の窓にも、高窓にも、明かりがついている。', 'ピアノのある部屋なのに、何の音もしなかった。', '重い扉に、手をかけた。'] },
+    music: { before: ['階段を下りて、2階の廊下に出た。'], hall: 'hall_library', arrive: ['壁の掲示板に、図書だよりが貼ってある。', '小さくて整った字。名前の欄に「水野」とある。', '図書室の扉の窓から、明かりが漏れていた。', '引き戸に、手をかけた。'] },
+  };
+  let walkToastTimer = 0;
+  function walkToast(html) {
+    const t = $('#walkToast'); t.innerHTML = html; t.hidden = false;
+    clearTimeout(walkToastTimer); walkToastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+  }
+  async function hallBg(name) {
+    const bg = $('#bgImg'); bg.src = `img/${name}.webp`;
+    $('#sitFig').classList.add('gone'); $('#leftover').style.display = 'none'; $('#hsLayer').innerHTML = '';
+    try { await bg.decode(); } catch (e) {}
+  }
+  async function walkOn(next, shut) {
+    const w = WALKS[C.id];
+    closeOverlay();
+    if (shut) await say([`${C.room}の明かりは、ついたままだった。`]);
+    else {
+      await say(['扉に手をかけると、今度は、開いた。']);
+      await hallBg(C.hall);
+      await say(['廊下に出た。', '振り返ると、扉は閉まっていた。', 'もう、この扉は開かない気がした。']);
+    }
+    if (w.before) await say(w.before);
+    await hallBg(w.hall);
+    await say(w.arrive);
+    goNext(next);
+  }
+  // わすれものの案内：最初に誰かが消えたときに一度だけ（第1章で消えたなら、第1章の終わり）
+  async function keepNote() {
+    if (P.keepTold) return;
+    P.keepTold = true; saveP();
+    await overlayWait(`<p class="eyebrow">しくみ</p>
+      <p>わすれものは、次の放課後へ持っていけます。</p>
+      <p>持っていけば、今は見つからない言葉が見つかります。</p>
+      <p class="note">この放課後は、このまま先へ進みます。</p>`, '', ['続ける']);
+    closeOverlay();
+  }
   async function vanish() {
     bgm('vanish');
     await C.vanishScene();
@@ -3064,6 +3105,14 @@
     keepMem();
     R.over = true; clearRun(); render(); idle();
     const next = recordResult('vanished');
+    if (next && WALKS[C.id]) {
+      closeOverlay();
+      await keepNote();
+      await touchRecall();
+      closeOverlay();
+      walkToast(`わすれもの棚に追加：${C.lost}${R.touched ? `<br>${C.name}の心に、少しだけ触れた。` : ''}`);
+      return walkOn(next, false);
+    }
     await touchRecall();
     overlayWait(`<p class="eyebrow">消失イベント</p><h2>${C.name}が消えた</h2>${touchNote()}
       <p>わすれもの「${C.lost}」を、わすれもの棚にしまった。</p>
@@ -4094,6 +4143,12 @@
     keepMem();
     R.over = true; clearRun(); P.endings.shut = true; saveP(); render(); idle(); bgm('shut');
     const next = recordResult('shut');
+    if (next && WALKS[C.id]) {
+      await touchRecall();
+      closeOverlay();
+      if (R.touched) walkToast(`${C.name}の心に、少しだけ触れた。`);
+      return walkOn(next, true);
+    }
     await touchRecall();
     overlayWait(`<p class="eyebrow">閉ざされた扉</p><h2>${C.name}は、もう扉を開けなかった</h2>${touchNote()}
       <p class="note">この放課後では、もう${C.room}には戻れない。</p>`,
@@ -5013,7 +5068,7 @@
     ],
     async intro(rem) {
       if (!rem) {
-        await say(['……気がつくと、音楽室にいた。', '窓の外は夕焼け。時計は16:30を指している。', ...locked('音楽室'), 'グランドピアノの前に、男子生徒がひとり座っていた。',
+        await say(['重い扉を開けて、中に入った。', '後ろで、扉の閉まる音がした。', '窓の外は夕焼け。時計は16:30を指している。', ...locked('音楽室'), 'グランドピアノの前に、男子生徒がひとり座っていた。',
                    '鍵盤の蓋は閉じたまま。両手を膝に置いて、じっとうつむいている。……声をかけてみる。',
                    '「……ピアノ、弾くの？」',
                    ['', '彼が少しだけ顔を上げた。胸の名札には「2年 井上ソウタ」とある。目の下に、濃いくまが浮いていた。', 'lookUp'], ['', '焦点の合わない目。座っているだけなのに、上体がときどき、ふらりと揺れる。', 'lookUp'],
@@ -5595,7 +5650,7 @@
     ],
     async intro(rem) {
       if (!rem) {
-        await say(['……気がつくと、図書室にいた。', '窓の外は夕焼け。時計は17:00を指している。', ...locked('図書室'), '閲覧机の端に女子生徒がひとり座っていた。',
+        await say(['引き戸を開けて、中に入った。', '後ろで、戸の閉まる音がした。', '窓の外は夕焼け。時計は17:00を指している。', ...locked('図書室'), '閲覧机の端に女子生徒がひとり座っていた。',
                    '一冊の本を両腕で抱えるようにして。……声をかけてみる。',
                    '「あの……ここ、図書室だよね」',
                    '彼女はびくりと肩を震わせてこちらを見た。胸の名札には「2年 水野ミオ」とある。',
