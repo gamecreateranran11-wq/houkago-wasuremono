@@ -591,6 +591,7 @@
   .veil { position: fixed; inset: 0; z-index: 1000; background: var(--ground); }
   .loading { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 5; font-family: var(--serif); font-size: 14px; letter-spacing: .18em; color: #cfc6b6; pointer-events: none; }
   .loading { text-align: center; white-space: nowrap; }
+  .offline .load-note { display: none; }
   .load-note { display: block; margin-top: 8px; font-family: var(--hand); font-size: 11px; letter-spacing: .04em; color: #a79e92; }
   .loading span { animation: ld 1.2s infinite; opacity: .2; }
   .loading span:nth-child(2) { animation-delay: .2s; } .loading span:nth-child(3) { animation-delay: .4s; }
@@ -844,6 +845,11 @@
   .overlay.another-read .cg { max-height: 30vh; object-fit: cover; }
 </style>
 
+<script>
+  // オフライン版（アプリ・ダウンロード販売）を作るときは OFFLINE_BUILD を true に。読み込み中の「通信環境により〜」を出さない
+  var OFFLINE_BUILD = false;
+  if (OFFLINE_BUILD || location.protocol === 'file:') document.documentElement.classList.add('offline');
+</script>
 <div id="veil" class="veil"><div class="loading" aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span><small class="load-note">通信環境により、時間がかかる場合があります</small></div></div>
 <div id="app">
   <header class="bar">
@@ -1450,13 +1456,13 @@
   let veilTimer = 0, veilResume = false;
   function veilOn(resume = false) {
     veilResume = resume; veil.hidden = false;
-    clearTimeout(veilTimer); veilTimer = setTimeout(veilOff, 15000);   // 何かあっても、幕が下りたままにならないように
+    clearTimeout(veilTimer); veilTimer = setTimeout(veilOff, 90000);   // 何かあっても、幕が下りたままにならないように
   }
   function veilOff() {
     veilResume = false; clearTimeout(veilTimer);
     setTimeout(() => { if (!veilResume) veil.hidden = true; }, 30);   // 絵と文章が画面に出てから幕を上げる
   }
-  veilTimer = setTimeout(veilOff, 15000);
+  veilTimer = setTimeout(veilOff, 90000);
   function overlayWait(html, cls, buttons) {
     const r = replayed();
     return new Promise(res0 => {
