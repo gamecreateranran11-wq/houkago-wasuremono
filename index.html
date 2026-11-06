@@ -589,6 +589,13 @@
   .bub.me { align-self: flex-end; align-items: flex-end; } .bub.me p { background: #3b5f4a; color: #eef3ea; }
   /* 起動と再開の読みこみ中は、ゲームの画面（時計や調べる場所）を見せない */
   .veil { position: fixed; inset: 0; z-index: 1000; background: var(--ground); }
+  .veil-err { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); width: min(86vw, 420px); text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; font-size: 14px; line-height: 1.8; }
+  .net-toast { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 1001; width: max-content; max-width: 90vw; box-sizing: border-box; padding: 7px 14px; font-size: 12.5px; line-height: 1.6; color: #fbf7ee; background: rgba(40, 32, 44, .92); pointer-events: none; }
+  .offline .net-toast, .offline .veil-err { display: none !important; }
+  /* アルバムの絵の枠：読みこむあいだと、読みこめなかったとき */
+  img.img-wait, img.img-fail { aspect-ratio: 3 / 2; color: transparent; background-color: #e6dcc7; background-position: center; background-repeat: no-repeat; }
+  img.img-wait { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='24'%3E%3Ctext x='50%25' y='16' text-anchor='middle' font-size='12' letter-spacing='1' font-family='sans-serif' fill='%23857a68'%3E読み込み中%3C/text%3E%3C/svg%3E"); }
+  img.img-fail { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='24'%3E%3Ctext x='50%25' y='16' text-anchor='middle' font-size='12' letter-spacing='1' font-family='sans-serif' fill='%23857a68'%3E読み込めませんでした%3C/text%3E%3C/svg%3E"); }
   .loading { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 5; font-family: var(--serif); font-size: 14px; letter-spacing: .18em; color: #cfc6b6; pointer-events: none; }
   .loading { text-align: center; white-space: nowrap; }
   .offline .load-note { display: none; }
@@ -850,7 +857,8 @@
   var OFFLINE_BUILD = false;
   if (OFFLINE_BUILD || location.protocol === 'file:') document.documentElement.classList.add('offline');
 </script>
-<div id="veil" class="veil"><div class="loading" aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span><small class="load-note">通信環境により、時間がかかる場合があります</small></div></div>
+<div id="veil" class="veil"><div class="loading" aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span><small class="load-note">通信環境により、時間がかかる場合があります</small></div><div id="veilErr" class="veil-err" role="alert" hidden><p style="margin:0">通信エラーが発生しました。<br>通信環境を確認して、もう一度読み込んでください。</p><button type="button" class="btn" onclick="location.reload()">もう一度読み込む</button></div></div>
+<div id="netToast" class="net-toast" role="status" hidden>通信エラーが発生しました。通信環境を確認してください。</div>
 <div id="app">
   <header class="bar">
     <div class="clock">
@@ -1447,22 +1455,48 @@
   function openOverlay(html, cls = '', cardCls = 'ov-card') {
     ov.className = 'overlay ' + cls; card.className = cardCls; card.innerHTML = html; ov.hidden = false;
     if (veilResume && (!replay || !replay.inputs.length)) veilOff();   // 再開の途中で答えを待つ画面が出たら、幕を上げる
+    if (card.querySelector('.alb-view, .alb-pair') || /^アルバム/.test((card.querySelector('.eyebrow') || {}).textContent || '')) imgWait(card);
     wirePhoneBar(card);
     const f = card.querySelector('.primary, button'); if (f) f.focus({ preventScroll: true });
   }
   function closeOverlay() { ov.hidden = true; card.innerHTML = ''; }
   // 読みこみの幕：起動してタイトルの絵が出るまでと、章の開始・続きからの再開で画面が整うまで、ゲームの画面を隠す
   const veil = $('#veil');
-  let veilTimer = 0, veilResume = false;
+  let veilTimer = 0, veilResume = false, veilFailed = false, toastTimer = 0;
   function veilOn(resume = false) {
+    if (veilFailed) return;
     veilResume = resume; veil.hidden = false;
-    clearTimeout(veilTimer); veilTimer = setTimeout(veilOff, 90000);   // 何かあっても、幕が下りたままにならないように
+    clearTimeout(veilTimer); veilTimer = setTimeout(netFail, 90000);   // 読みこみが終わらないときは、前の画面を見せず通信エラーを出す
   }
   function veilOff() {
+    if (veilFailed) return;
     veilResume = false; clearTimeout(veilTimer);
-    setTimeout(() => { if (!veilResume) veil.hidden = true; }, 30);   // 絵と文章が画面に出てから幕を上げる
+    setTimeout(() => { if (!veilResume && !veilFailed) veil.hidden = true; }, 30);   // 絵と文章が画面に出てから幕を上げる
   }
-  veilTimer = setTimeout(veilOff, 90000);
+  // 通信エラー：読みこみの幕が出ているときは幕の中に、遊んでいる最中は画面の上に小さく出す（オフライン版では出さない）
+  function netFail() {
+    if (document.documentElement.classList.contains('offline')) return veilOff();
+    if (!veil.hidden) {
+      veilFailed = true; clearTimeout(veilTimer);
+      veil.querySelector('.loading').hidden = true; $('#veilErr').hidden = false;
+      return;
+    }
+    const t = $('#netToast'); t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+  }
+  veilTimer = setTimeout(netFail, 90000);
+  // 画面の中の絵が読めなかったとき（読みこみ前の空の絵は数えない）・通信が切れたとき
+  window.addEventListener('error', e => { const i = e.target; if (i && i.tagName === 'IMG' && i.getAttribute('src')) netFail(); }, true);
+  window.addEventListener('offline', netFail);
+  // アルバムの絵の枠に「読み込み中」を出す。読み終えたら消す
+  function imgWait(root) {
+    root.querySelectorAll('img').forEach(i => {
+      if (i.complete && i.naturalWidth) return;
+      i.classList.add('img-wait');
+      i.addEventListener('load', () => i.classList.remove('img-wait'), { once: true });
+      i.addEventListener('error', () => { i.classList.remove('img-wait'); i.classList.add('img-fail'); i.alt = ''; i.removeAttribute('src'); }, { once: true });
+    });
+  }
   function overlayWait(html, cls, buttons) {
     const r = replayed();
     return new Promise(res0 => {
@@ -7574,7 +7608,7 @@
     if (roof) ov.style.setProperty('--title-img', `url("img/${rainy ? 'title_1830_rain' : 'title_1830_dark'}.webp")`);   // 屋上の途中：五人の教室の明かりは消えている（保健室も）。雨の途中なら雨空の校舎
     ov.classList.toggle('rainy', rainy);
     // 起動時の幕：タイトルの絵が読めてから上げる
-    if (!veil.hidden) { const m = /url\("(.+?)"\)/.exec(ov.style.getPropertyValue('--title-img')), im = new Image(); im.onload = im.onerror = veilOff; im.src = m ? m[1] : 'img/title.webp'; }
+    if (!veil.hidden) { const m = /url\("(.+?)"\)/.exec(ov.style.getPropertyValue('--title-img')), im = new Image(); im.onload = veilOff; im.onerror = netFail; im.src = m ? m[1] : 'img/title.webp'; }
     windSE(false, 2);
     if (rainy) { if (audioReady) rainSE(true, 2); } else rainSE(false, 2);
     bgm('title');
