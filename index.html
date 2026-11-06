@@ -590,6 +590,8 @@
   /* 起動と再開の読みこみ中は、ゲームの画面（時計や調べる場所）を見せない */
   .veil { position: fixed; inset: 0; z-index: 1000; background: var(--ground); }
   .loading { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 5; font-family: var(--serif); font-size: 14px; letter-spacing: .18em; color: #cfc6b6; pointer-events: none; }
+  .loading { text-align: center; white-space: nowrap; }
+  .load-note { display: block; margin-top: 8px; font-family: var(--hand); font-size: 11px; letter-spacing: .04em; color: #a79e92; }
   .loading span { animation: ld 1.2s infinite; opacity: .2; }
   .loading span:nth-child(2) { animation-delay: .2s; } .loading span:nth-child(3) { animation-delay: .4s; }
   @keyframes ld { 0%, 60%, 100% { opacity: .2; } 30% { opacity: 1; } }
@@ -842,7 +844,7 @@
   .overlay.another-read .cg { max-height: 30vh; object-fit: cover; }
 </style>
 
-<div id="veil" class="veil"><div class="loading" aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span></div></div>
+<div id="veil" class="veil"><div class="loading" aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span><small class="load-note">通信環境により、時間がかかる場合があります</small></div></div>
 <div id="app">
   <header class="bar">
     <div class="clock">
@@ -871,7 +873,7 @@
 
   <div id="inv" class="inv" aria-label="持ち物"></div>
   <div class="scene-wrap">
-    <div id="loading" class="loading" hidden aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span></div>
+    <div id="loading" class="loading" hidden aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span><small class="load-note">通信環境により、時間がかかる場合があります</small></div>
     <div id="scene" class="scene" role="group" aria-label="">
       <div id="stage" class="stage">
         <img id="bgImg" class="bg" src="" alt="">
