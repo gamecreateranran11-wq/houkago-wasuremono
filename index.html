@@ -587,6 +587,8 @@
   .bub span { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .bub.them { align-self: flex-start; } .bub.them p { background: #2a2334; color: var(--ink); }
   .bub.me { align-self: flex-end; align-items: flex-end; } .bub.me p { background: #3b5f4a; color: #eef3ea; }
+  /* 起動と再開の読みこみ中は、ゲームの画面（時計や調べる場所）を見せない */
+  .veil { position: fixed; inset: 0; z-index: 1000; background: var(--ground); }
   .loading { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 5; font-family: var(--serif); font-size: 14px; letter-spacing: .18em; color: #cfc6b6; pointer-events: none; }
   .loading span { animation: ld 1.2s infinite; opacity: .2; }
   .loading span:nth-child(2) { animation-delay: .2s; } .loading span:nth-child(3) { animation-delay: .4s; }
@@ -840,6 +842,7 @@
   .overlay.another-read .cg { max-height: 30vh; object-fit: cover; }
 </style>
 
+<div id="veil" class="veil"><div class="loading" aria-live="polite">Now Loading<span>.</span><span>.</span><span>.</span></div></div>
 <div id="app">
   <header class="bar">
     <div class="clock">
@@ -1136,7 +1139,7 @@
         return Promise.resolve();
       }
       // 早送りが終わったら、その時点で流れているはずの曲をかけ直す。核心の曲を待っている途中なら、その待ちは消さない
-      const rb = replay.bgm, pc = pendingCore; replay = null; syncSave();
+      const rb = replay.bgm, pc = pendingCore; replay = null; syncSave(); veilOff();
       bgm(rb !== undefined ? rb : moodNow());
       if (seWant.wind) windSE(true, 1.2); if (seWant.rain) rainSE(true, 1.2); seWant.wind = seWant.rain = false;   // 中断したときに鳴っていた風・雨を戻す
       if (pc) pendingCore = pc;
@@ -1435,10 +1438,23 @@
   const ov = $('#overlay'), card = $('#ovCard');
   function openOverlay(html, cls = '', cardCls = 'ov-card') {
     ov.className = 'overlay ' + cls; card.className = cardCls; card.innerHTML = html; ov.hidden = false;
+    if (veilResume && (!replay || !replay.inputs.length)) veilOff();   // 再開の途中で答えを待つ画面が出たら、幕を上げる
     wirePhoneBar(card);
     const f = card.querySelector('.primary, button'); if (f) f.focus({ preventScroll: true });
   }
   function closeOverlay() { ov.hidden = true; card.innerHTML = ''; }
+  // 読みこみの幕：起動してタイトルの絵が出るまでと、章の開始・続きからの再開で画面が整うまで、ゲームの画面を隠す
+  const veil = $('#veil');
+  let veilTimer = 0, veilResume = false;
+  function veilOn(resume = false) {
+    veilResume = resume; veil.hidden = false;
+    clearTimeout(veilTimer); veilTimer = setTimeout(veilOff, 15000);   // 何かあっても、幕が下りたままにならないように
+  }
+  function veilOff() {
+    veilResume = false; clearTimeout(veilTimer);
+    setTimeout(() => { if (!veilResume) veil.hidden = true; }, 30);   // 絵と文章が画面に出てから幕を上げる
+  }
+  veilTimer = setTimeout(veilOff, 15000);
   function overlayWait(html, cls, buttons) {
     const r = replayed();
     return new Promise(res0 => {
@@ -2850,7 +2866,7 @@
         knewNow = true;
         try { await C.talk(); } finally { knewNow = false; }
       }
-    } finally { scr = null; replay = null; busy = false; render(); if (!R.over) idle(); }
+    } finally { scr = null; replay = null; busy = false; render(); if (!R.over) idle(); veilOff(); }
   }
   // 序章と章のあいだ：本編は、18:30の屋上で立ち尽くす主人公の思い返し。その現実（チャイム・風・手から落ちて足もとにある生徒手帳）が、章のはじめに数行だけ割りこむ。
   // 場所（屋上・高さ・フェンス）はわからせず、「何か紙のもの」だけを手がかりにする。手帳が手から落ちるのは序章の一度だけ
@@ -7501,14 +7517,14 @@
     // 2周目以降の放課後に入るとき：黒い画面に、主人公の決意を短く出す（前の周回の終わり方と、持っていくわすれもので変える）
     if (ch === ORDER[0] && !opt.skipPuzzle && !opt.recall && (P.runNo || 1) > 1 && !Object.keys(P.cur.results).length && !P.cur.resolved) { P.cur.resolved = true; saveP(); await voidWait(resolveLines()); }
     if (opt.recall) await voidWait(opt.recall);
-    closeOverlay(); clearRoof();
+    veilOn(); closeOverlay(); clearRoof();
     busy = true; P.played = true; if (ch === 'infirmary') P.metTsumugi = true; saveP(); bgm(null); guest = null; guestRender();
     if (R && R.ch) keepMem();
     clearRun(); await setChapter(ch); newRun(ch); if (opt.skipPuzzle) R.skipPuzzle = true;
     if (P.diff === 'easy') nmMark('easy');   // 章を「やさしい」で遊んだら、この周回は隠しの演出の対象から外す
     if (P.mem[ch] && P.mem[ch].length) { P.mem[ch].forEach(k => R.know.add(k)); R.memIn = true; }
     render(); bgm('explore');
-    busy = false;
+    busy = false; veilOff();
     tel('ch_start', { c: ch, skip: opt.skipPuzzle ? 1 : 0, recall: opt.recall ? 1 : 0, diff: P.diff === 'easy' ? 'easy' : 'normal' });
     act(scriptFn('intro'), 'intro');
   }
@@ -7549,6 +7565,8 @@
     const rainy = !!(roof && roof.rain);
     if (roof) ov.style.setProperty('--title-img', `url("img/${rainy ? 'title_1830_rain' : 'title_1830_dark'}.webp")`);   // 屋上の途中：五人の教室の明かりは消えている（保健室も）。雨の途中なら雨空の校舎
     ov.classList.toggle('rainy', rainy);
+    // 起動時の幕：タイトルの絵が読めてから上げる
+    if (!veil.hidden) { const m = /url\("(.+?)"\)/.exec(ov.style.getPropertyValue('--title-img')), im = new Image(); im.onload = im.onerror = veilOff; im.src = m ? m[1] : 'img/title.webp'; }
     windSE(false, 2);
     if (rainy) { if (audioReady) rainSE(true, 2); } else rainSE(false, 2);
     bgm('title');
@@ -8054,7 +8072,7 @@
     continueRun(d.run, d.resume);
   }
   async function continueRun(d, resume) {
-    closeOverlay();
+    veilOn(true); closeOverlay();
     busy = true;
     const toRoof = !!(resume && resume.key && resume.key.startsWith('roof:'));
     await setChapter(d.ch, !toRoof);
@@ -8083,7 +8101,7 @@
       act(fn, resume.key);
       return;
     }
-    idle();
+    idle(); veilOff();
   }
   /* ---------- 設定（タイトルから開く）：既読スキップ・文字の速さ・音量 ---------- */
   function showSettings() {
