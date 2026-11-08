@@ -2401,17 +2401,23 @@
                      unravelTrue: { src: 'snd/dawn_true_gemini_h.m4a', vol: 0.15, len: 3906205 },
                      unravelDim: { src: 'snd/farewell_dim_gemini_h.m4a', vol: 0.16, len: 3946925 },
                      tension: { src: 'snd/tension_gemini_h.m4a', vol: 0.16, len: 4586385 },
-                     burst: { src: 'snd/burst_gemini_h.m4a', vol: 0.155, len: 2627556 } };   // burst（『溢れ出す本心』）も 2026-11-08 に作者が Gemini で作った曲へ。最初の音から鳴るので最初から最後まで（頭と終わりの無音だけ切った）。フェードインはほかの曲と同じ。前の組み立てる曲（BGM.burst）は控えとして残す   // tension（『向き合う心』）も 2026-11-08 に作者が Gemini で作った曲へ。前奏を切って主題の入り（元の曲の 0:12.85）から曲の終わりまで。くり返しも主題から。フェードインはほかの曲と同じ。前の組み立てる曲（BGM.tension）は控えとして残す
+                     burst: { src: 'snd/burst_gemini_h.m4a', vol: 0.155, len: 2627556 },
+                     farewell: { src: 'snd/farewell_gemini_h.m4a', vol: 0.15, len: 4184644 },
+                     farewellLate: { src: 'snd/farewell_gemini_h.m4a', same: 'farewell', vol: 0.15, len: 4184644, first: 40.82 } };   // farewell（『分かたれる道』）も 2026-11-08 に作者が Gemini で作った曲へ（作者が作り直した2つ目）。頭の無音を切って最初から最後まで。くり返しは頭から。farewellLate（ツムギが一人で図書室へ向かう終わり）は同じファイルの後半（元の曲の 0:41.42、いったん静かになったあと次の節が始まるところ）から鳴らす。前の組み立てる曲（BGM.farewell / farewellLate）は控えとして残す   // burst（『溢れ出す本心』）も 2026-11-08 に作者が Gemini で作った曲へ。最初の音から鳴るので最初から最後まで（頭と終わりの無音だけ切った）。フェードインはほかの曲と同じ。前の組み立てる曲（BGM.burst）は控えとして残す   // tension（『向き合う心』）も 2026-11-08 に作者が Gemini で作った曲へ。前奏を切って主題の入り（元の曲の 0:12.85）から曲の終わりまで。くり返しも主題から。フェードインはほかの曲と同じ。前の組み立てる曲（BGM.tension）は控えとして残す
                      // それより前の差し替えの記録：   // unravelDim（『見送る背中』）も 2026-11-08 に作者が Gemini で作った曲（仮）へ。最初の音から鳴るので最初から最後まで（頭と終わりの無音だけ切った）。フェードインはほかの曲と同じ。前の組み立てる曲（BGM.unravelDim）は控えとして残す   // unravelTrue（『黎明に肩を並べて』）も 2026-11-08 に作者が Gemini で作った曲へ（最初から最後まで。終わりの無音だけ切った）。フェードインは呼ぶ側のまま（TRUE の夜は前の曲から2秒でゆっくり入れ替わる）。前の組み立てる曲（BGM.unravelTrue）は控えとして残す   // unravel（『夕映えの微笑み』）も 2026-11-08 に作者が Gemini で作った曲（Where the Light Softens）へ。前の組み立てる曲（BGM.unravel）は控えとして残す。ファイルは元の曲の 0:35.3〜1:52.1（くり返しはここ＝作者が選んだつなぎ目）。最初だけ 0:37.64（主旋律の入り 0:38.50 の前の 0:37.70・0:38.10 の音の、0:37.70 の頭）から鳴らす。フェードインはほかの曲と同じ（作者の指示）   // endless（『終わらない放課後』）も 2026-11-02 に作者が Gemini で作った曲へ。前の組み立てる曲（BGM.endless）は控えとして残す。
   // 2026-11-02：Gemini の曲は、前奏を切って、冒頭から主題が流れるようにした（くり返しても主題から。core と roofCore はもともと冒頭から主題）   // vanish（『手のひらに遺るもの』）も 2026-10-31 に作者が Gemini で作った曲へ（同じ _h の処理。ゲームでの大きさはほかの録音の曲にそろえた）。前の組み立てる曲（BGM.vanish）は控えとして残す   // musicbox（『ひとかけらの希望』）も 2026-10-30 に作者が Gemini で作った曲へ（ゲームでの大きさを前の曲の約 -24.4dB に合わせた）。前の組み立てる曲（BGM.musicbox）は控えとして残す
   // 2026-10-30：5曲とも、AIっぽさをやわらげる処理をかけた版（名前の最後に _h）へ。高い音の左右のしゅわしゅわした揺れとギラつきをおさえ、小さな部屋の響きとテープのようなごくわずかな揺れを足した（ヒスは足さない）。大きさは前と同じ。前の曲はデスクトップに控え
   // ファイルの中身（数MB）は、タイトルのうちに全曲ぶん取り寄せておく。音にほどく（デコード）のは、かける少し前に（全曲ほどいておくと、スマホで場所を取りすぎる）
   const fileBytes = {}, fileBuf = {};
+  // 同じファイルを別の位置から鳴らす曲（farewellLate など）は、取り寄せとほどいた音を元の曲と分け合う
+  const fileKey = name => (FILE_BGM[name] && FILE_BGM[name].same) || name;
   function fetchFileBgm(name) {
+    name = fileKey(name);
     if (!fileBytes[name]) { fileBytes[name] = fetch(FILE_BGM[name].src).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }); fileBytes[name].catch(() => { delete fileBytes[name]; }); }
     return fileBytes[name];
   }
   function loadFileBgm(name) {
+    name = fileKey(name);
     const a = audio();
     if (!fileBuf[name]) { fileBuf[name] = fetchFileBgm(name).then(b => new Promise((ok, ng) => a.decodeAudioData(b.slice(0), ok, ng))); fileBuf[name].catch(() => { delete fileBuf[name]; }); }   // 失敗したら、次にかけるときに取り寄せ直す
     return fileBuf[name];
@@ -8279,7 +8285,7 @@
     // ここから下の（仮）の題は、管理人が名前をつけるまでの仮の名前
     ['endless', '終わらない放課後（仮）', '', '（説明は未定）'],
     ['tension', '向き合う心', '', '（説明は未定）'],
-    ['farewell', '分かたれる道', '', 'ピアノの分散和音に、クラリネットとフルートの悲しい旋律。後半は、ヴァイオリンが前を向いて歌う'],
+    ['farewell', '分かたれる道', '', '（説明は未定）'],
     ['burst', '溢れ出す本心', '', '（説明は未定）'],
     ['unravelDim', '見送る背中', '', '（説明は未定）'],
     ['unravelTrue', '黎明に肩を並べて', '', '（説明は未定）'],
@@ -8310,7 +8316,7 @@
       playing = playing === k ? null : k; failed = null; loading = null;
       if (playing && FILE_BGM[playing]) {
         // 録音の曲は、音にほどき終わるまで「読み込み中…」と出す。ほかの録音の曲のほどいた音は手放す（スマホで場所を取りすぎないように。探索の曲と『ひとかけらの希望』は、本編ですぐ鳴らすために残す）
-        Object.keys(fileBuf).forEach(n => { if (n !== playing && n !== 'explore' && n !== 'musicbox') delete fileBuf[n]; });
+        Object.keys(fileBuf).forEach(n => { if (n !== fileKey(playing) && n !== 'explore' && n !== 'musicbox') delete fileBuf[n]; });
         try {
           loading = k;
           loadFileBgm(k).then(() => { if (loading === k) { loading = null; draw(); } },
