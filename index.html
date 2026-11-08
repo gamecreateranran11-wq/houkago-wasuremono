@@ -2279,14 +2279,13 @@
     },
     // 追い出される・追い出されたとき：重い低音と、ゆっくり沈んでいくチェロ、扉を叩くような音
     // 『閉ざされた扉』の差分（サウンドトラックには入れない）：追い出される前、チャイムが鳴るまで。扉を叩く音だけを抜く
+    // 2026-11-08：扉を叩く音は曲から外して、場面の効果音にした（shutKnocks）。曲を録音に差し替えても叩く音は残る。サウンドトラックでは叩く音なし
     shutIn(t, i) { return BGM.shut(t, i, true); },
     shut(t, i, quiet) {
       const d = 4, bar = i % 8;
       contrabass(33, t, d + 0.4, 0.03); tone(nf(21), t, d + 0.6, 0.05, 'sine', 0.8);
       cello([45, 44, 43, 42, 41, 42, 43, 44][bar], t, d + 0.2, 0.016);
       if (bar % 4 === 3) viola(57, t + 1, 2.8, 0.008);
-      // 扉を叩く音：2小節に1回「ドン、ドン、ドン」。返事はない（4小節目ごとに、叩く手が弱くなる）
-      if (!quiet && i % 2 === 1) { const w = bar % 4 === 3 ? 0.6 : 1; [0, 0.5, 1.0].forEach((o, k) => knock(t + 1.6 + o, (0.34 - k * 0.03) * w)); }
       return d;
     },
     // 緊張（ミオとツムギを引き合わせる場面用）：重くしすぎない。ためらい→悲しみと後悔→温かい思い出→懺悔と思いやり、が16小節で交錯する
@@ -2403,7 +2402,9 @@
                      tension: { src: 'snd/tension_gemini_h.m4a', vol: 0.16, len: 4586385 },
                      burst: { src: 'snd/burst_gemini_h.m4a', vol: 0.155, len: 2627556 },
                      farewell: { src: 'snd/farewell_gemini_h.m4a', vol: 0.15, len: 4184644 },
-                     farewellLate: { src: 'snd/farewell_gemini_h.m4a', same: 'farewell', vol: 0.15, len: 4184644, first: 40.82 } };   // farewell（『分かたれる道』）も 2026-11-08 に作者が Gemini で作った曲へ（作者が作り直した2つ目）。頭の無音を切って最初から最後まで。くり返しは頭から。farewellLate（ツムギが一人で図書室へ向かう終わり）は同じファイルの後半（元の曲の 0:41.42、いったん静かになったあと次の節が始まるところ）から鳴らす。前の組み立てる曲（BGM.farewell / farewellLate）は控えとして残す   // burst（『溢れ出す本心』）も 2026-11-08 に作者が Gemini で作った曲へ。最初の音から鳴るので最初から最後まで（頭と終わりの無音だけ切った）。フェードインはほかの曲と同じ。前の組み立てる曲（BGM.burst）は控えとして残す   // tension（『向き合う心』）も 2026-11-08 に作者が Gemini で作った曲へ。前奏を切って主題の入り（元の曲の 0:12.85）から曲の終わりまで。くり返しも主題から。フェードインはほかの曲と同じ。前の組み立てる曲（BGM.tension）は控えとして残す
+                     farewellLate: { src: 'snd/farewell_gemini_h.m4a', same: 'farewell', vol: 0.15, len: 4184644, first: 40.82 },
+                     shut: { src: 'snd/shut_gemini_h.m4a', vol: 0.18, len: 3774400, loop: 22.4293 },
+                     shutIn: { src: 'snd/shut_gemini_h.m4a', same: 'shut', vol: 0.18, len: 3774400, loop: 22.4293 } };   // shut（『閉ざされた扉』）も 2026-11-08 に作者が Gemini で作った曲へ。最初は頭から（前奏の2回の「ドーン」も聴かせる）。くり返しは、ほぼ同じ節が2回出てくる所を使って、元の曲の 1:25.65 から 0:22.5 へ2秒重ねて戻る（作者の指示：もっとシームレスに）。扉を叩く音は効果音（shutKnocks）なので、チャイム前の差分 shutIn も同じファイル。前の組み立てる曲（BGM.shut / shutIn）は控えとして残す     // farewell（『分かたれる道』）も 2026-11-08 に作者が Gemini で作った曲へ（作者が作り直した2つ目）。頭の無音を切って最初から最後まで。くり返しは頭から。farewellLate（ツムギが一人で図書室へ向かう終わり）は同じファイルの後半（元の曲の 0:41.42、いったん静かになったあと次の節が始まるところ）から鳴らす。前の組み立てる曲（BGM.farewell / farewellLate）は控えとして残す   // burst（『溢れ出す本心』）も 2026-11-08 に作者が Gemini で作った曲へ。最初の音から鳴るので最初から最後まで（頭と終わりの無音だけ切った）。フェードインはほかの曲と同じ。前の組み立てる曲（BGM.burst）は控えとして残す   // tension（『向き合う心』）も 2026-11-08 に作者が Gemini で作った曲へ。前奏を切って主題の入り（元の曲の 0:12.85）から曲の終わりまで。くり返しも主題から。フェードインはほかの曲と同じ。前の組み立てる曲（BGM.tension）は控えとして残す
                      // それより前の差し替えの記録：   // unravelDim（『見送る背中』）も 2026-11-08 に作者が Gemini で作った曲（仮）へ。最初の音から鳴るので最初から最後まで（頭と終わりの無音だけ切った）。フェードインはほかの曲と同じ。前の組み立てる曲（BGM.unravelDim）は控えとして残す   // unravelTrue（『黎明に肩を並べて』）も 2026-11-08 に作者が Gemini で作った曲へ（最初から最後まで。終わりの無音だけ切った）。フェードインは呼ぶ側のまま（TRUE の夜は前の曲から2秒でゆっくり入れ替わる）。前の組み立てる曲（BGM.unravelTrue）は控えとして残す   // unravel（『夕映えの微笑み』）も 2026-11-08 に作者が Gemini で作った曲（Where the Light Softens）へ。前の組み立てる曲（BGM.unravel）は控えとして残す。ファイルは元の曲の 0:35.3〜1:52.1（くり返しはここ＝作者が選んだつなぎ目）。最初だけ 0:37.64（主旋律の入り 0:38.50 の前の 0:37.70・0:38.10 の音の、0:37.70 の頭）から鳴らす。フェードインはほかの曲と同じ（作者の指示）   // endless（『終わらない放課後』）も 2026-11-02 に作者が Gemini で作った曲へ。前の組み立てる曲（BGM.endless）は控えとして残す。
   // 2026-11-02：Gemini の曲は、前奏を切って、冒頭から主題が流れるようにした（くり返しても主題から。core と roofCore はもともと冒頭から主題）   // vanish（『手のひらに遺るもの』）も 2026-10-31 に作者が Gemini で作った曲へ（同じ _h の処理。ゲームでの大きさはほかの録音の曲にそろえた）。前の組み立てる曲（BGM.vanish）は控えとして残す   // musicbox（『ひとかけらの希望』）も 2026-10-30 に作者が Gemini で作った曲へ（ゲームでの大きさを前の曲の約 -24.4dB に合わせた）。前の組み立てる曲（BGM.musicbox）は控えとして残す
   // 2026-10-30：5曲とも、AIっぽさをやわらげる処理をかけた版（名前の最後に _h）へ。高い音の左右のしゅわしゅわした揺れとギラつきをおさえ、小さな部屋の響きとテープのようなごくわずかな揺れを足した（ヒスは足さない）。大きさは前と同じ。前の曲はデスクトップに控え
@@ -2452,7 +2453,9 @@
           // 頭にAACの符号化で付く無音（ブラウザによって残る）を測り、くり返しの範囲を本体だけにする（つなぎ目にすき間を作らない）
           const body = F.len / 44100;   // 本体の長さ（秒）。ほどいた音は端末の出力の速さ（48kHzなど）に変わるので秒で比べる
           const pre = Math.max(0, Math.min(0.1, buf.duration - body));
-          src.loopStart = pre; src.loopEnd = pre + body;
+          // loop：くり返しの戻り先（秒）。ないときは頭へ戻る
+          // loopEnd はファイルの終わりちょうどにしない（長い曲だと Chrome が戻り先へ飛ばず、終わりの近くで止まったようになる。2026-11-08 に確認）。1サンプル手前で戻す
+          src.loopStart = pre + (F.loop || 0); src.loopEnd = Math.min(pre + body, buf.duration - 1 / buf.sampleRate);
           src.start(0, pre + (F.first || 0));
         } else src.start();
         gain.gain.setTargetAtTime(bgmLevel(), a.currentTime, F.fade || fadeIn);
@@ -2583,6 +2586,23 @@
   function keepBgm(name, ok) {
     if (!replay && P.sound && bgmName && ok.includes(bgmName)) return;
     bgm(name);
+  }
+  // 閉め出されたあとの、扉を叩く音（効果音）。前は『閉ざされた扉』の曲の中で鳴らしていたのと同じ間合い：
+  // 8秒（曲の2小節）に1回「ドン、ドン、ドン」。返事はない（2回目ごとに、叩く手が弱くなる）。曲が『閉ざされた扉』でなくなったら止まる
+  let shutKnockTimer = null;
+  function shutKnocks() {
+    clearTimeout(shutKnockTimer); clearInterval(shutKnockTimer); shutKnockTimer = null;
+    if (replay || bgmName !== 'shut') return;
+    let n = 0;
+    const hit = () => {
+      if (bgmName !== 'shut') { clearInterval(shutKnockTimer); shutKnockTimer = null; return; }
+      if (bgmPaused || $('.ost')) return;   // 別のアプリに切り替えているあいだ・サウンドトラックを開いているあいだは叩かない
+      let a; try { a = audio(); } catch (e) { return; }
+      const t = a.currentTime + 1.6, w = n++ % 2 ? 0.6 : 1;
+      [0, 0.5, 1.0].forEach((o, k) => knock(t + o, (0.34 - k * 0.03) * w, true));
+    };
+    // 曲の入りから1小節（4秒）おいて、そのあと2小節（8秒）ごと（前と同じ間合い）
+    shutKnockTimer = setTimeout(() => { if (bgmName !== 'shut') return; hit(); shutKnockTimer = setInterval(hit, 8000); }, 4000);
   }
   // 鍵の外れる音：合成音では自然に聞こえなかったため、鳴らさない（呼び出し側はそのまま）
   function lockClick() {}
@@ -3255,7 +3275,7 @@
     else if (end[0] === 'NORMAL' && !P.cur.mtSplit) bgm(end[3], 1.6);   // 『見送る背中』（『夕映えの微笑み』の静かなアレンジ、何人かの朝）。前の曲から、ゆっくり入れ替える
     // 決別した周回（「それぞれの朝」と、決別したうえで誰かを閉め出した「何人かの朝」）は、決別のあとから流れている曲（静かな決別）を切らずに続ける
     else if (end[0] === 'NORMAL2' || (end[0] === 'NORMAL' && P.cur.mtSplit)) keepBgm('farewell', ['farewell', 'farewellLate']);
-    else bgm(end[3]);
+    else { bgm(end[3]); if (end[3] === 'shut') shutKnocks(); }
     const got = achGain(end[0]);
     finishRun(true, end[0]);
     if (end[0] === 'BAD4') await closedSchool();
@@ -4170,7 +4190,7 @@
       $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = '';
       try { await bg.decode(); } catch (e) {}
     }
-    setCG(false); bgm('shut');
+    setCG(false); bgm('shut'); shutKnocks();
     await say([`……気がつくと、${C.room}の扉の外、薄暗い廊下に立っていた。`,
                'あれほど開かなかった扉が、今度は向こう側から閉ざされている。', ...after]);
     keepMem();
@@ -8278,7 +8298,7 @@
     ['unravel', '夕映えの微笑み', '', '（説明は未定）'],
     ['sota', '放課後', 'ソロ', 'ソウタのピアノ・ソロ。ハルのパートと同じ主題から始まる'],
     ['vanish', '手のひらに遺るもの', '', '（説明は未定）'],
-    ['shut', '閉ざされた扉', '', '重い低音と、ゆっくり沈むチェロ。扉を叩くような音'],
+    ['shut', '閉ざされた扉', '', '（説明は未定）'],
     ['coreHeavy', '身代わりの影', '', '低く沈んだ弦の和音'],
     ['roofCore', '深淵からの声', '', '（説明は未定）'],
     ['codep', 'ふたりきりの子守唄', '', 'オルゴールとピアノの3拍子。穏やかなのに、どこか落ち着かない'],
