@@ -2972,7 +2972,11 @@
     for (const l of (typeof st === 'function' ? st() : st)) { if (typeof l === 'function') l(); else out.push(l); }
     await say(out);
   }
-  async function voidLines() { const t = VOID_LINES[C.id]; if (t) await voidWait(t); }
+  async function voidLines() {
+    const t = VOID_LINES[C.id], d = voidDark; voidDark = null;
+    if (t) { const p = voidWait(t); if (d) setTimeout(() => fxEnd(d), 60); await p; }
+    else if (d) { d.classList.remove('on'); setTimeout(() => fxEnd(d), 1700); }
+  }
   // 黒い画面の文：文が一つずつ浮かび、全部出てから進むしるし（▼。本編の文章送りと同じ印）を出す
   // 文の出る間隔と、1行が浮かぶ長さは文字の速さの設定に合わせる（「普通」が元の速さ。一括は全部の行をいっしょに出す）。
   // 一度見た黒い画面は、既読スキップがONなら全部の行をすぐ出す
@@ -3103,7 +3107,8 @@
     art: { hall: 'hall_music', arrive: () => ['音楽室の前まで来た。', '扉の窓にも、高窓にも、明かりがついている。',
              ...(P.cur.results.hina === 'shut' ? ['振り返ると、美術室の高窓にも、まだ明かりがある。'] : []),
              'ピアノのある部屋なのに、何の音もしなかった。', '重い扉に、手をかけた。'] },
-    music: { before: () => ['階段を下りて、2階の廊下に出た。'], hall: 'hall_library', arrive: () => ['壁の掲示板に、図書だよりが貼ってある。', '小さくて整った字。名前の欄に「水野」とある。', '図書室の扉の窓から、明かりが漏れていた。', '引き戸に、手をかけた。'] },
+    music: { before: () => ['階段を下りて、2階の廊下に出た。'], savedBefore: () => [], hall: 'hall_library',   // savedBefore：ソウタを校門まで見送ったあとは、上の階から下りてこないので、この一文は出さない
+             arrive: () => ['壁の掲示板に、図書だよりが貼ってある。', '小さくて整った字。名前の欄に「水野」とある。', '図書室の扉の窓から、明かりが漏れていた。', '引き戸に、手をかけた。'] },
     library: { before: () => ['校舎を出ると、中庭の向こうの体育館に明かりが見えた。', ...(shutLit() ? [`振り返ると、特別教室棟の窓に、明かりが${shutLit()}つ残っていた。`] : [])],
                hall: 'hall_gym', arrive: () => ['ボールの弾む音が、一度だけした。', '続きの音は、しなかった。', '重い扉に、手をかけた。'] },
     gym: { before: () => ['渡り廊下を戻って、本校舎に入った。'], hall: 'hall_infirmary',
@@ -3136,7 +3141,20 @@
     if (w.before) await say(w.before());
     if (w.hall) await hallBg(w.hall);
     await say(w.arrive(shut));
+    if (next) await darkToVoid();
     goNext(next);
+  }
+  // 廊下から次の章へ入るとき：暗転してから、章のはじめの黒い画面（主人公の屋上の一文）を出す（作者の指示）。
+  // 黒い幕は読みこみの幕（veil）より前に置き、次の章の黒い画面が開いたら外す（voidLines）
+  let voidDark = null;
+  async function darkToVoid() {
+    if (replay) return;
+    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const d = fxLayer('dark'); d.style.zIndex = 1001; await wait(40); d.classList.add('on'); await wait(1600);
+    spk.hidden = true; txt.textContent = ''; chs.innerHTML = ''; more.hidden = true;
+    voidDark = d;
+    // 念のため：次の章の黒い画面が出ないまま残ったら、外す（画面が黒いまま止まらないように）
+    setTimeout(() => { if (voidDark === d) { voidDark = null; d.classList.remove('on'); setTimeout(() => fxEnd(d), 1700); } }, 20000);
   }
   // わすれものの案内：最初に誰かが消えたときに一度だけ（第1章で消えたなら、第1章の終わり）
   async function keepNote() {
@@ -4222,27 +4240,42 @@
   // stop：主人公が足を止める場所（主人公は、まだ放課後の外へは出られない）
   // ほかの教室に、まだ明かりがついているか（まだ行っていない教室と、閉め出された教室は明かりがついたまま。ほどけた子・消えた子の教室は消えている）
   const litLeft = () => ORDER.some(id => id !== C.id && (!P.cur.results[CHAPTERS[id].key] || P.cur.results[CHAPTERS[id].key] === 'shut'));
-  function ending({ lines, img, alt, stop = '門の手前で、足が止まる。まだここは通れない。', album = img, music = null }) {
+  // 2026-11-08：ほどけたときも、消えた・閉め出されたときと同じ流れにした（作者の指示）。結果の画面と「次の章に進む／タイトルへ」のボタンはやめて、
+  // 見送りの絵を背景に文章送りで見せ、取り戻した記憶（あれば）を1枚出してから、廊下を歩いて次の章へそのまま入る。第5章は放課後の終わりへ
+  async function ending({ lines, img, alt, stop = '門の手前で、足が止まる。まだここは通れない。', album = img, music = null }) {
     talkHold = false;
     if (album) albumSee(album);
     R.standing = true;  // 見送りの場面では立っている
     const now = chStart() + R.ticks * MIN_PER_TICK;
     R.over = true; clearRun(); P.saved[C.key] = true; saveP(); albumSync(); render(); idle(); if (music) keepBgm(music, [music]); else keepBgm('unravel', WARM);
     const next = recordResult('saved');
-    const btns = [next ? `次の章に進む（${hm((next.startMin || 0))}）` : '放課後の終わりへ', 'タイトルへ'];
-    const note = `<p class="note">${hm(now)}。チャイムは、まだ鳴っていない。${next ? `鳴る前に、明かりのついた${next.room}へ向かう。` : ''}</p>${achNoteTake()}`;
-    const scene = `<img class="cg" src="img/${img}.webp" alt="${alt}">
-      <div class="fade" style="display:flex;flex-direction:column;gap:12px">
-        ${lines.map(l => `<p>${l}</p>`).join('')}
-        <p>${stop}</p>
-        <p>${litLeft() ? '振り返ると、ほかの教室には、まだ明かりがついていた。' : '振り返ると、ほかの教室の明かりは、もうどれも消えていた。'}</p>
-        <p class="eyebrow">${C.label}　${C.name}の心がほどけた</p>
-      </div>`;
-    const go = v => v === 0 ? goNext(next) : showTitle(true);
+    closeOverlay();
+    // 見送りの絵へは明転で切り替える（作者の指示）。絵は先に読みこんでおく
+    try { const pre = new Image(); pre.src = `img/${img}.webp`; await pre.decode(); } catch (e) {}
+    await whiteSwap(() => {
+      guest = null; guestRender();
+      const bg = $('#bgImg'); bg.src = `img/${img}.webp`; bg.alt = alt || '';
+      $('#sitFig').classList.add('gone'); $('#leftover').style.display = 'none'; $('#hsLayer').innerHTML = '';
+    });
+    await say([...lines, stop, litLeft() ? '振り返ると、ほかの教室には、まだ明かりがついていた。' : '振り返ると、ほかの教室の明かりは、もうどれも消えていた。']);
     // 取り戻した記憶は、見送りのあとに1枚分けて出す（見送りの文を長くしない）
-    if (!(C.memory && C.memory.length)) { overlayWait(scene + note, 'dawn', btns).then(go); return; }
-    overlayWait(scene, 'dawn', ['続ける']).then(() => overlayWait(`<img class="cg recall" src="img/${img}.webp" alt="">
-      <div class="fade recall-text" style="display:flex;flex-direction:column;gap:14px">${C.memory.map(l => `<p>${l}</p>`).join('')}</div>${note}`, 'dawn', btns)).then(go);
+    if (C.memory && C.memory.length && !replay) {
+      await uiWait(`<img class="cg recall" src="img/${img}.webp" alt="">
+        <div class="fade recall-text" style="display:flex;flex-direction:column;gap:14px">${C.memory.map(l => `<p>${l}</p>`).join('')}</div>`, 'dawn', ['続ける']);
+      closeOverlay();
+    }
+    walkToast(`${C.label}　${C.name}の心がほどけた${achNoteTake()}`);
+    await say([`${hm(now)}。チャイムは、まだ鳴っていない。${next ? `鳴る前に、明かりのついた${next.room}へ向かう。` : ''}`]);
+    const w = WALKS[C.id];
+    if (next && w) {
+      const pre = w.savedBefore ? w.savedBefore() : (w.before ? w.before() : []);   // 見送ったあとは部屋の中からではなく、見送った場所から歩く
+      if (pre.length) await say(pre);
+      if (w.hall) await hallBg(w.hall);
+      const arr = w.arrive(false);
+      if (arr.length) await say(arr);
+      await darkToVoid();
+    }
+    goNext(next);
   }
 
   /* ---------- 共通の調べもの ---------- */
