@@ -2396,7 +2396,8 @@
                      roofCore: { src: 'snd/roof_after_last_bell_h.m4a', vol: 0.36 },   // roofCore（屋上『深淵からの声』）も 2026-10-29 に Gemini の『After the Last Bell』へ。前の組み立てる曲（BGM.roofCore）は控えとして残す
                      musicbox: { src: 'snd/musicbox_gemini_h.m4a', vol: 0.16 },
                      vanish: { src: 'snd/vanish_gemini_h.m4a', vol: 0.15 },
-                     endless: { src: 'snd/endless_gemini_h.m4a', vol: 0.15 } };   // endless（『終わらない放課後』）も 2026-11-02 に作者が Gemini で作った曲へ。前の組み立てる曲（BGM.endless）は控えとして残す。
+                     endless: { src: 'snd/endless_gemini_h.m4a', vol: 0.15 },
+                     unravel: { src: 'snd/unravel_gemini_h.m4a', vol: 0.15, len: 3387012, first: 2.36 } };   // unravel（『夕映えの微笑み』）も 2026-11-08 に作者が Gemini で作った曲（Where the Light Softens）へ。前の組み立てる曲（BGM.unravel）は控えとして残す。ファイルは元の曲の 0:35.3〜1:52.1（くり返しはここ＝作者が選んだつなぎ目）。最初だけ 0:37.64（主旋律の入り 0:38.50 の前の 0:37.70・0:38.10 の音の、0:37.70 の頭）から鳴らす。フェードインはほかの曲と同じ（作者の指示）   // endless（『終わらない放課後』）も 2026-11-02 に作者が Gemini で作った曲へ。前の組み立てる曲（BGM.endless）は控えとして残す。
   // 2026-11-02：Gemini の曲は、前奏を切って、冒頭から主題が流れるようにした（くり返しても主題から。core と roofCore はもともと冒頭から主題）   // vanish（『手のひらに遺るもの』）も 2026-10-31 に作者が Gemini で作った曲へ（同じ _h の処理。ゲームでの大きさはほかの録音の曲にそろえた）。前の組み立てる曲（BGM.vanish）は控えとして残す   // musicbox（『ひとかけらの希望』）も 2026-10-30 に作者が Gemini で作った曲へ（ゲームでの大きさを前の曲の約 -24.4dB に合わせた）。前の組み立てる曲（BGM.musicbox）は控えとして残す
   // 2026-10-30：5曲とも、AIっぽさをやわらげる処理をかけた版（名前の最後に _h）へ。高い音の左右のしゅわしゅわした揺れとギラつきをおさえ、小さな部屋の響きとテープのようなごくわずかな揺れを足した（ヒスは足さない）。大きさは前と同じ。前の曲はデスクトップに控え
   // ファイルの中身（数MB）は、タイトルのうちに全曲ぶん取り寄せておく。音にほどく（デコード）のは、かける少し前に（全曲ほどいておくと、スマホで場所を取りすぎる）
@@ -2434,8 +2435,16 @@
       const play = n => loadFileBgm(name).then(buf => {
         if (bgmGain !== gain) return;
         const v = a.createGain(); v.gain.value = FILE_BGM[name].vol; v.connect(gain);   // 音量バー・会話中の音量下げは、組み立てる曲と同じ bgmGain で
-        const src = bgmSrc = a.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(v); src.start();
-        gain.gain.setTargetAtTime(bgmLevel(), a.currentTime, fadeIn);
+        const src = bgmSrc = a.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(v);
+        const F = FILE_BGM[name];
+        if (F.len) {
+          // 頭にAACの符号化で付く無音（ブラウザによって残る）を測り、くり返しの範囲を本体だけにする（つなぎ目にすき間を作らない）
+          const body = F.len / 44100;   // 本体の長さ（秒）。ほどいた音は端末の出力の速さ（48kHzなど）に変わるので秒で比べる
+          const pre = Math.max(0, Math.min(0.1, buf.duration - body));
+          src.loopStart = pre; src.loopEnd = pre + body;
+          src.start(0, pre + (F.first || 0));
+        } else src.start();
+        gain.gain.setTargetAtTime(bgmLevel(), a.currentTime, F.fade || fadeIn);
       }).catch(() => { if (bgmGain === gain) setTimeout(() => { if (bgmGain === gain) play(n + 1); }, Math.min(2000 * 2 ** n, 15000)); });
       play(0);
       return;
