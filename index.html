@@ -4255,6 +4255,14 @@
     gym: '（……後輩たちのことを何も知らないまま、「大丈夫」と言ってしまった。ケイは前に立つはずだった場所に背を向けて、こちらを選んだ）',
     infirmary: '（……寂しい、と言ってしまった。ツムギはこちらの寂しさを埋めるために、入院からも、ミオからも、目をそらした）',
   };
+  // 「同じところに立てばわかる？」と言ったときの相手の反応（訝しむか、できるわけないと突き放すか、どちらか一言）。このあと身代わりの言葉につながる
+  const PITY_STAND = {
+    art: [['ヒナ', '……やれるもんなら、やってみれば', 'angry']],
+    music: [['ソウタ', '……同じところって、どういう意味だよ', 'angryUp']],
+    library: [['ミオ', '……代われるなら、代わってほしいくらい', 'sad']],
+    gym: [['ケイ', '……できるわけないだろ', 'angry']],
+    infirmary: [['ツムギ', '……無理だよ、そんなの', 'sad']],
+  };
   const depNote = () => `（……さっきも同じように安心させた。そのたびに、${C.name}はこちらにしか寄りかかれなくなっていった）`;
   // 同情の答えのあと：突き返され、「わからないくせに」と言われる。同じところに立とうとすれば身代わり（BAD2）、何も言えなければ、今までどおり届かない
   async function pityBranch(lines, missing) {
@@ -4262,7 +4270,7 @@
     const pv = await choose(['「……だったら、同じところに立てばわかる？」', '（……何も言えない）']);
     tel('pity_branch', { c: C.id, k: pv === 0 ? 'stand' : 'silent' });
     if (pv === 0) {
-      bgm('coreHeavy'); await say(C.badSubTalk); return chapterBad('BAD2', '身代わり', C.badSub, 'coreHeavy');
+      bgm('coreHeavy'); await say([...(PITY_STAND[C.id] || []), ...C.badSubTalk]); return chapterBad('BAD2', '身代わり', C.badSub, 'coreHeavy');
     }
     return lastWrong();   // 「何か、あと一つ足りない気がする」は出さない（届かなかったのは向き合い方のせいで、わすれものが足りないからではない）
   }
@@ -5423,9 +5431,11 @@
           R.taken.shelf = true; await gotItem('frag1');
           albumSee('m_photo');
           await overlayWait(`<p class="eyebrow">楽譜ファイルの写真</p><h2>ひまわりピアノ教室 発表会</h2><img class="cg" src="img/m_photo.webp" alt="「ひまわりピアノ教室 発表会」の看板の前で、幼い男の子が二人並んでいる">
-            <p>幼稚園くらいの男の子が二人、手をつないで並んでいる。照れてうつむいている子は、ソウタに似ている。</p>`, '', ['持っていく']);
+            <p>幼稚園くらいの男の子が二人、手をつないで並んでいる。照れてうつむいている子は、ソウタに似ている。</p>`, '', ['ファイルに戻す']);
           closeOverlay();
-          R.items.add('photo'); R.know.add('photo'); render();
+          // 2026-11-10 作者の指摘：謎解きに使わない大事な写真を持ち出すと、黙って盗んだように見える。見たら、ファイルに戻す（持ち物には入れない）
+          await say(['写真は、楽譜ファイルの元の場所にそっと戻した。']);
+          R.know.add('photo'); render();
           await tick();
         } else { const nw = !R.know.has('shelfProgram'); R.know.add('shelfProgram'); await say(['色とりどりの楽譜ファイルが並んでいる。',
                           '「ひまわりピアノ教室」と書かれた古いファイルに、発表会のプログラムが挟まっていた。',
