@@ -917,7 +917,7 @@
       <div id="getItem" class="get-item" role="status" hidden></div>
       <img id="guestFig" class="guest" alt="">
       <img id="portrait" class="portrait" alt="">
-      <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fRoomDark" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".64 0 0 0 0  0 .54 0 0 0  0 0 .56 0 0  0 0 0 1 0"/></filter><filter id="fRoomDarkP" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".76 0 0 0 0  0 .66 0 0 0  0 0 .68 0 0  0 0 0 1 0"/></filter></svg>
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fRoomDark" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".64 0 0 0 0  0 .54 0 0 0  0 0 .56 0 0  0 0 0 1 0"/></filter><filter id="fRoomDarkP" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".76 0 0 0 0  0 .66 0 0 0  0 0 .68 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_art" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.89 0 0 0 0  0 0.8 0 0 0  0 0 0.68 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_music" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.84 0 0 0 0  0 0.67 0 0 0  0 0 0.5 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_library" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.83 0 0 0 0  0 0.83 0 0 0  0 0 0.89 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_gym" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.64 0 0 0 0  0 0.62 0 0 0  0 0 0.92 0 0  0 0 0 1 0"/></filter></svg>
       <img class="chime-cg" src="img/chime_sky.webp" alt="17:00の夕焼け空。チャイムが響いている">
     </div>
   </div>
@@ -3217,9 +3217,27 @@
     clearTimeout(walkToastTimer); walkToastTimer = setTimeout(() => { t.hidden = true; }, 5000);
   }
   async function hallBg(name) {
-    const bg = $('#bgImg'); bg.src = `img/${name}.webp`;
+    // 廊下の絵を読み終えてから、背景・椅子・わすれものを同時に切り替える（部屋の椅子などが先に消えないように）
+    const bg = $('#bgImg'), pre = new Image(); pre.src = `img/${name}.webp`;
+    try { await pre.decode(); } catch (e) {}
+    bg.src = pre.src;
     $('#sitFig').classList.add('gone'); $('#leftover').style.display = 'none'; $('#hsLayer').innerHTML = '';
+    $('#scene').classList.remove('room-dark');   // 廊下は部屋の暗さを引き継がない
     try { await bg.decode(); } catch (e) {}
+  }
+  // 子が消えたあと、部屋を出る前に主人公が明かりを消す（2026-11-11 作者の指示：消えた直後の廊下で、部屋の明かりがついたままにならないように）
+  // 決まり：消えた子の部屋は、主人公が最後に出るときに消す。閉め出された部屋は、外からは消せないので、ついたまま。
+  // ほどけた子の部屋は、その子が帰るときに自分で消していく（裏設定。18:00の窓から見える明かりと合う）
+  async function roomLightOff() {
+    if (C.id === 'infirmary' && R.taken && R.taken.dark) { await say(['保健室の明かりは、消したままだった。', `暗い部屋に、${C.lost}だけが残っていた。`]); return; }
+    await say(['部屋を出る前に、入口のスイッチに手を伸ばした。']);
+    const pre = new Image(); pre.src = `img/${C.bg}_unlit.webp`; try { await pre.decode(); } catch (e) {}
+    if (C.id === 'infirmary') setDark(true);
+    else {
+      $('#bgImg').src = pre.src;
+      const lo = $('#leftover'); lo.style.filter = `url(#fUnlit_${C.id})`;   // わすれものも、部屋と同じ暗さ・色みに（わすれものの周りの、点灯／消灯の背景の色の比）
+    }
+    await say(['カチ、と小さな音がした。', `明かりの消えた${C.room}に、${C.lost}だけが残っていた。`]);
   }
   async function walkOn(next, shut) {
     const w = WALKS[C.id];
@@ -3227,7 +3245,8 @@
     if (shut) await say([guestHide(), `${C.room}の明かりは、ついたままだった。`]);
     else {
       await say(['扉に手をかけると、今度は、開いた。']);
-      await hallBg(C.id === 'infirmary' ? 'hall_infirmary_unlit' : C.hall);   // 2026-11-10：ツムギが消えた直後の廊下は、保健室の明かりを消す（作者の指示）
+      await roomLightOff();
+      await hallBg(`${C.hall}_unlit`);   // 消えた直後の廊下は、その部屋の明かりが消えている
       await say(['廊下に出た。', '振り返ると、扉は閉まっていた。', 'もう、この扉は開かない気がした。']);
     }
     if (w.before) await say(w.before());
@@ -4322,7 +4341,7 @@
     await say(h.lines);
     const opts = [['「……うん。傷つける言い方だった」', 'ok'], ['「そういうつもりじゃ、なかったんだ」', 'excuse'], ['（何も言わずに、待つ）', 'ok'], ['「ごめん。本当に、ごめん」', 'again']];
     const k = opts[await choose(opts.map(o => o[0]))][1];
-    if (k === 'excuse') { nmMark('miss'); await say([[C.name, '……つもりじゃなくても、言ったでしょ', 'angry']]); await closeHeart(); return true; }
+    if (k === 'excuse') { nmMark('miss'); await say([[C.name, (C.key === 'sota' || C.key === 'kei' ? '……つもりじゃなくても、言っただろ' : '……つもりじゃなくても、言ったでしょ'), 'angry']]); await closeHeart(); return true; }
     if (k === 'again') { nmMark('miss'); await say([[C.name, '……そんなに謝られたら、許さなきゃいけないみたいじゃん', 'angry']]); await closeHeart(); return true; }
     await say(h.ok);
     return false;
