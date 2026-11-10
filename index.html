@@ -100,6 +100,7 @@
   .scene .bg-clock { position: absolute; pointer-events: none; }
   .sit { position: absolute; width: auto; transition: filter .5s ease; pointer-events: none; }
   .sit.gone { display: none; }
+  .scene .sit-front { pointer-events: none; }
   .scene .chime-cg { inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .9s ease; pointer-events: none; z-index: 2; }
   .scene.cg .chime-cg { opacity: 1; }
   .scene.cg .hs { visibility: hidden; }
@@ -153,6 +154,8 @@
   .msg.lifted { z-index: 6; box-shadow: 0 -8px 18px rgba(40, 30, 20, .22); }
   .choice { text-align: left; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 10px 14px; line-height: 1.6; cursor: pointer; }
   .choice:hover { border-color: var(--akane); }
+  .choice.burnt { opacity: .55; }
+  .choice .sting { display: block; font-size: .85em; color: var(--muted); margin-top: 2px; }
 
   .overlay { position: fixed; inset: 0; background: rgba(12, 10, 16, .9); display: grid; place-items: center; padding: 16px; overflow-y: auto; z-index: 10; }
   .ov-card > * { flex-shrink: 0; }
@@ -240,7 +243,7 @@
   .eye-chart svg { display: block; width: 100%; height: auto; }
   .card-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fbf8f0; color: #2a2a2a; }
   .card-table th, .card-table td { border: 1px solid #b9b2a2; padding: 2px 4px; text-align: center; }
-  #scene.room-dark #sitFig { filter: url(#fRoomDark); }
+  #scene.room-dark #sitFig, #scene.room-dark #sitChair { filter: url(#fRoomDark); }
   #scene.room-dark #portrait, #scene.room-dark #guestFig { filter: url(#fRoomDarkP); }   /* 2026-11-10：立ち絵・座り絵（消えたあとに来るミオも）は見づらいので、部屋よりワントーン明るく（作者の指示） */
   #scene.room-dark #sitFig.pretoned { filter: none; }
   .card-scroll { max-height: 46vh; overflow-y: auto; border-radius: 4px; scrollbar-width: none; }
@@ -898,7 +901,9 @@
         <img id="bgImg" class="bg" src="" alt="">
         <svg id="bgClock" class="bg bg-clock" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display:none"></svg>
         <canvas id="bgRain" aria-hidden="true"></canvas>
+        <img id="sitChair" class="sit" src="" alt="" aria-hidden="true" style="display:none">
         <img id="sitFig" class="sit" src="" alt="">
+        <img id="sitFront" class="bg sit-front" src="" alt="" aria-hidden="true" style="display:none">
         <div id="leftover" class="leftover" style="display:none"></div>
       </div>
       <div id="hsLayer"></div>
@@ -1105,7 +1110,7 @@
   let C;  // 今遊んでいる章
   function newRun(ch) {
     R = { ch, loop: 0, ticks: 0, items: new Set(), taken: {}, know: new Set(), seen: new Set(), log: [], stage: 0,
-          st: 'here', doom: false, over: false, drawerOpen: false, touched: false, cons: 0 };
+          st: 'here', doom: false, over: false, drawerOpen: false, touched: false, cons: 0, failed: [], lastEnd: '' };
   }
 
   /* ---------- message engine ---------- */
@@ -1214,7 +1219,7 @@
   const STAND_SET = { hina: 'angry despair down grief sad smile surprise pout', sota: 'angry crysmile despair down grief sad smile surprise',
                       mio: 'angry crysmile despair down grief sad smile surprise stroke offer offer_sad nb nb_apology nb_grief nb_crysmile nb_skirt nb_surprise nb_down nb_plead nbleave nbleavewonder', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
-  const STAND_NEAR = { reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
+  const STAND_NEAR = { crumple: 'crysmile', reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
                        blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', grip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise', sleeve: 'sad', wristhate: 'sad' };
   // 座り絵が無い表情は、近い座り絵で代える（ミオの表紙を撫でる→撫でてうつむく。ヒナのむくれ顔は立って描いたあとの一言だけで、
   // 座ってむくれる場面はないが、先読みで無い絵を探しに行かないように、うつむきにしておく）
@@ -1297,14 +1302,21 @@
     }
   });
   function choose(opts) {
-    const r = replayed(); if (r) { chs.innerHTML = ''; addLog({ choice: opts[r.v] }); return Promise.resolve(r.v); }
+    const r = replayed(); if (r) { chs.innerHTML = ''; addLog({ choice: opts[r.v] }); if (R) R.lastPick = opts[r.v]; return Promise.resolve(r.v); }
     return new Promise(res0 => {
-      const res = v => res0(rec(v));
+      const res = v => { if (R) R.lastPick = opts[v]; res0(rec(v)); };
       chs.innerHTML = '';
       const build = () => { more.hidden = true; opts.forEach((o, i) => {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'choice'; b.textContent = o;
-        b.onclick = ev => { ev.stopPropagation(); chs.innerHTML = ''; addLog({ choice: o }); res(i); };
+        // 2026-11-10 主人公の後悔：この章で前に心を閉ざされた・傷つけた言葉は薄く残す。選ぼうとすると一度だけ手が止まる（作者の指示）
+        const burnt = R && Array.isArray(R.failed) && R.failed.includes(o);
+        if (burnt) { b.classList.add('burnt'); b.dataset.armed = ''; }
+        b.onclick = ev => {
+          ev.stopPropagation();
+          if (burnt && !b.dataset.armed) { b.dataset.armed = '1'; const t = document.createElement('span'); t.className = 'sting'; t.textContent = '（さっきは、これで……）'; b.appendChild(t); return; }
+          chs.innerHTML = ''; addLog({ choice: o }); res(i);
+        };
         chs.appendChild(b);
       }); };
       // 誤タップ防止：直前の文章を読んだあと、1タップしてから選択肢を出す
@@ -2835,6 +2847,34 @@
       ${hand(hAng, 42, 8, 9)}${hand(mAng, 66, 10, 5.5)}<circle r="6"/></g>`;
   }
   new MutationObserver(() => syncBgClock()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src', 'style'] });
+  // 座り絵の椅子（2026-11-10）：子が消えても・立っても椅子は残す。映っている背景の部屋で決める（BAD5 で別の部屋を映すときも）。
+  // 明かりの差分（消灯・18:30）には、椅子のまわりの背景の色の比で焼いた版を使う
+  // 座り絵より手前にある家具（背景の一部）は、椅子・座り絵の上へ重ねる。背景と同じ絵を切り抜くので、明かりの差分にも自動で合う
+  function sitRoomOfBg() {
+    const src = ($('#bgImg').getAttribute('src') || '').replace(/^.*?(?=img\/[^\/]+$)/, '');
+    let chs = []; try { chs = Object.values(CHAPTERS); } catch (e) {}
+    for (const ch of chs) {
+      if (!ch.sit || !ch.bg) continue;
+      for (const v of ['', '_unlit', '_1830_dark', '_1830_lit']) if (src === `img/${ch.bg}${v}.webp`) return { ch, v };
+    }
+    return null;
+  }
+  function syncSitFront() {
+    const fr = $('#sitFront'), bg = $('#bgImg'), sf = $('#sitFig'), chEl = $('#sitChair'), hit = sitRoomOfBg();
+    const sit = hit && hit.ch.sit;
+    if (sit && sit.chair) {
+      const want = `img/${sit.chair}${hit.v}.webp`;
+      if (chEl.getAttribute('src') !== want) chEl.setAttribute('src', want);
+      chEl.setAttribute('style', sit.style); chEl.style.opacity = bg.style.opacity || '';
+    } else chEl.style.display = 'none';
+    const figOn = !sf.classList.contains('gone') && !!sf.getAttribute('src') && C && hit && hit.ch === C;
+    const clip = sit && sit.front, on = !!clip && !!bg.getAttribute('src') && ((sit && sit.chair) || figOn);
+    if (!on) { fr.style.display = 'none'; return; }
+    if (fr.getAttribute('src') !== bg.getAttribute('src')) fr.setAttribute('src', bg.getAttribute('src'));
+    fr.style.clipPath = clip; fr.style.webkitClipPath = clip; fr.style.opacity = bg.style.opacity || ''; fr.style.display = '';
+  }
+  new MutationObserver(syncSitFront).observe($('#bgImg'), { attributes: true, attributeFilter: ['src', 'style'] });
+  new MutationObserver(syncSitFront).observe($('#sitFig'), { attributes: true, attributeFilter: ['src', 'style', 'class'] });
   // 保健室前の廊下の窓から見える特別教室棟の明かり。背景が変わるたびに、その周回の結果に合わせて重ねる
   // 18:00：まだ行っていない教室と閉め出された教室だけ点く（外が明るいので弱く見える）。18:30（BAD4）：息を引き取った子の部屋だけ消える
   (function () {
@@ -2964,7 +3004,7 @@
   // 場所（屋上・高さ・フェンス）はわからせず、「何か紙のもの」だけを手がかりにする。手帳が手から落ちるのは序章の一度だけ
   const VOID_LINES = {
     art: ['チャイムが鳴っている。', '風の音。', '手の中から、何かが落ちた。'],
-    music: ['チャイムは、まだ鳴っている。', '……どこかで、風の音がした。'],
+    music: ['チャイムは、まだ鳴っている。', '……どこかで、風の音がした。', '（……ちゃんと、聞けていただろうか）'],
     library: ['指先に、紙のふちの感触が残っている気がした。', '（……どうして、手を放したんだろう）'],
     gym: ['どこかで、ページをめくる音がした。', '誰かの字が、見えた気がした。自分の字ではなかった。'],
     infirmary: ['足もとで、紙が風にあおられている音がした。', 'めくれて、止まる。違う字が、行ごとに並んでいる。', 'いちばん下の行にだけ、何も書かれていなかった。'],
@@ -3097,11 +3137,14 @@
                  '……覚えていない。さっき話したことも、全部。',
                  '時間が、巻き戻っている。',
                  '扉はやっぱり開かない。チャイムが鳴っても、この放課後は終わらなかった。',
-                 '（それでも、見たものは覚えている。同じことを繰り返さなくても、先へ進めそうだ）']);
+                 '（それでも、見たものは覚えている。同じことを繰り返さなくても、先へ進めそうだ）',
+                 ...(R.lastEnd === 'shut' ? ['（……さっきの言葉を、取り消したい）'] : [])]);
     } else {
       await say([`……気がつくと、また${hm(chStart())}の${C.room}にいた。`, '手の中にあったものは消えている。でも、見たことは覚えている。']);
       if (R.loop === 2) await say(['チャイムの余韻が、さっきより重く耳に残っている。']);
+      if (R.lastEnd === 'shut') await say(['（……さっきの言葉を、取り消したい）']);
     }
+    R.lastEnd = '';
   }
 
   // 全章共通：その子の放課後が終わるまで、部屋の扉は開かない
@@ -3178,6 +3221,7 @@
     bgm('vanish');
     await C.vanishScene();
     if (R.late) { closeOverlay(); await say([`……${C.name}には、もう時間がなかったんだ。`, '間に合わなかった。そのことだけが、はっきりわかった。']); }
+    if (!R.late) { closeOverlay(); await say(['（……また、間違えた）']); }   // 2026-11-10 主人公の後悔（作者の指示）。「また」の前に何があったかは書かない
     const first = !P.shelf[C.key];
     if (first) { P.shelf[C.key] = true; P.shelfRun[C.key] = P.runNo; }
     albumSync();
@@ -3598,7 +3642,10 @@
                     '少しだけ疲れた顔で笑って、「あなたが大丈夫だから、ほんとに助かってる」と言った。', '……大丈夫じゃない、と言いかけて、飲み込んだ。', '疲れた顔で笑う母に、これ以上、何も背負わせたくなかった。']);
     // 鍵は三者面談のあと。ほかの面談が続いていて、職員室にはほとんど人がいない
     await roofVoid(['母と別れて、職員室へ行った。', 'ほかの三者面談が続いていて、先生たちはみんな出はらっていた。', '入口のそばのキーボックスから、屋上の鍵を一本取った。', '貸出簿には、何も書かなかった。']);
-    await roofVoid(['放課後、五つの部屋で、五人に会った。', '別れぎわに、生徒手帳を差し出して、名前を書いてもらった。', '……自分の名前は、一度も言わなかった。',
+    // 2026-11-10 作者の指示：会いに行ったのは行きずりではない。前に見かけた場所を順に歩いた（理由は書かない）
+    await roofVoid(['放課後、校舎を歩いた。', '前に見かけたことのある場所を、順に。', '美術室の窓。音楽室の前の階段。図書室。体育館。保健室の前の廊下。',
+                    '……そのどこにも、見かけたことのある人がいた。', '五人とも、ひとりだった。']);
+    await roofVoid(['五つの部屋で、五人の話を聞いた。', '別れぎわに、生徒手帳を差し出して、名前を書いてもらった。', '……自分の名前は、一度も言わなかった。',
                     '（覚えてもらうほどの名前じゃない）']);
     await roofVoid(['最終下校のチャイムの少し前。', '西の階段をのぼって、屋上の扉を開けた。', 'フェンスの前で、手帳の名前のページを開いた。', '……そこから先は、覚えていない。']);
     try { loadFileBgm('roofCore'); } catch (e) {}   // 雨の曲を、空が暗くなる前にほどいておく
@@ -3676,7 +3723,16 @@
     // 「生かされる」のを嫌ってきた主人公が、同じことを五人にしたかもしれない、という裏返し。是非は作中で断定しない。五人が自分から来たことと、ケイの「俺が、そうしたいだけ」のあと、主人公が自分の動機を認めるところまで（五人の感謝は書かない。感謝はほどけた周回の結果論で、ほかの分岐で五人がどう思っていたかはわからない）
     await say(['（……あの子たちは、本当に、助けてほしかったのかな）',
                [O, '……わからないでしょ'], [O, '誰も、助けてなんて言ってなかったよ'],
-               [O, '頼まれてもいないのに、扉を開けて、言葉をかけて。……役に立っていたかっただけじゃないの'],
+               [O, '……ねえ。どうして、あの子たちの扉の前で、立ち止まったの']]);
+    // 2026-11-10：動機を決めつけない（作者の指示）。遊ぶ人が自分の動機を選び、もう一人の自分がそれをそのまま責める。是非は断定しない
+    const why = await choose(['「……ここから、出たかった」', '「……自分が誰なのか、思い出したかった」', '「……何があったのか、知りたかった」', '「……放っておけなかった」', '「……わからない」']);
+    tel('roof_why', { k: why });
+    await say([[[O, '……出るために、聞いたんだ'], [O, 'あの子たちの痛みを、鍵みたいに使って']],
+               [[O, '……自分を思い出すために、あの子たちの話を聞いたんだ'], [O, 'それって、あの子たちのため？']],
+               [[O, '……知りたかっただけ'], [O, 'のぞき見と、何が違うの']],
+               [[O, '頼まれてもいないのに、扉を開けて、言葉をかけて。……役に立っていたかっただけじゃないの']],
+               [[O, '……わからないまま、人の心に手を入れたんだ']]][why]);
+    await say([
                [O, '言葉ひとつ間違えたら、もっと追い詰めてたかもしれないのに'],
                [O, '誰かにつないだって、その先でまた回されて、ひとりに戻るだけかもしれないのに'],   // つなぐことの、もう一つの現実（2026-10-31 作者の補足を本文に。是非は断定しない）
                [O, '手を伸ばしたなら、伸ばしたぶんの責任だってあるのに'], [O, '……ここに立ってる人に、それが果たせるの？'],
@@ -3725,7 +3781,7 @@
     if (await choose(['「……うん」', '「……ごめん。今は」']) === 0) await say(['小さくうなずくと、ツムギがそっと手をつないだ。']);
     else await say([['ツムギ', '……うん'], 'ツムギは手を引っこめて、そのまま隣に立った。']);
     await say(['もう一人の自分はまだそこにいる気がした。', 'うつむいたまま。', [O, '……それでも、そっちへ行くの？'], [O, 'また、生かされるの？'],
-               [O, '……幸せになったら、今までの自分は、何だったの？'], [O, 'ずっとこうだった。……こうでいるほうが、知ってる場所だよ'], [O, 'どうせあの子たちも、いずれ離れていくんだから'], [O, '期待しなければ痛みも感じずに済む。そうでしょう？'],
+               [O, '……幸せになったら、今までの自分は、何だったの？'], [O, 'ずっとこうだった。……こうでいるほうが、知ってる場所だよ'], [O, 'どうせあの子たちも、いずれ離れていくんだから'],
                '手帳の、白い6行目を見た。']);
     if (await choose(['（……書きたい。自分の名前を）', '（……もう、閉じよう）']) === 1) return roofBad8('close');
     // TRUE
@@ -3786,7 +3842,7 @@
     await say([...({ despair: ['今度は、指は止まらなかった。'],
                      self: ['もう一人の自分が静かに笑った気がした。'],
                      close: ['五人の声が、遠くなっていく。'] }[from] || []),
-               () => rainSE(false, 7), '手帳を閉じた。', ['もう一人の自分', '……やっぱり、変われなかった']]);
+               () => rainSE(false, 7), '手帳を閉じた。', '「……期待しなければ、痛みも感じずに済む」', ['もう一人の自分', '……やっぱり、変われなかった']]);   // 2026-11-10：もう一人の自分の台詞から、手帳を閉じたあとの主人公の言葉へ（作者の指示）
     $('#scene').classList.add('roof-dark');
     await say(['五人の名前の字が、色を失っていく。', '6行目は、白いまま。']);
     $('#scene').classList.remove('roof-dark');
@@ -3961,7 +4017,7 @@
       // 部屋の絵と、わすれものの重ね絵を両方読み終えてから、同時に切り替える（重ね絵だけ後から現れないように）
       const dec = im => (im.decode ? im.decode() : Promise.resolve()).catch(() => {});
       const pre = new Image(); pre.src = `img/${img}.webp`;
-      const preLo = ch && ch.leftoverImg ? new Image() : null; if (preLo) preLo.src = `img/${((img.endsWith('_unlit') || img.endsWith('_dark')) && ch.leftoverDark) || ch.leftoverImg}.webp`;
+      const preLo = ch && ch.leftoverImg ? new Image() : null; if (preLo) preLo.src = `img/${img.endsWith('_1830_dark') ? ch.leftoverImg + '_1830' : (((img.endsWith('_unlit') || img.endsWith('_dark')) && ch.leftoverDark) || ch.leftoverImg)}.webp`;   // 18:30の暗い部屋では、背景の色みで焼いた版（2026-11-10）
       bg.style.opacity = '0'; lo.style.transition = 'opacity .7s ease'; lo.style.opacity = '0';
       await Promise.all([wait(750), dec(pre), preLo ? dec(preLo) : null]);
       bg.src = pre.src;
@@ -4160,8 +4216,10 @@
     await say(C.badDepTalk);
     return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
   }
+  const burn = () => { if (R && R.lastPick && Array.isArray(R.failed) && !R.failed.includes(R.lastPick)) R.failed.push(R.lastPick); };
   async function closeHeart(after) {
     // 心を閉ざしたら、その場でチャイムの時間まで飛ばす
+    burn(); R.lastEnd = 'shut';
     await say(typeof C.closeLines === 'function' ? C.closeLines() : C.closeLines);
     if (after) await after();
     R.ticks = CHIME_AT - 1; await tick();
@@ -4183,6 +4241,7 @@
                  ok: ['ツムギは笑ったまま、カーディガンの袖を握りしめた。', ['', '……その笑顔が少しだけ、ほどけた。', 'down']] },
   };
   async function hurt(lines) {
+    burn();
     if (R.repaired) { await doom(lines); return true; }   // 二度目は、言い直せない
     const cut = Math.min(2, lines.length);
     await say(lines.slice(0, cut));
@@ -4274,6 +4333,8 @@
       await uiWait(`<img class="cg recall" src="img/${img}.webp" alt="">
         <div class="fade recall-text" style="display:flex;flex-direction:column;gap:14px">${C.memory.map(l => `<p>${l}</p>`).join('')}</div>`, 'dawn', ['続ける']);
       closeOverlay();
+      // 2026-11-10：はじめて記憶が戻ったとき。向き合えば自分のことも思い出せる、と主人公が気づく（作者の指示）
+      if (!P.memHook) { P.memHook = true; saveP(); await say(['（……向き合えば、自分のことも、もっと思い出せるのかもしれない）']); }
     }
     walkToast(`${C.label}　${C.name}の心がほどけた${achNoteTake()}`);
     await say([`${hm(now)}。チャイムは、まだ鳴っていない。${next ? `鳴る前に、明かりのついた${next.room}へ向かう。` : ''}`]);
@@ -4397,7 +4458,8 @@
     // 核心の曲は「破ったのは、お母さん」（選択のあと5文目）から始める
     coreAt: 5,
     id: 'art', key: 'hina', windowImg: 'ci_window_art', memory: ['（……思い出した。校門で生徒手帳を差し出したこと。ヒナは少し驚いて、それからさらさらと名前を書いてくれた）', '（もうひとつ。美術室の前の廊下で、窓ごしにひとりで描いている背中を見ていたことがある。……声は、かけなかった）'], name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom', bgClock: { cx: 755, cy: 163, rx: 34, ry: 35 },
-    sit: { src: 'hina_sit', style: 'left:2.9%;top:36.7%;height:20.0%' },
+    // 2026-11-10：椅子を背景の空いた椅子の位置・奥行きにそろえ、手前の作業台を椅子の上に重ねる（作者の指示）
+    sit: { src: 'hina_sit', chair: 'hina_chair', style: 'left:2.34%;top:36.43%;height:22.95%', front: 'polygon(8.85% 49.51%, 26.04% 45.12%, 26.04% 55.86%, 11.78% 55.86%, 11.78% 100%, 9.96% 100%, 9.96% 51.56%, 8.85% 51.56%)' },
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
     faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout' , grip: 'hina_grip',
              // スケッチブックの入った鞄を抱えてから、空を描き始めるまで
@@ -4466,7 +4528,9 @@
     async intro(rem) {
       if (!rem) {
         await say(['……目を覚ますと、美術室にいた。', '窓の外は夕焼け。時計は16:00を指している。', ...locked('美術室'),
-                   '誰かに連絡しようと、ポケットを探った。……スマホがない。ポケットの中は空っぽだった。', '窓際に女子生徒がひとり座っていた。',
+                   '誰かに連絡しようと、ポケットを探った。……スマホがない。ポケットの中は空っぽだった。',
+                   '（……どうして、ここにいるんだっけ）', '自分の名前さえ、思い出せなかった。',
+                   '窓際に女子生徒がひとり座っていた。',
                    '膝を抱えて、じっと窓の外を見ている。……声をかけてみる。',
                    '「あの……ここ、どこかわかる？」',
                    '彼女はゆっくりこちらを振り向いた。胸の名札には「2年 春日ヒナ」とある。',
@@ -4593,7 +4657,10 @@
           await say(['カチリ。引き出しが開いた。', '中には、空になった絆創膏の箱がいくつも。', 'それと、予備の長袖のカーディガンが一枚。', '……今は、七月だ。',
                      '箱のすき間に、小さなカードが一枚。去年の校内展の感想カードだった。丸い字。',
                      '「春日さんの空は、窓の外の空を何度も見て、何枚も描いてきたのが伝わってきました。来年の校内展も楽しみにしてるね。　森」',
-                     '何枚ももらったはずのカードの中で、残してあるのはこれ一枚だけみたいだ。角が何度も指でつまんだように白くすり切れていた。']);
+                     '何枚ももらったはずのカードの中で、残してあるのはこれ一枚だけみたいだ。角が何度も指でつまんだように白くすり切れていた。',
+                     // 2026-11-10：調べることは相手に踏みこむこと。作中で隠さない／出るための手がかりから、この子のことへ（作者の指示）
+                     ...(R.loop === 0 ? [['ヒナ', '……ちょっと。それ、勝手に開けないで', 'angry'],
+                                         '（……出る手がかりを探していたはずなのに、この子のことが頭から離れなかった）'] : [])]);
           R.know.add('drawer'); R.know.add('review'); await tick();
         } else { nmMark('puz'); await say(['ガチャ。開かない。']); await tick(); }
       },
@@ -5097,7 +5164,8 @@
     id: 'music', key: 'sota', memory: ['（……丸めた楽譜を脇にはさんで、ソウタは手帳に名前を書いてくれた。一画ずつ、ていねいに）'],
     // 心に触れたときの記憶のかけら（2つ目）。連弾のあとの心の声と同じ記憶
     touchMemory: '（火曜の放課後。階段に座って、少し開いた扉のすき間から二人の音を聴いていた。……二人とも、こっちには気づかなかった）', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room', bgClock: { cx: 756, cy: 245, rx: 36, ry: 37 },
-    sit: { src: 'sota_sit', style: 'left:54.2%;top:46.5%;height:29.5%' },
+    // 2026-11-10：座り絵の椅子だけの絵を、ソウタが消えても残す（背景の椅子は消した）
+    sit: { src: 'sota_sit', chair: 'sota_bench', style: 'left:54.2%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
     faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
     lost: 'ソウタのパートだけの楽譜',
@@ -6623,6 +6691,8 @@
                                   ['ケイ', '……出てってくれる？', 'reject']],
                                  ['扉を叩いた。返事はない。', '……体育館の中で、ボールが一度だけ床に跳ねる音がした。', '少しして、床を蹴って走る足音が聞こえはじめた。', '端まで行って、戻ってくる。なかなか止まらない。']);   // 効果音は鳴らさない（文だけ）
       await say([['', 'ケイは少しだけ目を丸くして、それから笑った。', 'surprise'],
+                 ['ケイ', '……お人好しだな。会ったばっかの奴に、そこまでする？', 'normal'],   // 2026-11-10 5人から見た主人公の干渉（作者の指示）
+                 '「……なんでだろう。放っておけなかった」',
                  ['ケイ', '……いいよ。どうせ俺しかいないし', 'smile'],
                  '（……その笑い方を、知っている気がした）', '（今は、この子の話だ）',   // 屋上の「寝坊」の朝とつながる
                  ['ケイ', '三年が引退して、二年は俺ひとりしか残らなかったんだ', 'normal'],
@@ -7013,7 +7083,7 @@
     sit: { src: 'tsumugi_sit', dark: 'tsumugi_sit_dark', style: 'left:78.19%;top:34.57%;height:55.37%' },
     leftover: '', leftoverImg: 'i_left', leftoverDark: 'i_left_dark',   // 消えたあと、シーツの上に来室カード（細長い厚紙）。暗い部屋では暗い版
     faces: { normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
-             grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile',
+             grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile', crumple: 'tsumugi_crumple',
              angryCry: 'tsumugi_angrycry',  // 怒りと悔しさをにじませた涙
              mioNormal: 'mio_bust', mioSad: 'mio_sad', mioDown: 'mio_down', mioSurprise: 'mio_surprise', mioGrief: 'mio_grief', mioCrySmile: 'mio_crysmile', mioDespair: 'mio_despair', mioSoftSmile: 'mio_softsmile',
              mioLeave: 'mio_nbleave', mioLeaveWonder: 'mio_nbleavewonder',   // 扉のほうを向いた姿
@@ -7487,7 +7557,7 @@
     // 主人公は二人にとって他人。口をはさむ前に心の声で一度ためらい、正解はなるべく「言葉を足さない」（問い返す・待つ・名前を呼ぶ）。
     // 外れは4つの型の言い方（慰める・正論・追い詰める）。分岐（risk・slips・決別の種類）は前と同じ
     // 1段目：ツムギの「怒ってないよ、ほんとに」
-    await say(['（……二人のことに自分が口をはさんでいいのかは、わからない）', '（でも、ツムギのあの笑い方は、さっき一人で話していたときと同じだった）']);
+    await say(['（……二人のことに自分が口をはさんでいいのかは、わからない）', '（でも、ツムギのあの笑い方は、さっき自分に打ち明けてくれていたときと同じだ）']);
     let c = [1, 2, 0][await choose(['ミオさんも、この本をずっと持ってたんだよ', '……ほんとに、怒ってない？', '……よかった、と、ほっとして言う'])];   // 0：慰める 1：代弁 2：正解
     if (c === 0) {
       wrong('smile');
@@ -7558,17 +7628,17 @@
     if (slips.includes('wait')) await say([['ミオ', '……さっきは、また逃げようとして、ごめん', 'mioNbDown']]);
     if (straight) {
       // 「次はしない」は宣言にせず、うつむいたままぽつりと。ツムギは約束で返さず、短い一言で受ける（対等なまま）
-      await say([['ミオ', '……ううん。私こそ', 'mioNbGrief'],
+      await say([['ミオ', '……ううん。私こそ', 'mioNbSadDown'],   // 2026-11-10：俯きに（作者の指示）
                  'ミオは自分の手を見つめたまま、小さく言った。',
                  ['ミオ', '……明日、また何か書けって言われても、もう書かない', 'mioNbSadDown'],
                  ['ツムギ', 'そのときは、呼んで', 'down'],
                  ['ミオ', '……ツムギ。もう一回、最初から。……友だちに、なってくれる？', 'mioNbPlead'],
-                 ['', 'ツムギは目をまるくして、それからくしゃっと笑った。', 'surprise'], () => bgm('unravel'), ['ツムギ', '……うん。なりたい', 'crySmile'],
+                 ['', 'ツムギは目をまるくして、それからくしゃっと笑った。', 'surprise'], () => bgm('unravel'), ['ツムギ', '……うん。なりたい', 'crumple'],   // 2026-11-10：テキストどおり、くしゃっと笑う顔（作者の指示）
                  // 主人公は二人にとって他人なので、ここで自分から場所を空ける
                  '（……ここから先は、二人の話だ）',
                  '座っていた丸椅子からそっと立ち上がって、一歩さがった。',
                  'ミオはちらりとこちらを見て、小さくうなずいた。それからその丸椅子を持ち上げて、ツムギのすぐ隣に置いた。',
-                 ['ミオ', '……今度は、私が運ぶ番、だから', 'mioNbCrySmile'],
+                 guestShow('mioNbCrySmile', false), ['ミオ', '……今度は、私が運ぶ番、だから', 'mioNbCrySmile'],   // 2026-11-10：ここから、ミオの立ち絵を元の大きさに戻す（作者の指示）
                  ['ツムギ', '……ふふ。それ、図書室の椅子じゃないよ', 'crySmile'],
                  ['ミオ', '知ってる', 'mioNbCrySmile'],
                  guestHide(), 'ミオが座ると、ツムギは『ひとりぶんの椅子』を開いて、二人のひざに渡した。']);
