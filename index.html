@@ -155,6 +155,9 @@
   .choice { text-align: left; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 10px 14px; line-height: 1.6; cursor: pointer; }
   .choice:hover { border-color: var(--akane); }
   .choice.burnt { opacity: .55; }
+  .choices .choice.picked { color: #8a6f8f; }
+  .choices .choice.picked:hover { color: var(--blue); }
+  .choices.roof .choice.picked { color: #8d88a3; }
   .choices.roof .choice { color: #4a5a72; letter-spacing: .02em; }
   .choices.roof .choice::before { content: "…"; }
   .choices.roof .choice:hover::before { content: "…"; font-size: inherit; top: 9px; }
@@ -1304,10 +1307,12 @@
       e.preventDefault(); advance();
     }
   });
+  // 一度選んだことがある選択肢（周回をまたいで残す。プレイデータのリセットで消える）
+  function markPicked(o) { if (typeof o !== 'string') return; P.picked = P.picked || {}; if (!P.picked[o]) { P.picked[o] = 1; saveP(); } }
   function choose(opts) {
-    const r = replayed(); if (r) { chs.innerHTML = ''; addLog({ choice: opts[r.v] }); if (R) R.lastPick = opts[r.v]; return Promise.resolve(r.v); }
+    const r = replayed(); if (r) { chs.innerHTML = ''; addLog({ choice: opts[r.v] }); if (R) R.lastPick = opts[r.v]; markPicked(opts[r.v]); return Promise.resolve(r.v); }
     return new Promise(res0 => {
-      const res = v => { if (R) R.lastPick = opts[v]; res0(rec(v)); };
+      const res = v => { if (R) R.lastPick = opts[v]; markPicked(opts[v]); res0(rec(v)); };
       chs.innerHTML = '';
       chs.classList.toggle('roof', onRoof());   // 2026-11-10 屋上の選択肢は「正解」ではなく今の気持ち。見た目を章と変える（作者の指示）
       const build = () => { more.hidden = true; opts.forEach((o, i) => {
@@ -1316,6 +1321,7 @@
         // 2026-11-10 主人公の後悔：この章で前に心を閉ざされた・傷つけた言葉は薄く残す。選ぼうとすると一度だけ手が止まる（作者の指示）
         const burnt = R && Array.isArray(R.failed) && R.failed.includes(o);
         if (burnt) { b.classList.add('burnt'); b.dataset.armed = ''; }
+        if (P.picked && P.picked[o]) b.classList.add('picked');   // 2026-11-10 一度選んだことがある選択肢は色を変える（作者の指示）
         b.onclick = ev => {
           ev.stopPropagation();
           if (burnt && !b.dataset.armed) { b.dataset.armed = '1'; const t = document.createElement('span'); t.className = 'sting'; t.textContent = '（さっきは、これで……）'; b.appendChild(t); return; }
