@@ -110,6 +110,7 @@
   .guest { position: absolute; left: 4%; bottom: -7%; height: 100%; width: auto; opacity: 0; transition: opacity .45s ease; pointer-events: none; z-index: 3; }   /* 大きさ・位置は動かさない（出るときにズームして見えないように） */
   .guest.show { opacity: 1; }
   .guest.mid { height: 80%; bottom: 6%; left: 9%; }
+  .guest.small { height: 134.5%; top: 14%; bottom: auto; left: 9%; }   /* 2026-11-10：一回り小さい全身の絵（mio_f_*、700×1960）。大きい版の0.8倍で、脚は画面の下で切れる */
   .guest.far { height: 70%; bottom: -3%; left: 14%; filter: brightness(.9); }
   .scene.talk .guest.show { filter: none; }
   .hs { position: absolute; background: transparent; border: 1px dashed transparent; border-radius: 4px; padding: 0; cursor: pointer; }
@@ -238,7 +239,8 @@
   .eye-chart svg { display: block; width: 100%; height: auto; }
   .card-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fbf8f0; color: #2a2a2a; }
   .card-table th, .card-table td { border: 1px solid #b9b2a2; padding: 2px 4px; text-align: center; }
-  #scene.room-dark #portrait, #scene.room-dark #sitFig, #scene.room-dark #guestFig { filter: url(#fRoomDark); }
+  #scene.room-dark #sitFig { filter: url(#fRoomDark); }
+  #scene.room-dark #portrait, #scene.room-dark #guestFig { filter: url(#fRoomDarkP); }   /* 2026-11-10：立ち絵・座り絵（消えたあとに来るミオも）は見づらいので、部屋よりワントーン明るく（作者の指示） */
   #scene.room-dark #sitFig.pretoned { filter: none; }
   .card-scroll { max-height: 46vh; overflow-y: auto; border-radius: 4px; scrollbar-width: none; }
   .card-scroll::-webkit-scrollbar { display: none; }
@@ -903,7 +905,7 @@
       <div id="getItem" class="get-item" role="status" hidden></div>
       <img id="guestFig" class="guest" alt="">
       <img id="portrait" class="portrait" alt="">
-      <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fRoomDark" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".64 0 0 0 0  0 .54 0 0 0  0 0 .56 0 0  0 0 0 1 0"/></filter></svg>
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fRoomDark" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".64 0 0 0 0  0 .54 0 0 0  0 0 .56 0 0  0 0 0 1 0"/></filter><filter id="fRoomDarkP" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".76 0 0 0 0  0 .66 0 0 0  0 0 .68 0 0  0 0 0 1 0"/></filter></svg>
       <img class="chime-cg" src="img/chime_sky.webp" alt="17:00の夕焼け空。チャイムが響いている">
     </div>
   </div>
@@ -1260,9 +1262,11 @@
   function guestRender() {
     const g = $('#guestFig');
     if (!guest || !C || !C.faces[guest.f]) { g.classList.remove('show'); return; }
-    const url = `img/${faceFile(guest.f)}.webp`;
+    // small：一回り小さい全身の絵（mio_f_*）。脚は画面の下で切れる（2026-11-10、第五章でミオがベッドから一歩さがったあと）
+    if (guest.far === 'small' && !guestRender.pre) guestRender.pre = ['nb', 'nb_apology', 'nb_surprise', 'nb_down', 'nb_grief', 'nb_plead', 'nb_crysmile', 'nb_skirt', 'nbleave', 'nbleavewonder'].map(s => { const i = new Image(); i.src = `img/mio_f_${s}_inf.webp`; return i; });   // 切り替えでちらつかないよう先に読む
+    const small = guest.far === 'small', url =`img/${small ? faceFile(guest.f).replace('mio_p_', 'mio_f_') : faceFile(guest.f)}.webp`;
     if (g.getAttribute('src') !== url) g.src = url;
-    g.classList.toggle('far', guest.far === true); g.classList.toggle('mid', guest.far === 'mid'); g.classList.add('show');
+    g.classList.toggle('far', guest.far === true); g.classList.toggle('mid', guest.far === 'mid'); g.classList.toggle('small', small); g.classList.add('show');
   }
   const guestShow = (f, far, who = 'ミオ') => () => { guest = { f, far: far === undefined && guest ? guest.far : (far || false), who }; guestRender(); };
   const guestHide = () => () => { guest = null; guestRender(); };
@@ -2920,6 +2924,8 @@
     if (!C) return;
     $('#sitFig').classList.toggle('gone', R.st === 'vanished' || R.st === 'shut' || !!R.standing);
     $('#leftover').style.display = R.st === 'vanished' ? '' : 'none';
+    // 2026-11-10：ほどけたあとは、見送りの絵に替わるまで、調べる場所の枠を出さない（作者の指示）
+    if (R.st === 'unraveled') $('#hsLayer').style.visibility = 'hidden';
 
     const inv = $('#inv'); inv.innerHTML = '';
     const add = (label, cls, fn, src) => {
@@ -3136,7 +3142,7 @@
     if (shut) await say([guestHide(), `${C.room}の明かりは、ついたままだった。`]);
     else {
       await say(['扉に手をかけると、今度は、開いた。']);
-      await hallBg(C.hall);
+      await hallBg(C.id === 'infirmary' ? 'hall_infirmary_unlit' : C.hall);   // 2026-11-10：ツムギが消えた直後の廊下は、保健室の明かりを消す（作者の指示）
       await say(['廊下に出た。', '振り返ると、扉は閉まっていた。', 'もう、この扉は開かない気がした。']);
     }
     if (w.before) await say(w.before());
@@ -3261,7 +3267,7 @@
     let end;
     // [タグ, 題, ストーリーの文章, BGM, 背景]
     if (v >= 3) end = ['BAD5', '空席の教室', [], 'vanish'];
-    else if (v >= 1) end = ['BAD6', 'わすれものの重さ', ['屋上へ続く階段の途中で、足が止まった。', '踊り場に、自分と同じ顔をした誰かが立っている。', '「救えなかったくせに」', '差し出されたわすれものはどれも紙切れのように軽いはずなのに、両腕で抱えきれないほど重く感じた。'], 'vanish', 'stairs_1830'];   // 5章のあと（18:30）の、屋上へ続く階段（照明は消えている）
+    else if (v >= 1) end = ['BAD6', 'わすれものの重さ', ['屋上へ続く階段の途中で、足が止まった。', '踊り場に、自分と同じ顔をした誰かが立っている。', '「救えなかったくせに」', '差し出されたわすれものは紙切れのように軽いはずなのに、両腕で抱えきれないほど重く感じた。'], 'vanish', 'stairs_1830'];   // 5章のあと（18:30）の、屋上へ続く階段（照明は消えている）
     // ツムギが息を引き取り、ほかの全員にも扉を閉ざされた：唯一心に触れられた子を失い、屋上でひとり日没を見る（曲は息を引き取ったときの「消えたとき」をそのまま流す）
     else if (died && keys.length && sh === keys.length) end = ['BAD9', 'ひとりきりの斜陽', ['……気がつくと、屋上に立っていた。',
       'フェンスの向こうで、太陽が山の稜線に沈みかけている。', 'どの扉も最後まで開かなかった。……この放課後で手が届いたのは、あの子だけだった。',
@@ -3273,7 +3279,7 @@
       '夕焼けの屋上に、一人で立つ。',
       'フェンスの向こうに、図書室のある棟と、正門から延びる道が見えた。どちらも同じ夕日の色に染まっていた。',
       '言えなかった「またね」は、今日はどちらにも届かなかった。',
-      '……それでも、明日の朝は来る。二人に、それぞれの朝が。'], 'farewell', 'rooftop'];
+      '……それでも、明日はやってくる。二人に、それぞれの朝が。'], 'farewell', 'rooftop'];
     else if (sh >= 1 || died || P.cur.mtSplit) end = ['NORMAL', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。',
       ...(sh ? ['振り返ると、閉ざされた扉の教室には、まだ明かりがついていた。'] : []),
       ...(died ? ['一階の保健室の窓に、もうベッドのふちに座る影はなかった。'] : []),
@@ -7317,7 +7323,7 @@
                    '扉がゆっくり開いて、ミオが顔をのぞかせた。胸に『ひとりぶんの椅子』を抱えている。', guestShow('mioSurprise'),
                    ['ミオ', '……ツムギ？', 'mioSurprise'],
                    '空っぽのベッドと、シーツの上の来室カード。ミオは最後の空欄の、消しゴムの跡を見つめていた。',
-                   ['ミオ', '……図書室に、来るつもりだったの？', 'mioGrief'],
+                   ['ミオ', '……図書室に、来るつもりだったの？', 'mioSurprise'],   // 2026-11-10：ここは驚きの顔のまま（作者の指示）
                    ['ミオ', '私、ここまで来てたのに。……ノック、できなくて', 'mioGrief'],
                    guestHide(), 'ミオは本を抱きしめたまま、ベッドのそばに座りこんだ。しおりの手紙は、本に挟まったままだった。']);
       }
@@ -7487,7 +7493,7 @@
     } else if (c === 1) {
       wrong('side');
       await say(['「ミオさんも、この本をずっと持ってたんだよ」', guestShow('mioNbSurprise'), 'ミオが驚いたようにこちらを見た。',
-                 ['ツムギ', '……そう、だよね。ミオも、苦しかったよね', 'smile'],
+                 ['ツムギ', '……そう、だよね。ミオも、苦しかったよね', 'crySmile'],   // 2026-11-10：無理に笑う顔（作者の指示で表情を変更）
                  ['ミオ', '……ちがう。いちばん苦しかったのは、私じゃない', 'mioNbSadDown'],
                  ['ミオ', 'ツムギ、また笑ってる。……やっぱり、無理させてる', 'mioNbSkirt']]);
     } else {
@@ -7497,7 +7503,8 @@
     }
     // 2段目：ミオが扉へ向かう
     // 2026-11-09：ここも、まだ泣いた顔にしない（作者の指示）。スカートを握って涙をこらえる顔
-    await say(['ミオはベッドから一歩さがった。', ['ミオ', '……私、もう会わないほうがいいね', 'mioNbSkirt'], 'ミオは扉のほうへ向き直った。', guestShow('mioLeave'),
+    // 2026-11-10：一歩さがったら、一回り小さい全身の絵に（作者の指示）。このあとの guestShow は大きさを引き継ぐ
+    await say(['ミオはベッドから一歩さがった。', guestShow('mioNbSkirt', 'small'), ['ミオ', '……私、もう会わないほうがいいね', 'mioNbSkirt'], 'ミオは扉のほうへ向き直った。', guestShow('mioLeave'),
                '（引き止める言葉なら、いくらでも浮かぶ。……でも、それは自分の言葉で、ミオの言葉じゃない）']);
     c = [2, 0, 1][await choose(['何も言わずに、ミオが振り返るのを待つ', 'また逃げるの？', '話さないと、きっと後悔するよ'])];   // 0：追い詰める 1：正論 2：正解
     if (c === 0) {
@@ -7511,9 +7518,11 @@
       if (risk >= 2) return mtSplit('quiet', 'wait');
       await say(['しばらくして、ミオが扉に手をかけたまま、振り返った。', guestShow('mioNbSadDown')]);
     } else {
-      await say(['何も言わなかった。', '扉の取っ手にかかったミオの手が止まった。……しばらく、誰も、何も言わなかった。',
-                 'ミオは扉のほうを向いたまま、小さく言った。',
-                 ['ミオ', '……会わないほうがいいって、自分で言ったのに', 'mioLeave'], ['ミオ', '……足が、動かない', 'mioLeaveWonder'],
+      await say(['扉の取っ手にかかったミオの手が止まった。……しばらく、誰も、何も言わなかった。',
+                 // 2026-11-10：「会わないほうがいいって〜」「足が、動かない」はミオに言わせず、戸惑う顔と震えで、主人公とツムギが汲み取る（作者の指示）
+                 guestShow('mioLeaveWonder'), 'その指が、小さく震えていた。……扉は、いつまでも開かなかった。',
+                 // 2026-11-10：ツムギはミオに聞こえないくらい小さく呼ぶ（作者の指示）
+                 ['', 'ツムギはその背中を見つめたまま、唇だけで「ミオ……」と呟いた。声にはならなかった。', 'sad'],
                  'ミオがゆっくり、こちらへ振り返った。', guestShow('mioNbSadDown')]);
     }
     // 2026-11-09：仲直りするまでは、ミオに泣いた顔を使わない（作者の指示。ツムギが消えた直後の「ここまで来てたのに」だけは泣き顔）。うつむき（涙なし）と、涙をこらえる顔で
@@ -7602,12 +7611,14 @@
       await say([['ツムギ', '……私、怒ってたんだ', 'grief'], ['ツムギ', 'ずっと。……誰にも、怒っちゃいけないと思ってたのに', 'grief'],
                  'ツムギは本を抱えたまま、声を出さずに泣いていた。']);
     } else {
-      bgm('farewell');
+      // 2026-11-10：wait（長い沈黙）は、その一文からツムギの次の台詞まで無音にして、台詞で曲を始める（作者の指示）
+      const hush = from === 'wait';
+      if (hush) bgm(null); else bgm('farewell');
       // run：「また逃げるの？」でそのまま／wait：扉の前で黙ったまま／both：振り返って話を聞いたあと
       const lead = { run: ['ミオは扉に手をかけた。'], wait: ['長い沈黙のあと、ミオは扉に手をかけた。'],
                      both: ['ミオは小さく首を振った。', '……それから、もう一度扉に手をかけた。'] }[from] || [];
       await say([...lead, guestShow('mioLeave'), ['ミオ', '……当番、だから', 'mioLeave'], guestHide(), 'それだけ言って、ミオは出ていった。',
-                 '扉が、静かに閉まった。', ['ツムギ', '……またね、って、言えなかった', 'grief'], 'ツムギは閉まった扉を、ずっと見つめていた。']);
+                 '扉が、静かに閉まった。', ...(hush ? [() => bgm('farewell')] : []), ['ツムギ', '……またね、って、言えなかった', 'grief'], 'ツムギは閉まった扉を、ずっと見つめていた。']);
     }
     await say(['長いあいだ、ツムギは何も言わなかった。窓の外の夕日が少しずつ低くなっていく。',
                'やがて、ツムギは本を開いて、しおりの手紙をもう一度だけ読んだ。',
@@ -7672,7 +7683,7 @@
       if (!FACE_CACHE[url]) { const i = new Image(); i.src = url; if (i.decode) i.decode().catch(() => {}); FACE_CACHE[url] = i; }
     });
     $('#portrait').style.visibility = '';
-    const layer = $('#hsLayer'); layer.innerHTML = '';
+    const layer = $('#hsLayer'); layer.innerHTML = ''; layer.style.visibility = '';
     C.hotspots.forEach(([id, label, style]) => {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'hs'; b.dataset.id = id; b.setAttribute('style', style);
