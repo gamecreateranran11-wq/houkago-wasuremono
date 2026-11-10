@@ -2553,7 +2553,7 @@
       tapKnock(t, 0.27, dst); tapKnock(t + 0.32, 0.21, dst);
     } catch (e) {}
   };
-  function bgmRestart() { const n = bgmName; if (!n) return; bgmName = null; bgm(n, 0.6); }
+  function bgmRestart() { const n = bgmName; if (!n) return; bgmName = null; bgm(n, 1.6); }   // 2026-11-10：戻ったときは曲の頭の一音が目立たないよう、ゆっくり入れる
   // 戻ったあとに音の出口を開け直し、止めていた曲をかけ直す。
   // ・iPhone などは、戻った直後は開け直せず、画面に触れて指を離したときに初めて開け直せるので、触れる操作のたびにも試す
   // ・開いているのに時間が進まない（音が出ない）ことがあるので、そのときは音の出口を作り直す
@@ -2574,7 +2574,7 @@
   function unmute() {
     if (!actx || !master || document.hidden) return;
     const t = actx.currentTime;
-    try { master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(MASTER_GAIN, t + 0.25); } catch (e) {}
+    try { master.gain.cancelScheduledValues(t); master.gain.setValueAtTime(master.gain.value, t); master.gain.linearRampToValueAtTime(MASTER_GAIN, t + 0.8); } catch (e) {}
   }
   function rebuildAudio() {
     const n = bgmName;
@@ -2601,10 +2601,16 @@
     if (actx.state === 'running') check();
     else { try { actx.resume().then(check).catch(() => { waking = false; }); } catch (e) { waking = false; } }
   }
-  document.addEventListener('visibilitychange', () => { if (document.hidden) pauseSound(); else wakeSound(); });
+  // 2026-11-10 作者の指摘：スマホでほかのアプリへ切り替えるとき、ときどき曲の一音（ギターのような音）が鳴る。
+  // 切り替えの途中で一瞬「見えている」状態に戻ることがあり、そのたびに曲をかけ直して頭の音が鳴っていた。見えている状態が0.7秒続いてから戻す
+  let wakeTimer = null;
+  document.addEventListener('visibilitychange', () => {
+    clearTimeout(wakeTimer);
+    if (document.hidden) pauseSound(); else wakeTimer = setTimeout(() => { if (!document.hidden) wakeSound(); }, 700);
+  });
   window.addEventListener('pagehide', pauseSound);
-  window.addEventListener('pageshow', wakeSound);
-  window.addEventListener('focus', wakeSound);
+  window.addEventListener('pageshow', () => { clearTimeout(wakeTimer); wakeTimer = setTimeout(() => { if (!document.hidden) wakeSound(); }, 700); });
+  window.addEventListener('focus', () => { clearTimeout(wakeTimer); wakeTimer = setTimeout(() => { if (!document.hidden) wakeSound(); }, 700); });
   ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => {
     if (actx && !document.hidden && (actx.state !== 'running' || bgmPaused)) wakeSound();
   }, { capture: true, passive: true }));
@@ -4798,7 +4804,7 @@
                                ['扉を叩いた。返事はない。', '……扉の向こうで、紙を引き裂く音が聞こえた。', '少しして、また一枚。……また一枚。']);
       await say([['ヒナ', '……きれい？', 'surprise'], ['ヒナ', '……そんなふうに言われたの、初めて', 'down'], 'ヒナはしばらく黙って、窓の外の夕焼けを見ていた。', 'それからぽつりと言った。', ['ヒナ', '破ったのは、お母さん', 'down'], ['ヒナ', '……昨日、ここで描いたの。乾かそうと思ってスケッチブックに挟んだら、そのまま鞄に入れて帰っちゃって', 'sad'], ['ヒナ', 'お母さん、毎晩スケッチブックを見るの。お風呂から戻ったら、あの絵が机の上に出してあって、裏に、お母さんの字が書いてあった', 'sad'], ['ヒナ', '『こんなもの描いてる暇があるなら』って。……県展の絵、まだ一枚も描けてないから', 'sad'], ['ヒナ', '言い返したら、目の前で、びりびりに', 'sad'], 'ヒナの声が少しだけ震えた。',
                  ...(R.know.has('resign')
-                   ? [['ヒナ', '……引き出しの、退部届も見たんだ', 'down'],
+                   ? [['ヒナ', '……引き出しの、退部届も見たんでしょ', 'down'],   // 2026-11-10 作者の指摘：見た証拠がないので、ヒナの推測の言い方に
                       ['ヒナ', 'お母さんね、本気で『あなたのため』だと思ってるの。……だから、何も言い返せない', 'sad']]
                    : [['ヒナ', '……県展の〆切、今週の金曜なの', 'down'],
                       ['ヒナ', '出せなかったら、もう続けさせないって', 'sad']])]);
