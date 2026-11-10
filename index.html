@@ -110,6 +110,7 @@
   .guest { position: absolute; left: 4%; bottom: -7%; height: 100%; width: auto; opacity: 0; transition: opacity .45s ease; pointer-events: none; z-index: 3; }   /* 大きさ・位置は動かさない（出るときにズームして見えないように） */
   .guest.show { opacity: 1; }
   .guest.mid { height: 80%; bottom: 6%; left: 9%; }
+  .guest.distant { height: 19.7%; top: 37.3%; bottom: auto; left: 42.2%; }   /* 2026-11-10：廊下の先に立つ全身の絵（mio_f_*）。足もとの奥行きでの扉（約2m）・天井の高さから身長（約155cm）を計算した大きさ */
   .guest.small { height: 134.5%; top: 14%; bottom: auto; left: 9%; }   /* 2026-11-10：一回り小さい全身の絵（mio_f_*、700×1960）。大きい版の0.8倍で、脚は画面の下で切れる */
   .guest.far { height: 70%; bottom: -3%; left: 14%; filter: brightness(.9); }
   .scene.talk .guest.show { filter: none; }
@@ -1263,10 +1264,10 @@
     const g = $('#guestFig');
     if (!guest || !C || !C.faces[guest.f]) { g.classList.remove('show'); return; }
     // small：一回り小さい全身の絵（mio_f_*）。脚は画面の下で切れる（2026-11-10、第五章でミオがベッドから一歩さがったあと）
-    if (guest.far === 'small' && !guestRender.pre) guestRender.pre = ['nb', 'nb_apology', 'nb_surprise', 'nb_down', 'nb_grief', 'nb_plead', 'nb_crysmile', 'nb_skirt', 'nbleave', 'nbleavewonder'].map(s => { const i = new Image(); i.src = `img/mio_f_${s}_inf.webp`; return i; });   // 切り替えでちらつかないよう先に読む
-    const small = guest.far === 'small', url =`img/${small ? faceFile(guest.f).replace('mio_p_', 'mio_f_') : faceFile(guest.f)}.webp`;
+    if ((guest.far === 'small' || guest.far === 'distant') && !guestRender.pre) guestRender.pre = ['down', 'nb', 'nb_apology', 'nb_surprise', 'nb_down', 'nb_grief', 'nb_plead', 'nb_crysmile', 'nb_skirt', 'nbleave', 'nbleavewonder'].map(s => { const i = new Image(); i.src = `img/mio_f_${s}_inf.webp`; return i; });   // 切り替えでちらつかないよう先に読む
+    const small = guest.far === 'small' || guest.far === 'distant', url = `img/${small ? faceFile(guest.f).replace('mio_p_', 'mio_f_') : faceFile(guest.f)}.webp`;
     if (g.getAttribute('src') !== url) g.src = url;
-    g.classList.toggle('far', guest.far === true); g.classList.toggle('mid', guest.far === 'mid'); g.classList.toggle('small', small); g.classList.add('show');
+    g.classList.toggle('far', guest.far === true); g.classList.toggle('mid', guest.far === 'mid'); g.classList.toggle('small', guest.far === 'small'); g.classList.toggle('distant', guest.far === 'distant'); g.classList.add('show');
   }
   const guestShow = (f, far, who = 'ミオ') => () => { guest = { f, far: far === undefined && guest ? guest.far : (far || false), who }; guestRender(); };
   const guestHide = () => () => { guest = null; guestRender(); };
@@ -3055,7 +3056,7 @@
     // 3回目のチャイムの直前：心に触れていた子は、この先を示す言葉を残す
     if (R.loop + 1 >= 3 && R.st !== 'unraveled' && !R.doom && R.touched && C.lastWords) {
       R.standing = true; render();  // 時間切れ：その子は立ち上がって、行ってしまう（立った絵の「絶望」を使う）
-      bgm('vanish'); await say(C.lastWords); R.late = true;
+      await say(C.lastWords); R.late = true;   // 2026-11-10：消えるときの曲は、チャイムが鳴ったあと（vanish()）から（作者の指示）
     }
     // チャイムが鳴っている間は、左上の時計もチャイムの時刻（章の終わり）を指す
     keepMem();
@@ -3857,9 +3858,12 @@
   /* ---------- エンドロール：NORMAL以上の結末で、結末の名前を出す前に流す。作中の一枚絵とわすれものを後ろに映す ---------- */
   const CREDIT_AUTHOR = '紫月ーshizukiー';   // 作者名（仮）
   function endRollImages(tag) {
-    const seen = ALBUM.filter(a => P.album[a[0]]).map(a => a[1]);
+    const cur = (P.lastRun && P.lastRun.cur) || P.cur || {};   // エンドロールの前に周回を締めくくる（finishRun）ので、その周回の記録は P.lastRun.cur にある
+    const runSeen = cur.album || {};
+    const seen = ALBUM.filter(a => runSeen[a[0]]).map(a => a[1]);
     const extra = [];
-    WASURE.forEach(([, k, get]) => { if (P.shelf[k]) { try { const it = get().shelfItem(!!P.saved[k]); if (it && it.thumb) extra.push(it.thumb); } catch (e) {} } });
+    // わすれものは、この周回の結末に合った姿で（ほどけた子は姿を変えたあと、そうでなければ棚に並んだ姿）
+    WASURE.forEach(([, k, get]) => { if (P.shelf[k]) { try { const it = get().shelfItem(k === 'me' ? !!P.saved[k] : !!(cur.results && cur.results[k] === 'saved')); if (it && it.thumb) extra.push(it.thumb); } catch (e) {} } });
     if (tag === 'TRUE') extra.push('infirmary_morning', 'protag_notebook', 'true_gate');
     else if (tag === 'GOOD') extra.push('protag_notebook_dusk', 'rooftop');
     else extra.push('chime_sky_1830');
@@ -4194,7 +4198,7 @@
     return false;
   }
   async function doom(lines) {
-    bgm('vanish');
+    // 2026-11-10：消えるときの曲は、このあとのチャイムが鳴ってから（vanish()）流す（作者の指示）
     await say(lines);
     await say([`${C.name}は、もうこちらを見なかった。`]);
     R.doom = true;
@@ -7360,7 +7364,7 @@
       if (a === 'oitsu') return shutOut([['ツムギ', '……え', 'surprise'], ['', 'ツムギの笑顔がすっと消えた。', 'reject'],
                                          ['ツムギ', '……どうして、それを知ってるの', 'reject'], ['ツムギ', 'ごめん。今日は、もう帰って', 'reject']],
                                         ['扉を叩いた。返事はない。', '……扉の向こうから、苦しそうに咳きこむ声が聞こえた。えずくような音が何度か続く。', 'やがて咳はおさまった。……扉は、それでも開かなかった。',
-                                         ...(mioRes() === 'saved' ? [guestShow('mioDown', true), '廊下の先で、ミオが本を抱えたまま立ちつくしていた。'] : [])]);
+                                         ...(mioRes() === 'saved' ? [guestShow('mioDown', 'distant'), '廊下の先で、ミオが本を抱えたまま立ちつくしていた。'] : [])]);
       await say([['ツムギ', '……居場所、かあ', 'surprise'], ['ツムギ', 'うん。教室にいられなくなってから、ずっとここ', 'normal'],
                  ['ツムギ', 'この窓、好きなんだ。となりが昇降口だから、正門へ帰っていく人が、斜めに見えるの。……みんなの帰り道が見える', 'normal']]);
 
@@ -7940,7 +7944,7 @@
     const keys = ORDER.map(id => CHAPTERS[id].key), nm = { ...(src.cur.nm || {}), rewind: true };
     P.runNo = src.runNo;
     if (roof) P.cur = { ...JSON.parse(JSON.stringify(src.cur)), nm };
-    else { const r = {}; keys.slice(0, i).forEach(k => { if (src.cur.results[k]) r[k] = src.cur.results[k]; }); P.cur = { results: r, nm }; }
+    else { const r = {}; keys.slice(0, i).forEach(k => { if (src.cur.results[k]) r[k] = src.cur.results[k]; }); P.cur = { results: r, nm, album: { ...(src.cur.album || {}) } }; }
     saveP(); clearRun(); clearRoof();
     const lines = ['（……目を閉じて、あの放課後を、もう一度思い返す）'];
     if (roof) {
@@ -7975,7 +7979,8 @@
   if (P.endings.TRUE && !P.album.true_gate) { P.album.true_gate = true; saveP(); }
   // わすれもの（姿を変えたもの）と同じ絵は、一枚絵には並べない（わすれものの段にだけ出す）
   ['sketchbook_face', 'm_duet', 'g_letter'].forEach(id => { delete P.album[id]; });
-  function albumSee(id) { if (!P.album[id]) { P.album[id] = true; saveP(); } }
+  // 2026-11-10：この周回で見た一枚絵も P.cur.album に記録する（エンドロールは、この周回で見たものだけを映す。ほかの周回の差分はネタバレになるため）
+  function albumSee(id) { if (P.cur) { P.cur.album = P.cur.album || {}; if (!P.cur.album[id]) { P.cur.album[id] = true; saveP(); } } if (!P.album[id]) { P.album[id] = true; saveP(); } }
   // わすれもの：棚に並んだ姿（w_〇〇_v）と、姿を変えたあと（w_〇〇_s）。棚を空にしても、アルバムには残す
   // 主人公のわすれもの（生徒手帳）。GOOD で夕焼けの屋上に落ちている。TRUE で姿を変える（終業式のあとの保健室の床頭台の上で、寄せ書きの見開き）。TRUE は未実装なので P.saved.me はまだ立たない
   // 寄せ書きの一言（絵の字と同じ文。似顔絵の横に、それぞれ自分の字で）
