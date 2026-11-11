@@ -813,6 +813,13 @@
   .endcard .note, .endcard .ach-note, .endcard .ach-x-note { animation: rise 1s ease both 2.4s; }
   .endcard .row { justify-content: center; animation: rise 1s ease both 3.2s; }
   @media (prefers-reduced-motion: reduce) { .endcard .end-name, .endcard .end-kind, .endcard .note, .endcard .row, .roll-bg img.on { animation: none; } }
+  /* BAD END の画面：結末の名前を題名のように大きく。本文はふつう、やり直し方の案内・ボタンは控えめに（2026-11-11 作者の指摘：全部同じ大きさで、ボタンに目が行く） */
+  .badcard .bad-head { padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .badcard .bad-kind { font-size: .78em; letter-spacing: .4em; color: var(--akane); margin: 0 0 6px; }
+  .badcard .bad-name { font-family: var(--serif); font-weight: 600; font-size: 1.9em; letter-spacing: .14em; line-height: 1.4; margin: 0; padding: 0; border: 0; color: var(--ink); }
+  .badcard .note { font-size: .95em; }
+  .badcard .note.bad-howto, .badcard .ach-note { font-size: .82em; }
+  .badcard .row .btn { font-size: .88em; padding: 7px 12px; }
   .kb.locked { pointer-events: none; }
   .kb.locked .wk, .kb.locked .bk { cursor: default; }
   .name-in { font: inherit; font-family: var(--hand); font-size: 20px; letter-spacing: .1em; width: 100%; box-sizing: border-box; padding: 10px 6px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--ink); outline: 0; }
@@ -3434,12 +3441,12 @@
       firstNote = `<p class="eyebrow">しくみ</p><p class="note">最初の放課後では、まだ誰の心にも届ききりません。<br>${hasLeft ? '消えた子が残したわすれものを持って、もう一度放課後を歩くと、届かなかった言葉の先へ進めます。' : '心を閉ざした子とも、言葉を変えれば、別の道が開けるかもしれません。'}<br>ここまでが、物語のはじまりです。</p>`;
     }
     const head = dawnEnd ? `<div class="end-ttl"><p class="end-kind">${end[0].replace('2', '')} END</p><h1 class="end-name">${end[1]}</h1></div>`
-                         : `<div class="fade" style="display:flex;flex-direction:column;gap:12px"><p class="eyebrow">BAD END「${end[1]}」</p></div>`;
+                         : `<div class="fade bad-head"><p class="bad-kind">BAD END</p><h2 class="bad-name">${end[1]}</h2></div>`;
     overlayWait(`${head}
       ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。</p>` : ''}
       <p class="note">${endNote}</p>${firstNote}${achNote(got)}
       `,
-      dawnEnd ? 'dawn endcard' : '', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
+      dawnEnd ? 'dawn endcard' : 'badcard', ['もう一度会いに行く', 'タイトルへ']).then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
   /* ================================================================
      屋上（18:30）。いまは確認用のURL（?roof）でだけ入れる。台詞は「屋上_台本案」第1稿
@@ -3658,18 +3665,18 @@
     await say(['五人の字に指をのせてみた。']);
     // 各章で一瞬だけ出て流した心の声と、それにつながる小さな場面（名前のつく出来事ではなく、ありふれた場面。少しずつ話せなくなっていく順）
     const SMALL = {
-      art: ['（……得意なことを聞かれても、何も書けなかった気がした）',
+      art: ['（……自分も、得意なことを聞かれて、何も書けなかった気がした）',
             ['一学期のはじめに、自己紹介カードが配られた。', '「得意なこと」の欄だけ、書いては消して、最後まで埋められなかった。', '白いまま出した。……誰にも、何も言われなかった。']],
-      music: ['（……眠れないまま朝になる夜を、知っている気がした）',
+      music: ['（……自分も、眠れないまま朝になる夜を、知っている気がした）',
               ['「……最近、夜あんまり眠れなくて」と言いかけたら、「わかる！私も最近徹夜しててさ」と、話は相手のことになった。',
                '最後まで聞いて、相づちを打った。自分の話の続きを、聞く人はいなかった。……それからは、話しかけるのを少しためらうようになった。']],
-      library: ['（……言いたかったのに、ずっと言えなかった言葉がある気がした）',
+      library: ['（……自分にも、言いたかったのに、ずっと言えなかった言葉がある気がした）',
                 ['ノートのいちばん後ろのページに、小さく書いた。「苦しくてたまらない」', '読み返したら、大げさに見えた。……大したことないのに。', 'ページを閉じた。誰にも見られないところに、しまっておいた。']],
-      gym: ['（……その笑い方を、知っている気がした）',
+      gym: ['（……その笑い方を、自分も知っている気がした）',
             ['朝、身体が重くて、支度にいつもの倍かかった。学校までの道も、足がなかなか前に出なかった。',
              '遅れて教室に入ると、「寝坊？」と笑われた。「うん、寝坊」と笑って返した。',
              '……どう言えばいいのか、わからなかった。言っても、わかってもらえる気がしなかった。']],
-      infirmary: ['（……優しい声で、片付けられたことがある気がした）',
+      infirmary: ['（……自分も、優しい声で片付けられたことがある気がした）',
                   ['一度だけ、思い切って先輩に話した。', '先輩は笑って、「そんなの大したことないって。気にすんなよ」と言った。', '……励ましてくれたんだと、わかっていた。', '……それから、話すのをやめた。']]
     };
     // 2026-10-31：なぞる名前は遊ぶ人が選ぶ（順番は自由）。6行目は、なぞる字がない
@@ -4064,9 +4071,9 @@
     finishRun(true, tag);
     if (tag === 'TRUE') { P.trueKind = kindNow; saveP(); bgm('lastBell', 2); await endRoll('TRUE'); }   // 曲は仮押さえ
     const head = tag === 'TRUE' ? `<div class="end-ttl"><p class="end-kind">TRUE END</p><h1 class="end-name">${title}</h1></div>`
-                                : `<div class="fade" style="display:flex;flex-direction:column;gap:12px"><p class="eyebrow">BAD END「${title}」</p></div>`;
+                                : `<div class="fade bad-head"><p class="bad-kind">BAD END</p><h2 class="bad-name">${title}</h2></div>`;
     overlayWait(`${head}
-      <p class="note">この放課後は、ここで終わった。</p>${achNote(got)}${firstTrue ? '<p class="note ach-note">アナザーストーリー『五人の放課後』が開きました。タイトルの「おまけ」→「アナザーストーリー」から読めます。</p>' : ''}`, tag === 'TRUE' ? 'dawn endcard' : '', ['もう一度会いに行く', 'タイトルへ'])
+      <p class="note">この放課後は、ここで終わった。</p>${achNote(got)}${firstTrue ? '<p class="note ach-note">アナザーストーリー『五人の放課後』が開きました。タイトルの「おまけ」→「アナザーストーリー」から読めます。</p>' : ''}`, tag === 'TRUE' ? 'dawn endcard' : 'badcard', ['もう一度会いに行く', 'タイトルへ'])
       .then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
   // エンディングの場面に切り替える。人物や調べる場所を消し、背景をフェードアウト→フェードインで差し替える
@@ -4161,10 +4168,9 @@
     tel('bad', { c: C.id, tag: 'BAD1', loops: R.loop });
     const got = achGain('BAD1');
     await touchRecall();
-    const v = await overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
-        <p class="eyebrow">BAD END「終わらない放課後」</p></div>${touchNote()}
-      <p class="note">${C.room}のはじめから、やり直せます。調べたこと・話したことは覚えているので、謎解きは飛ばせます。</p>${achNote(got)}`,
-      '', [`${C.room}のはじめから`, 'タイトルへ']);
+    const v = await overlayWait(`<div class="fade bad-head"><p class="bad-kind">BAD END</p><h2 class="bad-name">終わらない放課後</h2></div>${touchNote()}
+      <p class="note bad-howto">${C.room}のはじめから、やり直せます。調べたこと・話したことは覚えているので、謎解きは飛ばせます。</p>${achNote(got)}`,
+      'badcard', [`${C.room}のはじめから`, 'タイトルへ']);
     if (v === 0) startRun(C.id, { skipPuzzle: true }); else showTitle(true);
   }
   // 章の途中で周回が終わるBAD（身代わり・ふたりきりの放課後）。放課後がここで終わるので、周回に数える
@@ -4180,10 +4186,9 @@
     const got = achGain(tag);
     await touchRecall();
     // BAD1と同じく、その章のはじめから（謎解きは飛ばして）やり直せる。「放課後をやり直す」を選んだときだけ、周回を締めくくって美術室から
-    const v = await overlayWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px">
-        <p class="eyebrow">BAD END「${title}」</p></div>${touchNote()}
+    const v = await overlayWait(`<div class="fade bad-head"><p class="bad-kind">BAD END</p><h2 class="bad-name">${title}</h2></div>${touchNote()}
       <p class="note">この放課後は、ここで終わった。</p>
-      <p class="note">${C.room}のはじめから、やり直せます。調べたこと・話したことは覚えているので、謎解きは飛ばせます。</p>${achNote(got)}`, '',
+      <p class="note bad-howto">${C.room}のはじめから、やり直せます。調べたこと・話したことは覚えているので、謎解きは飛ばせます。</p>${achNote(got)}`, 'badcard',
       // 1章では「美術室のはじめから」と「放課後をやり直す」が同じ所へ戻るので、片方だけ出す（2026-11-10 作者の指示）
       C.id === ORDER[0] ? [`${C.room}のはじめから`, 'タイトルへ'] : [`${C.room}のはじめから`, '放課後をやり直す', 'タイトルへ']);
     const w = C.id === ORDER[0] && v === 1 ? 2 : v;
@@ -4847,7 +4852,7 @@
       // 2段目：県展の話から入り、何年も比べられ、母に愛されてこなかったことへつなげる
       await say([['ヒナ', '……お姉ちゃん、高3のとき、県展で金賞取ったの', 'down'],
                  ['ヒナ', '昔から、なんでもできる人なの。……私とは違って', 'down'],
-                 '（……得意なことを聞かれても、何も書けなかった気がした）', '（今は、この子の話だ）',   // 屋上の自己紹介カードの場面とつながる
+                 '（……自分も、得意なことを聞かれて、何も書けなかった気がした）', '（今は、この子の話だ）',   // 屋上の自己紹介カードの場面とつながる
                  ['ヒナ', '学校でも、先生も先輩も、私のこと『サクラの妹』って呼ぶの', 'down'],
                  ['ヒナ', '……わかってる。みんな、悪気なんてない。お姉ちゃんの妹だって、言ってるだけ', 'down'],
                  ['ヒナ', 'でも、そう呼ばれるたびに、頭の中でお母さんの声に変わるの。『サクラの、失敗作』って', 'sad'],
@@ -5607,7 +5612,7 @@
                  ['ソウタ', '……あの『ごめん』には、今も既読がつかないんだ', 'sad'],
                  ['ソウタ', 'あれから、ほとんど眠れてない。目を閉じると、既読のつかない画面が浮かぶんだ', 'down'],
                  ['ソウタ', '毎晩、カーテンの向こうが白んでいくのを、ただ眺めてる。……もう、何日寝てないのか、わからない', 'down'],
-                 '（……眠れないまま朝になる夜を、知っている気がした）', '（今は、この子の話だ）']);   // 屋上の「徹夜」の場面とつながる
+                 '（……自分も、眠れないまま朝になる夜を、知っている気がした）', '（今は、この子の話だ）']);   // 屋上の「徹夜」の場面とつながる
       await line(['ソウタ', '……ハルが最後に読んだ俺の言葉は、『もうどうでもいい』なんだよ', 'sad'], false);
       a = await ask([['返事が来なかったのは、ハルくんが怒ってたからじゃないと思う', 'seiron'], ['あの言葉、取り消したかった？', 'yori'],
                      ['……ソウタくんのせいじゃないよ', 'nagu'], ['ハルくんの分まで、ソウタくんが前を向いていかなきゃね', 'oitsu']], 2);
@@ -6273,7 +6278,7 @@
       // 3段目
       await say([['', 'ミオは本に挟んだしおりの端を、指でなぞった。', 'strokeDown'],
                  ['ミオ', '……謝りたい。ずっと、謝りたかった', 'sad'],
-                 '（……言いたかったのに、ずっと言えなかった言葉がある気がした）', '（今は、この子の話だ）']);   // 屋上の「ノートの後ろのページ」とつながる
+                 '（……自分にも、言いたかったのに、ずっと言えなかった言葉がある気がした）', '胸の奥で、何かが小さく引っかかった。', '（……今は、この子の話だ）']);   // 屋上の「ノートの後ろのページ」とつながる。打ち消すまでに一拍かかる（章が進むほど打ち消しにくくなる。2026-11-11）
       if (hasKey('mio')) {
         await say([['ミオ', 'でも、謝ったら、許してもらうのを待つことになる。……私に、そんな資格ない', 'frown']]);
         await line('……あのしおりの手紙が頭に浮かんだ。', false);
@@ -6790,7 +6795,7 @@
                  ['ケイ', '……お人好しだな。会ったばっかの奴に、そこまでする？', 'normal'],   // 2026-11-10 5人から見た主人公の干渉（作者の指示）
                  '「……なんでだろう。放っておけなかった」',
                  ['ケイ', '……いいよ。どうせ俺しかいないし', 'smile'],
-                 '（……その笑い方を、知っている気がした）', '（今は、この子の話だ）',   // 屋上の「寝坊」の朝とつながる
+                 '（……その笑い方を、自分も知っている気がした）', '（遅れて入った教室で、たしか――）', '（……今は、この子の話だ）',   // 屋上の「寝坊」の朝とつながる。打ち消す前に、自分の場面が浮かびかける（笑い方の意味は言わない：選択肢のヒントにしない）
                  ['ケイ', '三年が引退して、二年は俺一人しか残らなかったんだ', 'normal'],
                  ['ケイ', 'あとは一年が五人。ユウマ、ハヤト、ミナト、ダイチ、シュン', 'normal'],
                  ['ケイ', '下手くそだけど、いいやつらなんだよ。……あいつらと試合するの、好きなんだ', 'smile'],
@@ -7523,7 +7528,7 @@
                  ['ツムギ', 'でも、もうすぐここにも来なくなるんだ。来週から、入院。小さいころから、慣れっこだけどね', 'normal'],
                  ...(R.know.has('dadNote') ? [['ツムギ', '……椅子の付箋、見た？ 今日はこのあと、お父さんと病院の説明を聞きに行くの', 'down'], ['ツムギ', 'だから、こんな時間まで、ここにいていいんだ。……いつもは、帰らなきゃいけないんだけど', 'normal']] : []),
                  ['ツムギ', '先生にも、言われちゃった。『入院中は、もう保健室には来なくていいのよ』って。……優しい声だったな', 'down'],
-                 '（……優しい声で、片付けられたことがある気がした）', '（今は、この子の話だ）']);   // 屋上の先輩の「大したことないって」とつながる
+                 '（……自分も、優しい声で片付けられたことがある気がした）', '（今は、この子の――）', '言い聞かせようとした言葉が、最後まで続かなかった。']);   // 屋上の先輩の「大したことないって」とつながる。5章では打ち消しきれない
       await line(['ツムギ', '……ね。私なんか、いてもいなくても同じなんだよ', 'normal'], false);
       let a = await ask([['ここが、ツムギさんの居場所だったんだ', 'yori'], ['入院するなら、今は治療に専念しないと', 'seiron'], ['黒板にそう書いたの、ミオさんだよね？', 'oitsu']], 1);
       if (a === 'seiron') { await say([['ツムギ', '……うん、わかってる', 'normal'], ['ツムギ', 'ちゃんと治すよ。……治して、また、どこにも行く場所がないだけ', 'down'], 'ツムギは目を伏せて、窓のほうへ顔をそむけた。']); return closeHeart(); }
