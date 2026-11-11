@@ -4287,6 +4287,14 @@
     gym: [['ケイ', '……できるわけないだろ', 'angry']],
     infirmary: [['ツムギ', '……無理だよ、そんなの', 'sad']],
   };
+  // 相手の一言を受けて、主人公が意地になる・引けなくなる（2026-11-11 作者の指示：身代わりへ進む前に、主人公の意思が固まる描写を入れる）
+  const PITY_RESOLVE = {
+    art: ['カチン、と胸の奥で何かが鳴った。', '（……やってやる）'],
+    music: ['問い返されて、言葉に詰まった。', '……でも、今さら引っ込めたくなかった。'],
+    library: ['（……代われるなら）', 'その一言に、背中を押された気がした。'],
+    gym: ['（できるわけない、か）', '意地になっていた。できないと言われるほど、やってみせたくなった。'],
+    infirmary: ['あきらめたように笑う顔を、これ以上見ていたくなかった。'],
+  };
   const depNote = () => `（……さっきも同じように安心させた。そのたびに、${C.name}はこちらにしか寄りかかれなくなっていった）`;
   // 同情の答えのあと：突き返され、「わからないくせに」と言われる。同じところに立とうとすれば身代わり（BAD2）、何も言えなければ、今までどおり届かない
   async function pityBranch(lines, missing) {
@@ -4294,7 +4302,7 @@
     const pv = await choose(['「……だったら、同じところに立てばわかる？」', '（……何も言えない）']);
     tel('pity_branch', { c: C.id, k: pv === 0 ? 'stand' : 'silent' });
     if (pv === 0) {
-      bgm('coreHeavy'); await say([...(PITY_STAND[C.id] || []), ...C.badSubTalk]); return chapterBad('BAD2', '身代わり', C.badSub, 'coreHeavy');
+      bgm('coreHeavy'); await say([...(PITY_STAND[C.id] || []), ...(PITY_RESOLVE[C.id] || []), ...C.badSubTalk]); return chapterBad('BAD2', '身代わり', C.badSub, 'coreHeavy');
     }
     return lastWrong();   // 「何か、あと一つ足りない気がする」は出さない（届かなかったのは向き合い方のせいで、わすれものが足りないからではない）
   }
