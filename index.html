@@ -2908,6 +2908,8 @@
       chEl.setAttribute('style', sit.style); chEl.style.opacity = bg.style.opacity || '';
     } else chEl.style.display = 'none';
     const figOn = !sf.classList.contains('gone') && !!sf.getAttribute('src') && C && hit && hit.ch === C;
+    // chairWhenGone：椅子だけの絵と座り絵の椅子の形が少しちがうので、その子が座っているあいだは椅子だけの絵を出さない（いなくなってから出す。2026-11-11 ミオ）
+    if (sit && sit.chair && sit.chairWhenGone && figOn) chEl.style.display = 'none';
     const clip = sit && sit.front, on = !!clip && !!bg.getAttribute('src') && ((sit && sit.chair) || figOn);
     if (!on) { fr.style.display = 'none'; return; }
     if (fr.getAttribute('src') !== bg.getAttribute('src')) fr.setAttribute('src', bg.getAttribute('src'));
@@ -3842,8 +3844,11 @@
     await say(['階段を駆け上がってくる足音がした。', '「……いた！」',
                '足音が、いくつも重なる。', '振り返ると、開いたままの扉のところに五人が立っていた。', '息を切らして。名前も知らないはずの、こちらを見て。',
                ['ケイ', '……やっぱり、あんただ'], ['ツムギ', '放課後、保健室に来てくれた人……だよね'],
-               ...(kind === 'split' ? ['ミオは扉のそばに、ツムギはフェンス寄りに立っていた。二人は一度も目を合わせなかった。'] : []),
+               ...(kind === 'split' ? ['ミオとツムギは、開いた扉をはさんで、離れて立っていた。二人は一度も目を合わせなかった。'] : []),
                '誰も、近づいてこなかった。', '扉のところで、止まったまま。']);
+    // 2026-11-10 作者の決定：屋上の一枚絵（A）。5章の結末（まっすぐ／ぎこちない／決別）で、ミオとツムギの立ち位置がちがう絵を出す（差分ができるまでは、まっすぐの周回だけ）
+    { const id = { straight: 'roof_five', awk: 'roof_five_awk', split: 'roof_five_split' }[kind];
+      if (ROOF_FIVE_READY[kind]) await cgShow(id, '雨上がりの夕焼けの屋上。開いた階段室の扉の前で、五人が立ち止まり、こちらを見つめている', ''); }
     if (await choose(['「……来ないで」', '（……何も、言えない）']) === 0)
       await say(['「……もう、誰も近寄らないで」', '「あなた達には関係ない。……ほっといて」', '誰も、帰らなかった。扉のところで、止まったまま。',
                  ['ソウタ', '……知らねえよ、そんなの']]);
@@ -3933,7 +3938,7 @@
                '後ろで、誰かが何か言っていた。……聞こえないふりをした。',
                '夕日が、山の向こうへ沈んでいく。', '最後の光が消えるまで、目をそらさなかった。……夕日からだけは。']);
     // 2026-11-11 作者の指示：日が沈まない・時が止まる書き方は超常現象に見えるので、ふつうに沈ませる。目をそらし続けることは、夕日だけを見続けたことで表す
-    // 日が沈んだあとの屋上の絵（rooftop_dusk）は依頼中（2026-11-11）。届いたら endScene('rooftop_dusk') をここに入れる
+    await endScene('rooftop_dusk');   // 日が沈んだあとの屋上（7/15 19:15ごろ。2026-11-11）
     return roofEnd('BAD7', '目をそらした夕焼け');
   }
   async function roofBad8(from) {
@@ -5929,7 +5934,7 @@
     window2: ['窓の下の低い書架に、鉢植えが置いてある。土は、まだ湿っていた。', '鉢に、水やり当番の札が刺さっている。丸い字の「白石」は、西日で薄くなっていた。', 'その下に、細い字で「水野」。こちらの字は、まだ新しい。'],
     clock2: ['時計の下に、開館時間の札。「放課後　〜17:00」。', 'その下に小さな付箋が貼ってある。「7/15　当番　水野・伊藤」。……閉館の時刻を過ぎても残っているのは、ミオ一人だけらしい。'],
     id: 'library', key: 'mio', memory: ['（……ミオは本を胸に抱え直してから、手帳の端に小さく名前を書いた。貸出カードと同じ字だった）', '（図書室の隅の席。閉館のチャイムが鳴るまで、ここにいた日がある。……家に、帰りたくなかった）'], name: 'ミオ', who: 'この子', startMin: 60, room: '図書室', hall: 'hall_library', label: '第三章「図書室」', bg: 'library', bgClock: { cx: 1437, cy: 78, rx: 31, ry: 61 },
-    sit: { src: 'mio_sit', style: 'left:12.2%;top:42.0%;height:46.5%', front: 'polygon(0.00% 62.99%, 6.97% 62.99%, 6.97% 65.23%, 11.20% 65.43%, 11.46% 66.31%, 13.74% 67.19%, 13.87% 100.00%, 0.00% 100.00%)' },   // 手前の低い書架は、座り絵より前（2026-11-11）
+    sit: { src: 'mio_sit', chair: 'mio_chair', chairWhenGone: true, style: 'left:12.2%;top:42.0%;height:46.5%', front: 'polygon(0.00% 62.99%, 6.97% 62.99%, 6.97% 65.23%, 11.20% 65.43%, 11.46% 66.31%, 13.74% 67.19%, 13.87% 100.00%, 0.00% 100.00%)' },   // 手前の低い書架は、座り絵より前（2026-11-11）
     // 消えたあと机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
     faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap', clench: 'mio_clench', clenchDown: 'mio_clenchdown', frown: 'mio_frown', look: 'mio_look' },   // clenchDown：本を握りしめて伏せ目／frown：眉をひそめてうつむく   // lap：本を膝の上に下ろして小さく決意した顔／clench：本を強く握りしめ、目をぎゅっとつむった悲痛な顔
@@ -6384,8 +6389,9 @@
       await say([['ミオ', '……え', 'surprise'], ['ミオ', 'なんで。……そんなこと、誰にも', 'surprise'],
                  '答えられなかった。ただあのしおりの手紙を覚えていた。',
                  ['ミオ', '……うん。一年の四月。誰とも話せなくて、ここに逃げてきた私に、『その本、泣けるよ』って', 'sad'],
-                 ['ミオ', 'ツムギは、ひとりぶんの椅子しかなかった私のところに、最初に椅子を運んでくれた人だった', 'sad'],
-                 ['ミオ', '……なのに、私は、その椅子を蹴ったんだ', 'grief'],
+                 ['ミオ', 'ツムギは、ひとりぶんの椅子しかなかった私のところに、最初に椅子を運んでくれた人だった', 'sad']]);
+      await cgShow('l_first', '春の図書室。閲覧机の端で本を読んでいたミオに、図書委員のツムギが一冊の本を差し出して話しかけている', '<p>『その本、泣けるよ』</p>');   // 2026-11-10 作者の決定：3章の一枚絵（A）
+      await say([['ミオ', '……なのに、私は、その椅子を蹴ったんだ', 'grief'],
                  '「……だったら、今度はミオさんが椅子を運ぶ番なんじゃないかな」',
                  '「許してもらうためじゃなくて。……ツムギさんが、いてもいなくても同じなんかじゃないって、伝えるために」',
                  'ミオは長いあいだ黙っていた。']);
@@ -6865,8 +6871,9 @@
                  '（……その笑い方を、自分も知っている気がした）', '（遅れて入った教室で、たしか――）', '（……今は、この子の話だ）',   // 屋上の「寝坊」の朝とつながる。打ち消す前に、自分の場面が浮かびかける（笑い方の意味は言わない：選択肢のヒントにしない）
                  ['ケイ', '三年が引退して、二年は俺一人しか残らなかったんだ', 'normal'],
                  ['ケイ', 'あとは一年が五人。ユウマ、ハヤト、ミナト、ダイチ、シュン', 'normal'],
-                 ['ケイ', '下手くそだけど、いいやつらなんだよ。……あいつらと試合するの、好きなんだ', 'smile'],
-                 'ケイは指のテーピングを、ぼんやり撫でた。']);
+                 ['ケイ', '下手くそだけど、いいやつらなんだよ。……あいつらと試合するの、好きなんだ', 'smile']]);
+      await cgShow('g_game', '明るい放課後の体育館。練習試合の途中、ケイが笑いながら一年生にパスを出している', '');   // 2026-11-10 作者の決定：4章の一枚絵（C。一枚絵が明るい場面でそろう）
+      await say(['ケイは指のテーピングを、ぼんやり撫でた。']);
 
       // 2段目
       await say(['テーピングを撫でていたケイの指が、ふと止まった。', ['ケイ', '……でも、顧問がさ', 'sad'], '「顧問？」',
@@ -7887,6 +7894,13 @@
                     img: 'hall_tsumugi', alt: '夕日の差す廊下を、渡り廊下のほうへ歩いていくツムギの後ろ姿',
                     stop: '扉の前で、足が止まる。まだ、ここから先へは行けない。', music: 'farewellLate' });
   }
+  const ROOF_FIVE_READY = { straight: true, awk: true, split: true };   // 2026-11-11 屋上の一枚絵（主人公は西のフェンスの前の真ん中。そこから振り返って東を見た視点。夕日は背中側）   // 屋上の一枚絵（まっすぐ・ぎこちない・決別の3枚。2026-11-11）
+  // 一枚絵を出す（1章の sakura と同じ見せ方）。アルバムに記録する
+  async function cgShow(id, alt, html) {
+    albumSee(id);
+    await overlayWait(`<img class="cg" src="img/${id}.webp" alt="${alt}">${html}`, '', ['続ける']);
+    closeOverlay();
+  }
   const CUT_RECONCILE = true;   // 仲直りのカットイン（ci_reconcile）
   const CHAPTERS = { art: ART, music: MUSIC, library: LIBRARY, gym: GYM, infirmary: INFIRMARY };
   const ORDER = ['art', 'music', 'library', 'gym', 'infirmary'];
@@ -8216,12 +8230,17 @@
     ['gate', 'gate', '第一章', '校門で手を振るヒナ'],
     ['m_photo', 'm_photo', '第二章', 'ひまわりピアノ教室 発表会'],
     ['m_gate', 'm_gate', '第二章', '校門で振り返るソウタ'],
+    ['l_first', 'l_first', '第三章', '『その本、泣けるよ』'],   // 題は仮（作者に確認）
     ['l_bridge', 'l_bridge', '第三章', '渡り廊下のミオ'],
+    ['g_game', 'g_game', '第四章', '六人の練習試合'],   // 題は仮
     ['g_gate', 'g_gate', '第四章', '校門で笑うケイ'],
     ['ci_reconcile', 'ci_reconcile', '第五章', '二人で開いた『ひとりぶんの椅子』'],
     ['gate_mt', 'gate_mt', '第五章', '並んだ「またね」'],
     ['gate_mt_awk', 'gate_mt_awk', '第五章', 'ぎこちない「またね」'],
     ['hall_tsumugi', 'hall_tsumugi', '第五章', '図書室へ向かうツムギ'],
+    ['roof_five', 'roof_five', '屋上', '扉の前の五人'],   // 題は仮
+    ['roof_five_awk', 'roof_five_awk', '屋上', '扉の前の五人（ぎこちない二人）'],   // 題は仮
+    ['roof_five_split', 'roof_five_split', '屋上', '扉の前の五人（離れた二人）'],   // 題は仮
     ['true_gate', 'true_gate', '終業式の日', '六人で出た正門']
   ];
   P.album = P.album || {};
