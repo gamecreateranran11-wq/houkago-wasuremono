@@ -2638,14 +2638,21 @@
   }
   // 2026-11-10 作者の指摘：スマホで他のアプリへ切り替えるとき、ときどき曲の一音（ギターのような音）が鳴る。
   // 切り替えの途中で一瞬「見えている」状態に戻ることがあり、そのたびに曲をかけ直して頭の音が鳴っていた。見えている状態が0.7秒続いてから戻す
+  // 2026-11-13 作者の指摘：それでも Safari からアプリを切り替えるとき、ギターのような一音（F#）が鳴った。
+  // 切り替えの画面を出している間は、0.7秒より長く「見えている」と報告されることがあり、そのあいだに曲の頭の音が鳴っていた。
+  // スマホ・タブレットでは、戻っただけでは曲をかけ直さず、画面に触れたときにかけ直す（パソコンは今までどおり0.7秒後）
+  const TOUCH_WAKE = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
   let wakeTimer = null;
+  const wakeLater = () => { clearTimeout(wakeTimer); if (!TOUCH_WAKE) wakeTimer = setTimeout(() => { if (!document.hidden) wakeSound(); }, 700); };
   document.addEventListener('visibilitychange', () => {
     clearTimeout(wakeTimer);
-    if (document.hidden) pauseSound(); else wakeTimer = setTimeout(() => { if (!document.hidden) wakeSound(); }, 700);
+    if (document.hidden) pauseSound(); else wakeLater();
   });
   window.addEventListener('pagehide', pauseSound);
-  window.addEventListener('pageshow', () => { clearTimeout(wakeTimer); wakeTimer = setTimeout(() => { if (!document.hidden) wakeSound(); }, 700); });
-  window.addEventListener('focus', () => { clearTimeout(wakeTimer); wakeTimer = setTimeout(() => { if (!document.hidden) wakeSound(); }, 700); });
+  window.addEventListener('pageshow', wakeLater);
+  window.addEventListener('focus', wakeLater);
+  // 切り替えの画面に入ったとき（スマホでは見えたまま、画面のフォーカスだけが外れる）も、先に音を止めておく
+  window.addEventListener('blur', () => { if (TOUCH_WAKE && actx && !bgmPaused) pauseSound(); });
   ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => {
     if (actx && !document.hidden && (actx.state !== 'running' || bgmPaused)) wakeSound();
   }, { capture: true, passive: true }));
@@ -4673,7 +4680,7 @@
     coreAt: 5,
     id: 'art', key: 'hina', windowImg: 'ci_window_art', memory: ['（……思い出した。校門で生徒手帳を差し出したこと。ヒナは少し驚いて、それからさらさらと名前を書いてくれた）', '（もう一つ。美術室の前の廊下で、窓ごしに一人で描いている背中を見ていたことがある。……声は、かけなかった）'], name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom', bgClock: { cx: 755, cy: 163, rx: 34, ry: 35 },
     // 2026-11-10：椅子を背景の空いた椅子の位置・奥行きにそろえ、手前の作業台を椅子の上に重ねる（作者の指示）
-    sit: { src: 'hina_sit', window: 'hina_sit_window', chair: 'hina_chair', style: 'left:2.34%;top:36.43%;height:22.95%', front: 'polygon(8.85% 49.51%, 26.04% 45.12%, 26.04% 55.86%, 11.78% 55.86%, 11.78% 100%, 9.96% 100%, 9.96% 51.56%, 8.85% 51.56%)' },
+    sit: { src: 'hina_sit_window', chair: 'hina_chair', style: 'left:2.34%;top:36.43%;height:22.95%', front: 'polygon(8.85% 49.51%, 26.04% 45.12%, 26.04% 55.86%, 11.78% 55.86%, 11.78% 100%, 9.96% 100%, 9.96% 51.56%, 8.85% 51.56%)' },
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
     faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout' , grip: 'hina_grip',
              // スケッチブックの入った鞄を抱えてから、空を描き始めるまで
