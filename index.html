@@ -2461,6 +2461,10 @@
   const fileBytes = {}, fileBuf = {};
   // 同じファイルを別の位置から鳴らす曲（farewellLate など）は、取り寄せとほどいた音を元の曲と分け合う
   const fileKey = name => (FILE_BGM[name] && FILE_BGM[name].same) || name;
+  // 通信量を減らす（2026-11-13 作者の指示）：第五章より後でしか流れない曲（屋上『深淵からの声』・TRUE『黎明に肩を並べて』・決別『分かたれる道』・TRUEのエンドロール『Last Bell in July』）は、
+  // はじめに取り寄せず、第五章に入ったときに取り寄せる。BAD1『終わらない放課後』はどの章でもなりうるので、はじめから取り寄せる
+  const LATE_BGM = new Set(['roofCore', 'unravelTrue', 'farewell', 'lastBell']);
+  const fetchLateBgm = () => { try { LATE_BGM.forEach(fetchFileBgm); } catch (e) {} };
   function fetchFileBgm(name) {
     name = fileKey(name);
     if (!fileBytes[name]) { fileBytes[name] = fetch(FILE_BGM[name].src).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }); fileBytes[name].catch(() => { delete fileBytes[name]; }); }
@@ -2489,7 +2493,7 @@
     if (master && master.gain.value < MASTER_GAIN * 0.99) unmute();
     if (name && !P.heard[name]) { P.heard[name] = true; saveP(); }
     let a; try { a = audio(); } catch (e) { return; }
-    try { loadFileBgm('explore').then(() => loadFileBgm('musicbox')).catch(() => {}); Object.keys(FILE_BGM).forEach(fetchFileBgm); } catch (e) {}   // 探索の曲はタイトルのうちにほどいておく（始めてすぐ鳴るように）。何度も流れる『ひとかけらの希望』も続けてほどく。他の曲は中身だけ取り寄せておく
+    try { loadFileBgm('explore').then(() => loadFileBgm('musicbox')).catch(() => {}); Object.keys(FILE_BGM).filter(k => !LATE_BGM.has(fileKey(k))).forEach(fetchFileBgm); } catch (e) {}   // 探索の曲はタイトルのうちにほどいておく（始めてすぐ鳴るように）。何度も流れる『ひとかけらの希望』も続けてほどく。他の曲は中身だけ取り寄せておく
     if (bgmPos && bgmPos.stop == null) bgmPos.stop = a.currentTime;
     const resumeAt = resume && name && bgmPos && bgmPos.key === fileKey(name) && bgmPos.stop != null ? bgmPos.off + (bgmPos.stop - bgmPos.t0) : null;
     if (bgmGain) { const g = bgmGain, src = bgmSrc; g.gain.setTargetAtTime(0, a.currentTime, 0.4); setTimeout(() => { try { g.disconnect(); if (src) src.stop(); } catch (e) {} }, 2500); }
@@ -2910,7 +2914,9 @@
     return null;
   }
   function syncSitFront() {
-    const fr = $('#sitFront'), bg = $('#bgImg'), sf = $('#sitFig'), chEl = $('#sitChair'), hit = sitRoomOfBg();
+    const fr = $('#sitFront'), bg = $('#bgImg'), sf = $('#sitFig'), chEl = $('#sitChair');
+    if (!fr || !bg || !sf || !chEl) return;   // 後日談のページ（この部分のコードを取り込む）には座り姿がない
+    const hit = sitRoomOfBg();
     const sit = hit && hit.ch.sit;
     if (sit && sit.chair) {
       const want = `img/${sit.chair}${hit.v}.webp`;
@@ -2925,10 +2931,12 @@
     if (fr.getAttribute('src') !== bg.getAttribute('src')) fr.setAttribute('src', bg.getAttribute('src'));
     fr.style.clipPath = clip; fr.style.webkitClipPath = clip; fr.style.opacity = bg.style.opacity || ''; fr.style.display = '';
   }
-  new MutationObserver(syncSitFront).observe($('#bgImg'), { attributes: true, attributeFilter: ['src', 'style'] });
-  new MutationObserver(syncSitFront).observe($('#sitFig'), { attributes: true, attributeFilter: ['src', 'style', 'class'] });
+  if ($('#sitFig')) {   // 後日談のページには座り姿がない
+    new MutationObserver(syncSitFront).observe($('#bgImg'), { attributes: true, attributeFilter: ['src', 'style'] });
+    new MutationObserver(syncSitFront).observe($('#sitFig'), { attributes: true, attributeFilter: ['src', 'style', 'class'] });
+  }
   // 涙のきらめき：表情の絵（#portrait）に涙の光の絵があれば、同じ位置に重ねて、表示・非表示も合わせる
-  const GLINT = new Set(['hina_p_grief', 'hina_s_angrycry', 'hina_s_chest_cry', 'hina_s_grief', 'kei_p_crysmile', 'kei_p_grief', 'kei_s_crysmile', 'kei_s_teary', 'mio_f_nb_crysmile_inf', 'mio_f_nb_grief_inf', 'mio_p_crysmile', 'mio_p_grief', 'mio_p_nb_crysmile', 'mio_p_nb_grief', 'mio_s_crysmile', 'mio_s_grief', 'sota_p_crysmile', 'sota_p_grief', 'sota_s_crysmile', 'sota_s_grief', 'tsumugi_p_crysmile', 'tsumugi_p_grief', 'tsumugi_s_angrycry', 'tsumugi_s_crysmile', 'tsumugi_s_grief']);
+  const GLINT = new Set(['hina_p_grief', 'hina_s_angrycry', 'hina_s_chest_cry', 'hina_s_grief', 'kei_p_crysmile', 'kei_p_grief', 'kei_s_crysmile', 'kei_s_teary', 'mio_f_nb_crysmile_inf', 'mio_f_nb_grief_inf', 'mio_p_crysmile', 'mio_p_grief', 'mio_p_nb_crysmile', 'mio_p_nb_grief', 'mio_s_crysmile', 'mio_s_grief', 'sota_p_crysmile', 'sota_p_grief', 'tsumugi_p_crysmile', 'tsumugi_p_grief', 'tsumugi_s_crysmile', 'tsumugi_s_grief']);
   // 表情の絵の名前から涙の光の絵を探す（保健室のミオ _inf は、光の絵がなければ _inf なしの名前で）
   const glintOf = name => !name ? null : GLINT.has(name) ? name : GLINT.has(name.replace(/_inf$/, '')) ? name.replace(/_inf$/, '') : null;
   function syncGlintPair(fig, gl, base) {
@@ -2939,7 +2947,7 @@
     gl.classList.toggle('show', on);
   }
   const syncGlint = () => { syncGlintPair($('#portrait'), $('#portraitGlint'), 'portrait'); syncGlintPair($('#guestFig'), $('#guestGlint'), 'guest'); };
-  for (const id of ['#portrait', '#guestFig']) new MutationObserver(syncGlint).observe($(id), { attributes: true, attributeFilter: ['src', 'style', 'class'] });
+  if ($('#portraitGlint') && $('#guestGlint')) for (const id of ['#portrait', '#guestFig']) new MutationObserver(syncGlint).observe($(id), { attributes: true, attributeFilter: ['src', 'style', 'class'] });
   // 保健室前の廊下の窓から見える特別教室棟の明かり。背景が変わるたびに、その周回の結果に合わせて重ねる
   // 18:00：まだ行っていない教室と閉め出された教室だけ点く（外が明るいので弱く見える）。18:30（BAD4）：息を引き取った子の部屋だけ消える
   (function () {
@@ -2962,6 +2970,7 @@
   })();
   // 屋上の雨：背景が rooftop_rain の間だけ、絵の座標（1536×1024）で動く雨を重ねる。奥・中・手前の3層で、中と手前は床で跳ねる。強さは2段階（h＝0 雨、h＝1 強い雨。rainHeavier で強い雨へ）
   const roofRain = (() => {
+    if (!$('#bgRain')) return { heavier() {} };   // 後日談のページ（この部分のコードを取り込む）には屋上の雨がない
     const cv = $('#bgRain'), W = 1536, H = 1024, FLOOR = 716, small = Math.min(innerWidth, innerHeight) < 560, q = small ? .75 : 1;
     cv.width = W * q; cv.height = H * q;
     const x = cv.getContext('2d'), R = (a, b) => a + Math.random() * (b - a);
@@ -7956,6 +7965,7 @@
   }
   function setChapter(id, show = true) {
     C = CHAPTERS[id] || ART;
+    if (id === 'infirmary') fetchLateBgm();   // 第五章：このあとの屋上・エンディングの曲を取り寄せておく
     // チャイムの空：その章でチャイムが鳴る時刻（章の終わり）の空にする（16:30・17:00・17:30・18:00・18:30）
     { const end = chEnd(), file = { 30: 'chime_sky_1630', 60: 'chime_sky', 90: 'chime_sky_1730', 120: 'chime_sky_1800', 150: 'chime_sky_1830' }[end] || 'chime_sky';
       const cg = $('.chime-cg'); if (cg) { cg.src = `img/${file}.webp`; cg.alt = `${hm(end)}の夕焼け空。チャイムが響いている`; } }
