@@ -987,6 +987,8 @@
   // 謎解きの難しさ：normal（普通）／easy（やさしい）。やさしいは、3〜5章の手順だけの謎（本の並べ替え・マグネット・方向の錠・照らし合わせ）を自動で解く。
   // 物語や背景が分かる手がかり（貸出記録・部誌・来室カード・窓の跡など）は、どちらでも自分で調べる
   P.diff = P.diff === 'easy' ? 'easy' : 'normal';
+  // bgmLazy：曲を流れるときに取り寄せる（通信を節約する。2026-11-13）。まだ選んでいなければ、スマホのデータセーバーがオンのときだけオン
+  if (typeof P.bgmLazy !== 'boolean') P.bgmLazy = !!(navigator.connection && navigator.connection.saveData);
   // diffSet：難しさを一度でも選んだ（初回の選択・設定での変更）。選ぶ画面は、まだ選んでいない初回プレイのときだけ出す。前に遊んだ人は選んだことがある
   if (P.played) P.diffSet = true;
   // heard：一度でも流れた曲（サウンドトラックで「？？？」を外すのに使う）。記録を始める前に遊んだ分は、見た結末などから推し量る
@@ -2464,7 +2466,7 @@
   // 通信量を減らす（2026-11-13 作者の指示）：第五章より後でしか流れない曲（屋上『深淵からの声』・TRUE『黎明に肩を並べて』・決別『分かたれる道』・TRUEのエンドロール『Last Bell in July』）は、
   // はじめに取り寄せず、第五章に入ったときに取り寄せる。BAD1『終わらない放課後』はどの章でもなりうるので、はじめから取り寄せる
   const LATE_BGM = new Set(['roofCore', 'unravelTrue', 'farewell', 'lastBell']);
-  const fetchLateBgm = () => { try { LATE_BGM.forEach(fetchFileBgm); } catch (e) {} };
+  const fetchLateBgm = () => { if (P.bgmLazy) return; try { LATE_BGM.forEach(fetchFileBgm); } catch (e) {} };   // 通信を節約する設定のときは、流れるときに取り寄せる
   function fetchFileBgm(name) {
     name = fileKey(name);
     if (!fileBytes[name]) { fileBytes[name] = fetch(FILE_BGM[name].src).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }); fileBytes[name].catch(() => { delete fileBytes[name]; }); }
@@ -2493,7 +2495,7 @@
     if (master && master.gain.value < MASTER_GAIN * 0.99) unmute();
     if (name && !P.heard[name]) { P.heard[name] = true; saveP(); }
     let a; try { a = audio(); } catch (e) { return; }
-    try { loadFileBgm('explore').then(() => loadFileBgm('musicbox')).catch(() => {}); Object.keys(FILE_BGM).filter(k => !LATE_BGM.has(fileKey(k))).forEach(fetchFileBgm); } catch (e) {}   // 探索の曲はタイトルのうちにほどいておく（始めてすぐ鳴るように）。何度も流れる『ひとかけらの希望』も続けてほどく。他の曲は中身だけ取り寄せておく
+    try { loadFileBgm('explore').then(() => loadFileBgm('musicbox')).catch(() => {}); if (!P.bgmLazy) Object.keys(FILE_BGM).filter(k => !LATE_BGM.has(fileKey(k))).forEach(fetchFileBgm); } catch (e) {}   // 探索の曲はタイトルのうちにほどいておく（始めてすぐ鳴るように）。何度も流れる『ひとかけらの希望』も続けてほどく。他の曲は中身だけ取り寄せておく
     if (bgmPos && bgmPos.stop == null) bgmPos.stop = a.currentTime;
     const resumeAt = resume && name && bgmPos && bgmPos.key === fileKey(name) && bgmPos.stop != null ? bgmPos.off + (bgmPos.stop - bgmPos.t0) : null;
     if (bgmGain) { const g = bgmGain, src = bgmSrc; g.gain.setTargetAtTime(0, a.currentTime, 0.4); setTimeout(() => { try { g.disconnect(); if (src) src.stop(); } catch (e) {} }, 2500); }
@@ -8539,7 +8541,7 @@
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
     if (v === 0) {
       // 手帳の名前・章ごとの調べた記憶・屋上の途中なども含めて消す（前は一部が残り、リセット直後も「前回のつづきから 屋上」が出ていた）
-      const keep = { sound: P.sound, skip: P.skip, textSpeed: P.textSpeed, bgmVol: P.bgmVol, seVol: P.seVol };
+      const keep = { sound: P.sound, skip: P.skip, textSpeed: P.textSpeed, bgmVol: P.bgmVol, seVol: P.seVol, bgmLazy: P.bgmLazy };
       try {
         [KEY, SAVE_KEY, ROOF_KEY, ROOF_START_KEY, READ_KEY, ...SLOTS.map(SLOT_KEY)].forEach(k => localStorage.removeItem(k));
         localStorage.setItem(KEY, JSON.stringify({ shelf: {}, runs: 0, endings: {}, ...keep }));
@@ -8635,6 +8637,9 @@
           <button type="button" data-diff="easy" aria-pressed="${P.diff === 'easy'}">易しい</button><button type="button" data-diff="normal" aria-pressed="${P.diff !== 'easy'}">普通</button></div></div>
         ${TELEMETRY_URL ? `<div class="set-row"><span class="set-label">遊び方の記録</span><div class="seg" id="setTel">
           <button type="button" data-tel="1" aria-pressed="${P.telemetry === true}">送る</button><button type="button" data-tel="0" aria-pressed="${P.telemetry !== true}">送らない</button></div></div>` : ''}
+        <div class="set-row"><span class="set-label">曲の読み込み</span><div class="seg" id="setLazy">
+          <button type="button" data-lazy="0" aria-pressed="${!P.bgmLazy}">先にまとめて</button><button type="button" data-lazy="1" aria-pressed="${!!P.bgmLazy}">流れるときに</button></div></div>
+        <p class="note set-note">「流れるときに」は通信量を抑えます（Wi-Fiがないとき向け）。曲の始まりが少し遅れることがあります。</p>
         <div class="set-row"><span class="set-label">音量</span>
           <label class="vol">BGM<input id="sVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
           <label class="vol">効果音<input id="sVolSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label></div>
@@ -8653,6 +8658,10 @@
     card.querySelectorAll('#setTel [data-tel]').forEach(b => b.onclick = () => {
       P.telemetry = b.dataset.tel === '1'; saveP(); if (P.telemetry) tel('consent'); else telQ = [];
       card.querySelectorAll('#setTel [data-tel]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.tel === '1') === P.telemetry ? 'true' : 'false'));
+    });
+    card.querySelectorAll('#setLazy [data-lazy]').forEach(b => b.onclick = () => {
+      P.bgmLazy = b.dataset.lazy === '1'; saveP();
+      card.querySelectorAll('#setLazy [data-lazy]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.lazy === '1') === P.bgmLazy ? 'true' : 'false'));
     });
     wireVol($('#sVolBgm'), $('#sVolSe'));
     $('#setBack').onclick = () => showTitle();
@@ -8827,4 +8836,11 @@
   showTitle(true);
 })();
 
+  // 絵と曲をスマホの中に取っておく（sw.js。2026-11-13）。公開しているサイト（github.io）だけで動かす（手元の確認用やClaudeの公開ページでは動かさない）
+  try {
+    if ('serviceWorker' in navigator && /\.github\.io$/.test(location.hostname)) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});   // ブラウザに、しまったものを消さないよう頼む
+    }
+  } catch (e) {}
 </script>
