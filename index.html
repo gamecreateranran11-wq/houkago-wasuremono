@@ -2945,7 +2945,7 @@
     new MutationObserver(syncSitFront).observe($('#sitFig'), { attributes: true, attributeFilter: ['src', 'style', 'class'] });
   }
   // 涙のきらめき：表情の絵（#portrait）に涙の光の絵があれば、同じ位置に重ねて、表示・非表示も合わせる
-  const GLINT = new Set(['hina_p_grief', 'hina_s_angrycry', 'hina_s_chest_cry', 'hina_s_grief', 'kei_p_crysmile', 'kei_p_grief', 'kei_s_crysmile', 'kei_s_teary', 'mio_f_nb_crysmile_inf', 'mio_f_nb_grief_inf', 'mio_p_crysmile', 'mio_p_grief', 'mio_p_nb_crysmile', 'mio_p_nb_grief', 'mio_s_crysmile', 'mio_s_grief', 'sota_p_crysmile', 'sota_p_grief', 'tsumugi_p_crysmile', 'tsumugi_p_grief', 'tsumugi_s_crysmile', 'tsumugi_s_grief']);
+  const GLINT = new Set(['hina_p_grief', 'hina_s_angrycry', 'hina_s_chest_cry', 'hina_s_grief', 'kei_p_crysmile', 'kei_p_grief', 'kei_s_crysmile', 'kei_s_teary', 'mio_f_nb_crysmile_inf', 'mio_f_nb_grief_inf', 'mio_p_crysmile', 'mio_p_grief', 'mio_p_nb_crysmile', 'mio_p_nb_grief', 'mio_s_crysmile', 'mio_s_grief', 'sota_p_crysmile', 'sota_p_grief', 'sota_s_crysmile', 'sota_s_grief', 'tsumugi_p_crysmile', 'tsumugi_p_grief', 'tsumugi_s_angrycry', 'tsumugi_s_crysmile', 'tsumugi_s_grief']);
   // 表情の絵の名前から涙の光の絵を探す（保健室のミオ _inf は、光の絵がなければ _inf なしの名前で）
   const glintOf = name => !name ? null : GLINT.has(name) ? name : GLINT.has(name.replace(/_inf$/, '')) ? name.replace(/_inf$/, '') : null;
   function syncGlintPair(fig, gl, base) {
