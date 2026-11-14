@@ -118,6 +118,17 @@
               mask-image: linear-gradient(to bottom, transparent calc(var(--gy, -30%) - var(--gw, 4%)), #000 var(--gy, -30%), transparent calc(var(--gy, -30%) + var(--gw, 4%))); }
   }
   @media (prefers-reduced-motion: reduce) { .glint.show { -webkit-mask-image: none; mask-image: none; opacity: .5; } }
+  /* 指先のキラリ（2026-11-14 作者の指示）：濡れた指先に、光の筋が回りながら一瞬だけ光る。絵が出るたびに一度だけ。
+     光の絵（img/<絵>_spark.webp）を表情の絵と同じ位置に重ね、指先を中心（transform-origin。JS の SPARK）に回す */
+  .spark { opacity: 0; transition: none; }
+  .spark.play { animation: sparkOnce 1.1s ease-out .6s 1 both; }
+  @keyframes sparkOnce {
+    0% { opacity: 0; transform: rotate(-45deg) scale(.3); }
+    30% { opacity: 1; transform: rotate(5deg) scale(1.1); }
+    65% { opacity: .9; transform: rotate(45deg) scale(.95); }
+    100% { opacity: 0; transform: rotate(90deg) scale(.35); }
+  }
+  @media (prefers-reduced-motion: reduce) { .spark.play { animation: none; } }
   /* 章の子とは別に、その場にいる子（第五章のミオ）。左寄りに立つ。far は少し離れた所（二回り小さく、奥に） */
   .guest { position: absolute; left: 4%; bottom: -7%; height: 100%; width: auto; opacity: 0; transition: opacity .45s ease; pointer-events: none; z-index: 3; }   /* 大きさ・位置は動かさない（出るときにズームして見えないように） */
   .guest.show { opacity: 1; }
@@ -938,6 +949,7 @@
       <img id="guestGlint" class="guest glint" alt="" aria-hidden="true">
       <img id="portrait" class="portrait" alt="">
       <img id="portraitGlint" class="portrait glint" alt="" aria-hidden="true">
+      <img id="portraitSpark" class="portrait spark" alt="" aria-hidden="true">
       <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fRoomDark" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".64 0 0 0 0  0 .54 0 0 0  0 0 .56 0 0  0 0 0 1 0"/></filter><filter id="fRoomDarkP" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".76 0 0 0 0  0 .66 0 0 0  0 0 .68 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_art" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.89 0 0 0 0  0 0.8 0 0 0  0 0 0.68 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_music" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.84 0 0 0 0  0 0.67 0 0 0  0 0 0.5 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_library" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.83 0 0 0 0  0 0.83 0 0 0  0 0 0.89 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_gym" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.64 0 0 0 0  0 0.62 0 0 0  0 0 0.92 0 0  0 0 0 1 0"/></filter></svg>
       <img class="chime-cg" src="img/chime_sky.webp" alt="17:00の夕焼け空。チャイムが響いている">
     </div>
@@ -1249,7 +1261,7 @@
                       mio: 'angry crysmile despair down grief sad smile surprise stroke offer offer_sad nb nb_apology nb_grief nb_crysmile nb_skirt nb_surprise nb_down nb_plead nbleave nbleavewonder', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { crumple: 'crysmile', reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry', window: 'sad',
-                       blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', grip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise', sleeve: 'sad', wristhate: 'sad' };
+                       blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', wethand: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', grip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise', sleeve: 'sad', wristhate: 'sad' };
   // 座り絵が無い表情は、近い座り絵で代える（ミオの表紙を撫でる→撫でてうつむく。ヒナのむくれ顔は立って描いた後の一言だけで、
   // 座ってむくれる場面はないが、先読みで無い絵を探しに行かないように、うつむきにしておく）
   const SIT_NEAR = { hina: { pout: 'down' }, mio: { stroke: 'strokedown' } };
@@ -2948,7 +2960,7 @@
     new MutationObserver(syncSitFront).observe($('#sitFig'), { attributes: true, attributeFilter: ['src', 'style', 'class'] });
   }
   // 涙のきらめき：表情の絵（#portrait）に涙の光の絵があれば、同じ位置に重ねて、表示・非表示も合わせる
-  const GLINT = new Set(['hina_p_grief', 'hina_s_angrycry', 'hina_s_chest_cry', 'hina_s_grief', 'kei_p_crysmile', 'kei_p_grief', 'kei_s_crysmile', 'kei_s_teary', 'mio_f_nb_crysmile_inf', 'mio_f_nb_grief_inf', 'mio_p_crysmile', 'mio_p_grief', 'mio_p_nb_crysmile', 'mio_p_nb_grief', 'mio_s_crysmile', 'mio_s_grief', 'sota_p_crysmile', 'sota_p_grief', 'sota_s_crysmile', 'sota_s_grief', 'tsumugi_p_crysmile', 'tsumugi_p_grief', 'tsumugi_s_angrycry', 'tsumugi_s_crysmile', 'tsumugi_s_grief']);
+  const GLINT = new Set(['hina_p_grief', 'hina_s_angrycry', 'hina_s_chest_cry', 'hina_s_grief', 'kei_p_crysmile', 'kei_p_grief', 'kei_s_crysmile', 'kei_s_teary', 'mio_f_nb_crysmile_inf', 'mio_f_nb_grief_inf', 'mio_p_crysmile', 'mio_p_grief', 'mio_p_nb_crysmile', 'mio_p_nb_grief', 'mio_s_crysmile', 'mio_s_grief', 'sota_p_crysmile', 'sota_p_grief', 'sota_s_crysmile', 'sota_s_grief', 'sota_s_wethand', 'hina_s_bag_grief', 'tsumugi_s_crumple', 'tsumugi_p_crysmile', 'tsumugi_p_grief', 'tsumugi_s_angrycry', 'tsumugi_s_crysmile', 'tsumugi_s_grief']);
   // 表情の絵の名前から涙の光の絵を探す（保健室のミオ _inf は、光の絵がなければ _inf なしの名前で）
   const glintOf = name => !name ? null : GLINT.has(name) ? name : GLINT.has(name.replace(/_inf$/, '')) ? name.replace(/_inf$/, '') : null;
   function syncGlintPair(fig, gl, base) {
@@ -2958,7 +2970,22 @@
     gl.className = base + ' glint' + [...fig.classList].filter(c => c !== base).map(c => ' ' + c).join('');   // far・small などの大きさの指定も同じに
     gl.classList.toggle('show', on);
   }
-  const syncGlint = () => { syncGlintPair($('#portrait'), $('#portraitGlint'), 'portrait'); syncGlintPair($('#guestFig'), $('#guestGlint'), 'guest'); };
+  // 指先のキラリ：絵の名前 → 指先の位置（絵の画素）。その絵が出たときに一度だけ光らせる
+  const SPARK = { sota_s_wethand: [632, 355, 1024, 1536] };
+  function syncSpark() {
+    const fig = $('#portrait'), sp = $('#portraitSpark'); if (!sp) return;
+    const m = (fig.getAttribute('src') || '').match(/img\/([^\/]+)\.webp$/), k = m && m[1];
+    const on = !!(k && SPARK[k]) && fig.classList.contains('show') && fig.style.visibility !== 'hidden';
+    sp.className = 'portrait spark' + [...fig.classList].filter(c => c !== 'portrait' && c !== 'show').map(c => ' ' + c).join('');
+    if (!on) { sp.dataset.k = ''; return; }
+    if (sp.dataset.k !== k) {
+      sp.dataset.k = k; const [x, y, w, h] = SPARK[k];
+      sp.src = `img/${k}_spark.webp`; sp.style.transformOrigin = `${(x / w * 100).toFixed(2)}% ${(y / h * 100).toFixed(2)}%`;
+      void sp.offsetWidth;   // 同じ絵がもう一度出たときも、最初から光らせる
+    }
+    sp.classList.add('play');
+  }
+  const syncGlint = () => { syncGlintPair($('#portrait'), $('#portraitGlint'), 'portrait'); syncGlintPair($('#guestFig'), $('#guestGlint'), 'guest'); syncSpark(); };
   if ($('#portraitGlint') && $('#guestGlint')) for (const id of ['#portrait', '#guestFig']) new MutationObserver(syncGlint).observe($(id), { attributes: true, attributeFilter: ['src', 'style', 'class'] });
   // 涙の光が流れる動き（2026-11-14）：光の絵の、涙のある高さの範囲（上端〜下端、絵の高さに対する%）を一度だけ測り、
   // その範囲を光の帯が上から下へ流れる（3.4秒ごと。流れる間は約2.4秒、あとは消えて間をおく）。帯は少しずつ速くなる（しずくが伝うように）
@@ -4595,6 +4622,9 @@
     goNext(next);
   }
 
+  // 2026-11-14 作者の指示：2・3章に、1章で知ったことが少しだけ活きる小ネタを。1章（美術室）で調べたことを覚えているか
+  const knewIn = (id, k) => (P.mem[id] || []).includes(k) || (R && R.ch === id && R.know.has(k));
+  const knewArt = k => knewIn('art', k), knewMusic = k => knewIn('music', k);
   /* ---------- 共通の調べもの ---------- */
   const COMMON = {
     async window() {
@@ -4602,7 +4632,7 @@
       const first = !R.know.has('window'), second = !first && C.window2 && !R.know.has('window2');
       showCut((!first && C.windowImg2) || C.windowImg || 'ci_window');
       if (first) {
-        await say([...(C.window1 || ['窓の外は、ずっと同じ夕焼け。校庭には誰もいない。']), ...windowLine()]);
+        await say([...(C.window1 || ['窓の外は、ずっと同じ夕焼け。校庭には誰もいない。']), ...(C.windowNote ? C.windowNote() : []), ...windowLine()]);
         R.know.add('window'); await tick();
       } else if (second) {
         // 2回目：その章だけの、窓回りの新しい情報
@@ -4761,9 +4791,11 @@
                 ['ヒナ', '……ここにいても、ずっと聞こえるの。『サクラは、できたのに』って', 'despair'],
                 ['ヒナ', '……お姉ちゃんにもらった色鉛筆、まだ一本も削ってないや', 'despair'],
                 ['ヒナ', '……失敗作なら、失敗作らしく、最後は……', 'despair']],
-    // 心を閉ざすときの姿は、直前の動きに合わせる（手首を隠した／膝に顔をうずめた／それ以外＝言い訳や重ねた謝罪の後）
+    // 心を閉ざすときの姿は、直前の動きに合わせる（手首を隠した／膝に顔をうずめた／窓へ顔をそむけた／それ以外＝言い訳や重ねた謝罪の後）
+    // 2026-11-14 作者の指摘：窓へ顔をそむけた直後に「うつむいたまま」は合わないので、窓の外を見たままに
     closeLines: () => { const p = R.pose; R.pose = null;
-      return [p === 'wrist' ? 'ヒナは手首を隠したまま、もう何も言わなかった。' : p === 'knees' ? 'ヒナは膝に顔をうずめたまま、もう何も言わなかった。' : 'ヒナはうつむいたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。']; },
+      return [p === 'wrist' ? 'ヒナは手首を隠したまま、もう何も言わなかった。' : p === 'knees' ? 'ヒナは膝に顔をうずめたまま、もう何も言わなかった。'
+            : p === 'window' ? 'ヒナは窓の外へ顔を向けたまま、もう何も言わなかった。' : 'ヒナはうつむいたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。']; },
     hotspots: [
       ['sink', '流し', 'left:83.3%;top:37.5%;width:16.7%;height:45.8%'],
       ['shelf', '画材棚', 'left:75.8%;top:14.2%;width:13.3%;height:28%'],
@@ -4882,13 +4914,21 @@
           await say(['番号は覚えている。7・1・4。']);
           lockClick();
           await say(['カチリ。空の絆創膏の箱と、長袖のカーディガン。森先生の感想カード。……前に見たときのままだ。']);
-          await drawerDeep(); await tick(); return;
+          await drawerDeep();
+          // 2026-11-14 作者の指摘：覚えている番号で開けても、棚の下の切れ端は拾えるように（ゴミ箱・イーゼルの切れ端と同じ）。
+          // 前は絵のサインを知っていると拾えず、3枚がそろわなかった
+          if (!R.taken.scrap && !combined('painting')) {
+            await say(['……棚の下に紙切れが挟まっている。引き抜くと、絵の切れ端だった。']);
+            R.taken.scrap = true; await gotItem('pieceB');
+          }
+          await tick(); return;
         }
-        // 絵のサインを知っていれば、棚の下の切れ端は拾わずにダイヤル錠へ進める
-        if (!R.taken.scrap && !R.know.has('painting')) {
+        // 棚の下の切れ端は、まだ拾っていなければ拾う（絵のサインを知っていれば、そのままダイヤル錠へ進める）
+        if (!R.taken.scrap && !combined('painting')) {
           showCut('ci_shelf');
           await say(['画材棚。一番上の引き出しに、3桁のダイヤル錠がかかっている。', '……棚の下に紙切れが挟まっている。引き抜くと、絵の切れ端だった。']);
-          R.taken.scrap = true; await gotItem('pieceB'); await tick(); return;
+          R.taken.scrap = true; await gotItem('pieceB');
+          if (!R.know.has('painting') && !R.drawerOpen) { await tick(); return; }
         }
         if (R.drawerOpen) {
           showCut('ci_drawer');
@@ -4992,7 +5032,7 @@
       // 2026-11-13 作者の指摘：1段目は、2回目の手がかり（退部届など）を見ずに来られる。ここではまだ、破られた絵や引き出しの中身が家の事情と関係あるかは分からず、
       // 廊下の視線・足音の主や、絵を破ったのがヒナの母であることも明かされていない。選択肢は、絵の裏の大人の字（必ず見る）から言えることだけにする
       let a = await ask([['きれいな空だった。……裏の字、ヒナさんの字じゃないよね', 'yori'], ['あんなにきれいなのに、捨てちゃうのはもったいないよ', 'seiron'], ['裏に書いた人にも、ヒナさんを心配する気持ちがあったんじゃないかな', 'oitsu']], 1);
-      if (a === 'seiron') { await say([['ヒナ', '……捨てたんじゃない', 'angry'], 'ヒナは何か言いかけて、唇を噛んだ。', ['ヒナ', '……もういい', 'angry'], ['', 'ヒナは窓のほうへ顔をそむけた。……その横顔がほんの一瞬、寂しそうに見えた気がした。', 'window']]); return closeHeart(); }
+      if (a === 'seiron') { await say([['ヒナ', '……捨てたんじゃない', 'angry'], 'ヒナは何か言いかけて、唇を噛んだ。', ['ヒナ', '……もういい', 'angry'], ['', 'ヒナは窓のほうへ顔をそむけた。……その横顔がほんの一瞬、寂しそうに見えた気がした。', 'window']]); R.pose = 'window'; return closeHeart(); }
       if (a === 'oitsu') return shutOut([['ヒナ', '……心配？', 'surprise'],
                                 ['ヒナ', '……みんな、そう言うんだよね', 'sad'],
                                 'ヒナの目から、すっと温度が消えた。',
@@ -5419,6 +5459,8 @@
 
   const MUSIC = {
     windowImg2: 'mci_metronome',
+    // 1章の画板の裏（ヒナの空の配合）を見ていれば、16時と17時のあいだの空に気づく
+    windowNote: () => knewArt('recipe') ? ['（……美術室の画板の裏の字を思い出した。「16時の空：セルリアン＋白」「17時：ここにオレンジを一滴」）', '今の空は、ちょうどその間の色をしていた。'] : [],
     window2: ['窓際の低い棚に、メトロノームが置いてある。', '重りは、楽譜の指定よりずっと速い目盛りまで下げたままだった。', '目盛りの横に、右上がりの字で鉛筆の印。「ここまでいける」。'],
     clock2: ['時計の下に、音楽室の使用予約の表が貼ってある。', '「火曜 16:30〜17:30　有志練習　井上・高瀬」。4月から毎週同じ欄に、同じ二人の名前。', '今日、7/15の欄にも二人の名前が書いてあった。'],
     id: 'music', key: 'sota', memory: ['（……丸めた楽譜を脇に挟んで、ソウタは手帳に名前を書いてくれた。一画ずつ、丁寧に）'],
@@ -5427,7 +5469,7 @@
     // 2026-11-10：座り絵の椅子だけの絵を、ソウタが消えても残す（背景の椅子は消した）
     sit: { src: 'sota_sit', chair: 'sota_bench', style: 'left:54.2%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
-    faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
+    faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', wetHand: 'sota_wethand', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
     lost: 'ソウタのパートだけの楽譜',
     idleFree: '（ソウタが待っている。チャイムが鳴る前に）',
     async onTick() {
@@ -5503,6 +5545,7 @@
                    '「一人じゃ？」',
                    ['ソウタ', '……関係ないだろ', 'angry'],
                    'それきり、ソウタは閉じた蓋をじっと見下ろした。膝の上で両手を固く握りしめている。',
+                   ...(knewArt('notice2') ? ['（……ソウタ。名字じゃなくて、名前で呼ぼうと思った。美術室の貼り紙の裏の「名前で呼ばれたい」が、まだ頭に残っていた）'] : []),
                    '【操作】気になる場所をタップすると調べられます。この部屋の時間は30分。調べるたびに時計が3分進み、17:00になるとチャイムが鳴ります。話しかけても時間は進みません。']);
       } else {
         await say(['……また、この音楽室だ。', '扉は今度も開かない。', '16:30。ピアノの前には、ソウタがいる。',
@@ -5654,7 +5697,9 @@
       async trash() {
         if (!R.taken.trash) {
           showCut('mci_trash');
-          await say(['丸めたプリントの間に小さく折りたたまれた五線譜が混じっていた。']);
+          await say(['丸めたプリントの間に小さく折りたたまれた五線譜が混じっていた。',
+                     // 1章で、ゴミ箱の絵の切れ端からヒナの「捨てたんじゃない」までを知っていれば
+                     ...(knewArt('painting') ? ['（美術室のゴミ箱にも、破れた空の絵が混じっていた。……破った人が、本当に捨てたかったとは限らない）'] : [])]);
           R.taken.trash = true; await gotItem('frag4'); await tick();
         } else if (!R.know.has('intro2')) {
           R.know.add('intro2');
@@ -5800,11 +5845,13 @@
                    '（……うなずいてしまったら、何かを間違える気がした）']);
       } else if (a === 'oitsu') {
         // 追い詰める答えを言い直して戻ったとき：言われた言葉を受けて話し出す（寄り添う答えの返事とは分ける）
-        await say([['ソウタ', '……前なんか、向けるわけないだろ', 'down'], ['ソウタ', 'ほんとは、ちゃんと顔見て謝りたかった。……次の日のリハで言えばいいって、思ってた', 'grief'],
-                   R.seen.has('lid') ? 'ソウタの目から、ぽたりと一粒、鍵盤の上に落ちた。' : 'ソウタの目から、ぽたりと一粒、鍵盤の蓋に落ちた。']);
+        await say([['ソウタ', '……前なんか、向けるわけないだろ', 'down'], ['ソウタ', 'ほんとは、ちゃんと顔見て謝りたかった。……次の日のリハで言えばいいって、思ってた', 'blank'],
+                   // 2026-11-14 作者の指示：楽譜の裏を読むまでは泣かない。こらえているのではなく、泣くこと自体を忘れている。受け止めきれない悲しみを、自分を責める気持ちや怒りに置き換えている
+                   R.seen.has('lid') ? 'ソウタは開いたままの鍵盤を見ていた。泣き方を、どこかに置いてきたみたいに。' : 'ソウタは閉じた鍵盤の蓋を見ていた。泣き方を、どこかに置いてきたみたいに。']);
       } else {
-        await say([['ソウタ', '……うん', 'sad'], ['ソウタ', 'ほんとは、ちゃんと顔見て謝りたかった。……次の日のリハで言えばいいって、思ってた', 'grief'],
-                   R.seen.has('lid') ? 'ソウタの目から、ぽたりと一粒、鍵盤の上に落ちた。' : 'ソウタの目から、ぽたりと一粒、鍵盤の蓋に落ちた。']);
+        await say([['ソウタ', '……うん', 'sad'], ['ソウタ', 'ほんとは、ちゃんと顔見て謝りたかった。……次の日のリハで言えばいいって、思ってた', 'blank'],
+                   // 2026-11-14 作者の指示：楽譜の裏を読むまでは泣かない。こらえているのではなく、泣くこと自体を忘れている。受け止めきれない悲しみを、自分を責める気持ちや怒りに置き換えている
+                   R.seen.has('lid') ? 'ソウタは開いたままの鍵盤を見ていた。泣き方を、どこかに置いてきたみたいに。' : 'ソウタは閉じた鍵盤の蓋を見ていた。泣き方を、どこかに置いてきたみたいに。']);
       }
 
       // 3段目
@@ -5859,12 +5906,15 @@
       bgm('musicbox');
       await say([['ソウタ', '……この『し』の、はねかた', 'surprise'],
                  ['ソウタ', 'ハルの字だ。……小学校のときから、ずっと、このくせ', 'surprise'],
-                 ['ソウタ', '……仲直りしたら、続き弾こう', 'grief'],
+                 ['ソウタ', '……仲直りしたら、続き弾こう', 'surprise'],
                  '何度も目で追ってやっと読めた字を、ソウタは一目で読んだ。',
                  'ソウタの指がその字をなぞった。']);
       hideCut();
       await say([
-                 ['ソウタ', '……あのメッセージのあとだ。予備校が終わって、帰る前に書いたんだ', 'surprise'],
+                 // 2026-11-14：この章で涙が見えるのは、ここから（読む前は泣き方を忘れている）。楽譜の裏のカットインは立ち絵を覆うので、閉じてから
+                 ['', '……ぽたり、と。鉛筆の字のすぐ横に、しずくが落ちた。', 'grief'],
+                 ['', 'ソウタは自分の頬に触れた。濡れた指先を、知らないものみたいに見つめていた。', 'wetHand'],
+                 ['ソウタ', '……あのメッセージのあとだ。予備校が終わって、帰る前に書いたんだ', 'grief'],
                  ['ソウタ', '返事がなかったんじゃない。……ここに、書いてたのかよ', 'grief'],
                  ['ソウタ', '……あいつ、ほんとバカ。謝らなきゃいけないの、俺のほうなのに', 'grief'],
                  '泣きながら、ソウタが少しだけ笑った。',
@@ -6030,6 +6080,7 @@
     // 図書室は特別教室棟の2階で、窓は西向き（本校舎も保健室も見えない）。5章のツムギ（保健室の窓からミオの帰り道を見送っていた）と対になる伏線
     windowImg: 'ci_window_library',   // 2階の窓（美術室・音楽室の3階より1階分低い。木々の茂みが窓の下を覆う）
     window1: ['西向きの窓。すぐ外の木々の茂みの上に、ずっと同じ夕焼けが広がっている。', '木々の間から家並みが少しのぞき、その向こうに山並み。太陽は山の少し上にかかったまま、動かない。'],
+    windowNote: () => knewArt('recipe') ? ['（17時の空。……「ここにオレンジを一滴。入れすぎない」。ヒナなら、この空をどう塗るだろう）'] : [],
     window2: ['窓の下の低い書架に、鉢植えが置いてある。土は、まだ湿っていた。', '鉢に、水やり当番の札が刺さっている。丸い字の「白石」は、西日で薄くなっていた。', 'その下に、細い字で「水野」。こちらの字は、まだ新しい。'],
     clock2: ['時計の下に、開館時間の札。「放課後　〜17:00」。', 'その下に小さな付箋が貼ってある。「7/15　当番　水野・伊藤」。……閉館の時刻を過ぎても残っているのは、ミオ一人だけらしい。'],
     id: 'library', key: 'mio', memory: ['（……ミオは本を胸に抱え直してから、手帳の端に小さく名前を書いた。貸出カードと同じ字だった）', '（図書室の隅の席。閉館のチャイムが鳴るまで、ここにいた日がある。……家に、帰りたくなかった）'], name: 'ミオ', who: 'この子', startMin: 60, room: '図書室', hall: 'hall_library', label: '第三章「図書室」', bg: 'library', bgClock: { cx: 1437, cy: 78, rx: 31, ry: 61 },
@@ -6164,7 +6215,10 @@
                      '「わたしは、もうひとつの椅子を、部屋のすみに片づけた。それから、扉に鍵をかけた。」',
                      '「これで、だれも来ない。だれも、傷つけない。」',
                      '最後のページの隅に小さな字で一行。「ごめんね。あなたの椅子を、片づけてしまって」',
-                     '……あの本には一文字も書き込まれていなかった。結末を変えたのは、このノートの中だけだ。']);
+                     '……あの本には一文字も書き込まれていなかった。結末を変えたのは、このノートの中だけだ。',
+                     'ノートを閉じて、元のすき間の奥へそっと戻した。',
+                     // 2章で、写真を楽譜ファイルに戻したことがあれば
+                     ...(knewMusic('photo') ? ['（音楽室の写真と同じだ。この子の大事なものは、この子の場所に）'] : [])]);
             await tick(); return;
           }
           await say(['913の棚。すき間は『ひとりぶんの椅子』のあるはずの場所にある。', '奥には椅子を片づけてしまう物語のノートが差し込まれている。']);
@@ -6182,7 +6236,10 @@
                      '「わたしは、もうひとつの椅子を、部屋のすみに片づけた。それから、扉に鍵をかけた。」',
                      '「これで、だれも来ない。だれも、傷つけない。」',
                      '最後のページの隅に小さな字で一行。「ごめんね。あなたの椅子を、片づけてしまって」',
-                     '……あの本には一文字も書き込まれていなかった。結末を変えたのは、このノートの中だけだ。']);
+                     '……あの本には一文字も書き込まれていなかった。結末を変えたのは、このノートの中だけだ。',
+                     'ノートを閉じて、元のすき間の奥へそっと戻した。',
+                     // 2章で、写真を楽譜ファイルに戻したことがあれば
+                     ...(knewMusic('photo') ? ['（音楽室の写真と同じだ。この子の大事なものは、この子の場所に）'] : [])]);
           await tick();
         } else await say(['913の棚。背のラベルの番号が前後して入り混じっている。棚の端に、一冊ぶんのすき間。', '棚の柱の札。「本は、左から請求記号の順に」']);
         // 調べたことでチャイムが鳴ったら、本には触れない
@@ -6228,7 +6285,9 @@
           } else await say(['「ツムギへ　ごめんね」。貼り出された紹介文の中に、ずっと隠れていた言葉。']);
           return;
         }
-        if (!first) await say(['隣の当番表では、「水野」の名前だけが黒いペンで塗りつぶされていた。']);
+        if (!first) await say(['隣の当番表では、「水野」の名前だけが黒いペンで塗りつぶされていた。',
+                               // 2章の黒板（「ハル」の名前にだけ二本線）を見ていれば
+                               ...(knewMusic('board') && !R.seen.has('halLine') && R.seen.add('halLine') ? ['（音楽室の黒板でも、「ハル」の名前にだけ線が引かれていた。……でも、あの線の下の名前は、まだ読めた）'] : [])]);
       },
       async trash() {
         if (!R.taken.trash) {
