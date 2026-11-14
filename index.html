@@ -111,10 +111,13 @@
   .glint { display: none; }
   @media (pointer: coarse), (max-width: 820px) {
     .glint { display: block; opacity: 0; transition: none; }
-    .glint.show { transform: none; animation: tearGlint 3.4s ease-in-out infinite; }
+    /* 2026-11-14 作者の指示：全体の点滅ではなく、光が涙の筋にそって上から下へ少しずつ流れる。
+       光の帯（--gy の高さ・--gw の幅）だけを見せるマスクを、下の JS（glintFlow）が涙のある高さの範囲で動かす */
+    .glint.show { transform: none; opacity: .95;
+      -webkit-mask-image: linear-gradient(to bottom, transparent calc(var(--gy, -30%) - var(--gw, 4%)), #000 var(--gy, -30%), transparent calc(var(--gy, -30%) + var(--gw, 4%)));
+              mask-image: linear-gradient(to bottom, transparent calc(var(--gy, -30%) - var(--gw, 4%)), #000 var(--gy, -30%), transparent calc(var(--gy, -30%) + var(--gw, 4%))); }
   }
-  @keyframes tearGlint { 0%, 62%, 100% { opacity: 0; } 74% { opacity: .95; } 82% { opacity: .35; } 88% { opacity: .7; } }
-  @media (prefers-reduced-motion: reduce) { .glint.show { animation: none; opacity: .5; } }
+  @media (prefers-reduced-motion: reduce) { .glint.show { -webkit-mask-image: none; mask-image: none; opacity: .5; } }
   /* 章の子とは別に、その場にいる子（第五章のミオ）。左寄りに立つ。far は少し離れた所（二回り小さく、奥に） */
   .guest { position: absolute; left: 4%; bottom: -7%; height: 100%; width: auto; opacity: 0; transition: opacity .45s ease; pointer-events: none; z-index: 3; }   /* 大きさ・位置は動かさない（出るときにズームして見えないように） */
   .guest.show { opacity: 1; }
@@ -2957,6 +2960,32 @@
   }
   const syncGlint = () => { syncGlintPair($('#portrait'), $('#portraitGlint'), 'portrait'); syncGlintPair($('#guestFig'), $('#guestGlint'), 'guest'); };
   if ($('#portraitGlint') && $('#guestGlint')) for (const id of ['#portrait', '#guestFig']) new MutationObserver(syncGlint).observe($(id), { attributes: true, attributeFilter: ['src', 'style', 'class'] });
+  // 涙の光が流れる動き（2026-11-14）：光の絵の、涙のある高さの範囲（上端〜下端、絵の高さに対する%）を一度だけ測り、
+  // その範囲を光の帯が上から下へ流れる（3.4秒ごと。流れる間は約2.4秒、あとは消えて間をおく）。帯は少しずつ速くなる（しずくが伝うように）
+  const GLINT_RANGE = {};
+  function glintRange(gl) {
+    const u = gl.getAttribute('src'); if (!u) return null;
+    if (GLINT_RANGE[u]) return GLINT_RANGE[u];
+    if (!gl.complete || !gl.naturalHeight) return null;
+    try {
+      const s = 4, w = Math.ceil(gl.naturalWidth / s), h = Math.ceil(gl.naturalHeight / s), c = document.createElement('canvas');
+      c.width = w; c.height = h; const x = c.getContext('2d'); x.drawImage(gl, 0, 0, w, h);
+      const d = x.getImageData(0, 0, w, h).data; let y0 = -1, y1 = -1;
+      for (let y = 0; y < h; y++) for (let i = y * w * 4 + 3; i < (y + 1) * w * 4; i += 4) if (d[i] > 40) { if (y0 < 0) y0 = y; y1 = y; break; }
+      GLINT_RANGE[u] = y0 < 0 ? [0, 100] : [y0 / h * 100, (y1 + 1) / h * 100];
+    } catch (e) { GLINT_RANGE[u] = [0, 100]; }
+    return GLINT_RANGE[u];
+  }
+  const GLINT_REDUCE = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  (function glintFlow(t) {
+    if (!GLINT_REDUCE) for (const gl of document.querySelectorAll('.glint.show')) {
+      const r = glintRange(gl); if (!r) continue;
+      const [a, b] = r, len = b - a, w = Math.max(1.2, len * 0.28), k = ((t % 3400) / 3400 - 0.1) / 0.7;
+      const y = k < 0 || k > 1 ? -30 : a - w + (len + 2 * w) * Math.pow(k, 1.4);
+      gl.style.setProperty('--gy', y.toFixed(2) + '%'); gl.style.setProperty('--gw', w.toFixed(2) + '%');
+    }
+    requestAnimationFrame(glintFlow);
+  })(0);
   // 保健室前の廊下の窓から見える特別教室棟の明かり。背景が変わるたびに、その周回の結果に合わせて重ねる
   // 18:00：まだ行っていない教室と閉め出された教室だけ点く（外が明るいので弱く見える）。18:30（BAD4）：息を引き取った子の部屋だけ消える
   (function () {
