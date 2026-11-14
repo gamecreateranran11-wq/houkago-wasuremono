@@ -1245,7 +1245,7 @@
   const STAND_SET = { hina: 'angry despair down grief sad smile surprise pout', sota: 'angry crysmile despair down grief sad smile surprise',
                       mio: 'angry crysmile despair down grief sad smile surprise stroke offer offer_sad nb nb_apology nb_grief nb_crysmile nb_skirt nb_surprise nb_down nb_plead nbleave nbleavewonder', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
-  const STAND_NEAR = { crumple: 'crysmile', reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry',
+  const STAND_NEAR = { crumple: 'crysmile', reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry', window: 'sad',
                        blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', grip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise', sleeve: 'sad', wristhate: 'sad' };
   // 座り絵が無い表情は、近い座り絵で代える（ミオの表紙を撫でる→撫でてうつむく。ヒナのむくれ顔は立って描いた後の一言だけで、
   // 座ってむくれる場面はないが、先読みで無い絵を探しに行かないように、うつむきにしておく）
@@ -4682,7 +4682,7 @@
     // 2026-11-10：椅子を背景の空いた椅子の位置・奥行きにそろえ、手前の作業台を椅子の上に重ねる（作者の指示）
     sit: { src: 'hina_sit_window', chair: 'hina_chair', style: 'left:2.34%;top:36.43%;height:22.95%', front: 'polygon(8.85% 49.51%, 26.04% 45.12%, 26.04% 55.86%, 11.78% 55.86%, 11.78% 100%, 9.96% 100%, 9.96% 51.56%, 8.85% 51.56%)' },
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
-    faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout' , grip: 'hina_grip',
+    faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout' , grip: 'hina_grip', window: 'hina_window',
              // スケッチブックの入った鞄を抱えてから、空を描き始めるまで
              bag: 'hina_bag', bagSad: 'hina_bag_sad', bagGrief: 'hina_bag_grief', bagSmile: 'hina_bag_smile', bagDown: 'hina_bag_down',
              sleeve: 'hina_sleeve', wristHate: 'hina_wristhate' },   // 袖の中で手を握りこむ（悲しみ）／左手首を押さえたまま自分を嫌う顔
@@ -4963,7 +4963,7 @@
       // 2026-11-13 作者の指摘：1段目は、2回目の手がかり（退部届など）を見ずに来られる。ここではまだ、破られた絵や引き出しの中身が家の事情と関係あるかは分からず、
       // 廊下の視線・足音の主や、絵を破ったのがヒナの母であることも明かされていない。選択肢は、絵の裏の大人の字（必ず見る）から言えることだけにする
       let a = await ask([['きれいな空だった。……裏の字、ヒナさんの字じゃないよね', 'yori'], ['あんなにきれいなのに、捨てちゃうのはもったいないよ', 'seiron'], ['裏に書いた人にも、ヒナさんを心配する気持ちがあったんじゃないかな', 'oitsu']], 1);
-      if (a === 'seiron') { await say([['ヒナ', '……捨てたんじゃない', 'angry'], 'ヒナは何か言いかけて、唇を噛んだ。', ['ヒナ', '……もういい', 'angry'], ['', 'ヒナは窓のほうへ顔をそむけた。……その横顔がほんの一瞬、寂しそうに見えた気がした。', 'sad']]); return closeHeart(); }
+      if (a === 'seiron') { await say([['ヒナ', '……捨てたんじゃない', 'angry'], 'ヒナは何か言いかけて、唇を噛んだ。', ['ヒナ', '……もういい', 'angry'], ['', 'ヒナは窓のほうへ顔をそむけた。……その横顔がほんの一瞬、寂しそうに見えた気がした。', 'window']]); return closeHeart(); }
       if (a === 'oitsu') return shutOut([['ヒナ', '……心配？', 'surprise'],
                                 ['ヒナ', '……みんな、そう言うんだよね', 'sad'],
                                 'ヒナの目から、すっと温度が消えた。',
