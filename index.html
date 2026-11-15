@@ -2960,7 +2960,7 @@
     new MutationObserver(syncSitFront).observe($('#sitFig'), { attributes: true, attributeFilter: ['src', 'style', 'class'] });
   }
   // 涙のきらめき：表情の絵（#portrait）に涙の光の絵があれば、同じ位置に重ねて、表示・非表示も合わせる
-  const GLINT = new Set(['hina_p_grief', 'hina_s_angrycry', 'hina_s_chest_cry', 'hina_s_grief', 'kei_p_crysmile', 'kei_p_grief', 'kei_s_crysmile', 'kei_s_teary', 'mio_f_nb_crysmile_inf', 'mio_f_nb_grief_inf', 'mio_p_crysmile', 'mio_p_grief', 'mio_p_nb_crysmile', 'mio_p_nb_grief', 'mio_s_crysmile', 'mio_s_grief', 'sota_p_crysmile', 'sota_p_grief', 'sota_s_crysmile', 'sota_s_grief', 'sota_s_wethand', 'hina_s_bag_grief', 'tsumugi_s_crumple', 'tsumugi_p_crysmile', 'tsumugi_p_grief', 'tsumugi_s_angrycry', 'tsumugi_s_crysmile', 'tsumugi_s_grief']);
+  const GLINT = new Set(['hina_p_grief', 'hina_s_angrycry', 'hina_s_chest_cry', 'hina_s_grief', 'kei_p_crysmile', 'kei_p_grief', 'kei_s_crysmile', 'kei_s_teary', 'mio_f_nb_crysmile_inf', 'mio_f_nb_grief_inf', 'mio_p_crysmile', 'mio_p_grief', 'mio_p_nb_crysmile', 'mio_p_nb_grief', 'mio_s_crysmile', 'mio_s_grief', 'sota_p_crysmile', 'sota_p_grief', 'sota_s_crysmile', 'sota_s_grief', 'sota_s_wethand', 'hina_s_bag_grief', 'hina_s_bag_crysmile', 'tsumugi_s_crumple', 'tsumugi_p_crysmile', 'tsumugi_p_grief', 'tsumugi_s_angrycry', 'tsumugi_s_crysmile', 'tsumugi_s_grief']);
   // 表情の絵の名前から涙の光の絵を探す（保健室のミオ _inf は、光の絵がなければ _inf なしの名前で）
   const glintOf = name => !name ? null : GLINT.has(name) ? name : GLINT.has(name.replace(/_inf$/, '')) ? name.replace(/_inf$/, '') : null;
   function syncGlintPair(fig, gl, base) {
@@ -3105,7 +3105,9 @@
     $('#sitFig').classList.toggle('gone', R.st === 'vanished' || R.st === 'shut' || !!R.standing);
     $('#leftover').style.display = R.st === 'vanished' ? '' : 'none';
     // 2026-11-10：ほどけた後は、見送りの絵に替わるまで、調べる場所の枠を出さない（作者の指示）
-    if (R.st === 'unraveled') $('#hsLayer').style.visibility = 'hidden';
+    // 2026-11-15：ただし、先へ進むのに調べる必要がある場所（青い絵の具のある流しなど。章ごとの freeSpots）の枠だけは出す。
+    // 前は全部隠していたので、絵の具をまだ拾っていないと流しを調べられず、進めなくなっていた
+    if (R.st === 'unraveled') { const keep = C.freeSpots ? C.freeSpots() : []; $('#hsLayer').querySelectorAll('.hs').forEach(b => { b.style.display = keep.includes(b.dataset.id) ? '' : 'none'; }); }
 
     const inv = $('#inv'); inv.innerHTML = '';
     const add = (label, cls, fn, src) => {
@@ -4744,9 +4746,10 @@
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
     faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout' , grip: 'hina_grip', window: 'hina_window',
              // スケッチブックの入った鞄を抱えてから、空を描き始めるまで
-             bag: 'hina_bag', bagSad: 'hina_bag_sad', bagGrief: 'hina_bag_grief', bagSmile: 'hina_bag_smile', bagDown: 'hina_bag_down',
+             bag: 'hina_bag', bagSad: 'hina_bag_sad', bagGrief: 'hina_bag_grief', bagSmile: 'hina_bag_smile', bagCrySmile: 'hina_bag_crysmile', bagDown: 'hina_bag_down',
              sleeve: 'hina_sleeve', wristHate: 'hina_wristhate' },   // 袖の中で手を握りこむ（悲しみ）／左手首を押さえたまま自分を嫌う顔
     lost: '顔のないスケッチブック',
+    freeSpots: () => R.items.has('blue') ? ['char'] : ['sink'],   // ほどけた後に調べられる場所
     idleFree: '（ヒナが待っている。チャイムが鳴る前に）',
     async onTick() {
       await memStage('gaze', [
@@ -5195,8 +5198,8 @@
                  ['ヒナ', '何を描いても、どうせまた"失敗作"なんだって。……自分でそう思っちゃうの。それが一番悔しい', 'angryCry'],
                  'ヒナは袖で乱暴に目元をぬぐった。',
                  ['', 'ヒナはスケッチブックの入った鞄を、胸にぎゅっと抱えた。', 'bagGrief'],
-                 ['ヒナ', '……それに、自分の顔なんて。見たら、きっと嫌いになる', 'bagSad'],
-                 '「嫌いになっても、いいと思う。……それでも、今のヒナさんの顔を、ヒナさん自身に見てあげてほしい」',
+                 ['ヒナ', '……それに、自分の顔なんて。見たら、きっと嫌いになる', 'bagGrief'],   // 2026-11-15 作者の指示：鞄を抱えた泣き顔のまま
+                 ['', '「嫌いになっても、いいと思う。……それでも、今のヒナさんの顔を、ヒナさん自身に見てあげてほしい」', 'bagGrief'],
                  'ヒナは長い間黙っていた。窓の外の夕焼けを見て、それから自分の手を見た。']);
       bgm(null);  // チェロとフルートを消して、しばらく音のない時間
       await say(['ぎゅっと鞄を抱えていた腕から、少しずつ力が抜けていく。',
@@ -5207,7 +5210,7 @@
                  ['ヒナ', '褒められるためじゃなくて。……こんな私の顔を、私が、大事に描いてあげても', 'bagGrief'],
                  '「いいよ。……ヒナさんの顔は、ヒナさんが大事にしていいんだ」',
                  '「空も、ヒナさんの顔も。……見たいな、ヒナさんが描いたの」',
-                 ['', 'ヒナは袖で目元をこすって、それから少しだけ笑った。', 'bagSmile']]);
+                 ['', 'ヒナは袖で目元をこすって、それから少しだけ笑った。', 'bagCrySmile']]);   // 2026-11-15 作者の指示：涙を浮かべて微笑む
       R.st = 'unraveled'; render();
       bgm('unravel');
       await say([`……張りつめていた部屋の空気がふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ヒナ', 'ねえ。青い絵の具、持ってない？', 'smile']]);
@@ -5480,6 +5483,7 @@
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
     faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', wetHand: 'sota_wethand', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
     lost: 'ソウタのパートだけの楽譜',
+    freeSpots: () => (R.items.has('secondo') || R.know.has('melody')) ? ['piano', 'char'] : ['stand', 'shelf', 'timpani', 'trash'].filter(k => !R.taken[k]),   // ほどけた後：切れ端の残っている場所、そろったらピアノ
     idleFree: '（ソウタが待っている。チャイムが鳴る前に）',
     async onTick() {
       await memStage('memory', [
@@ -6100,6 +6104,7 @@
     leftover: '', leftoverImg: 'l_left',
     faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap', clench: 'mio_clench', clenchDown: 'mio_clenchdown', frown: 'mio_frown', look: 'mio_look' },   // clenchDown：本を握りしめて伏せ目／frown：眉をひそめてうつむく   // lap：本を膝の上に下ろして小さく決意した顔／clench：本を強く握りしめ、目をぎゅっとつむった悲痛な顔
     lost: '返却期限の過ぎた一冊',
+    freeSpots: () => ['counter', 'char'],   // ほどけた後：カウンターのペン
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う。背景 infirmary の壁の時計は bgClock: { cx: 829, cy: 202, rx: 49, ry: 48 }
     clock: { img: 'ci_clock_library', cx: 778, cy: 411, s: 0.84 },
     idleFree: '（ミオが待っている。チャイムが鳴る前に）',
@@ -6723,6 +6728,7 @@
     leftover: '', leftoverImg: 'g_left',
     faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', softSmile: 'kei_softsmile', serious: 'kei_serious', breath: 'kei_breath', blank: 'kei_blank', teary: 'kei_teary', sadGrip: 'kei_sadgrip' },
     lost: '片方だけのバッシュ',
+    freeSpots: () => ['ball', 'char'],   // ほどけた後：床のボール
     clock: { img: 'ci_clock_gym', cx: 868, cy: 448, s: 0.86 },
     idleFree: '（ケイが待っている。チャイムが鳴る前に）',
     // 部誌・ケイの荷物を調べ、作戦ボードを解いて（ケイの組みたかった並びが分かって）いたら、対話に入れる
