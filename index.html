@@ -3467,7 +3467,7 @@
   function tel(ev, d = {}) {
     if (!telOn() || replay) return;   // 同意がない／ロード直後の早送り中は送らない
     if (!P.tid) { P.tid = Math.random().toString(36).slice(2, 12); saveP(); }   // 端末ごとのランダムな番号（名前などとは結びつかない）
-    telQ.push({ d: P.tid, s: TEL_SESSION, t: Date.now(), v: VERSION, e: ev, r: P.runNo || 1, ...d });
+    telQ.push({ d: P.tid, s: TEL_SESSION, t: Date.now(), v: VERSION, e: ev, r: P.runNo || 1, g: P.resets || 0, ...d });   // g：この端末でプレイデータをリセットした回数（0＝初めてのデータ）。集計で「初回」と「リセット後」を分けるため
     clearTimeout(telTimer);
     if (telQ.length >= 20) telFlush(); else telTimer = setTimeout(telFlush, 8000);
   }
@@ -8678,7 +8678,11 @@
       <p class="note">消したデータは元に戻せません。</p>`, '', ['リセットする', 'やめる']);
     if (v === 0) {
       // 手帳の名前・章ごとの調べた記憶・屋上の途中なども含めて消す（前は一部が残り、リセット直後も「前回のつづきから 屋上」が出ていた）
-      const keep = { sound: P.sound, skip: P.skip, textSpeed: P.textSpeed, bgmVol: P.bgmVol, seVol: P.seVol, bgmLazy: P.bgmLazy };
+      // 遊び方の記録：リセット前に届いた記録は消さない（累計にそのまま残す）。リセットしたことを1行送り、端末の番号と同意はそのまま、リセットの回数を1つ増やす
+      //   → リセット後の記録は同じ端末の「リセット後のデータ」として届き、集計の表で初回と分けて数えられる（同じ人が別人として二重に数えられない）
+      const hadTel = P.telemetry !== undefined;
+      if (telOn()) { tel('reset', { runs: P.runs || 0, ends: Object.keys(P.endings || {}).length }); telFlush(); }
+      const keep = { sound: P.sound, skip: P.skip, textSpeed: P.textSpeed, bgmVol: P.bgmVol, seVol: P.seVol, bgmLazy: P.bgmLazy, ...(hadTel ? { telemetry: P.telemetry } : {}), ...(P.tid ? { tid: P.tid } : {}), resets: (P.resets || 0) + 1 };
       try {
         [KEY, SAVE_KEY, ROOF_KEY, ROOF_START_KEY, READ_KEY, ...SLOTS.map(SLOT_KEY)].forEach(k => localStorage.removeItem(k));
         localStorage.setItem(KEY, JSON.stringify({ shelf: {}, runs: 0, endings: {}, ...keep }));
