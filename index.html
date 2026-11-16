@@ -3033,16 +3033,16 @@
     };
     new MutationObserver(ms => { if (ms.some(x => x.attributeName === 'src')) sync(); else follow(); }).observe(bg, { attributes: true, attributeFilter: ['src', 'style'] });
   })();
-  // 屋上の雨：背景が rooftop_rain の間だけ、絵の座標（1536×1024）で動く雨を重ねる。奥・中・手前の3層で、中と手前は床で跳ねる。強さは2段階（h＝0 雨、h＝1 強い雨。rainHeavier で強い雨へ）
+  // 屋上の雨：背景が rooftop_rain の間だけ、絵の座標（1536×1024）で動く雨を重ねる。奥・中・手前の3層。跳ねるのは低い壁の上だけ。強さは2段階（h＝0 雨、h＝1 強い雨。rainHeavier で強い雨へ）
   const roofRain = (() => {
     if (!$('#bgRain')) return { heavier() {} };   // 後日談のページ（この部分のコードを取り込む）には屋上の雨がない
-    const cv = $('#bgRain'), W = 1536, H = 1024, FLOOR = 716, small = Math.min(innerWidth, innerHeight) < 560, q = small ? .75 : 1;
+    const cv = $('#bgRain'), W = 1536, H = 1024, WALL = 897, small = Math.min(innerWidth, innerHeight) < 560, q = small ? .75 : 1;
     cv.width = W * q; cv.height = H * q;
     const x = cv.getContext('2d'), R = (a, b) => a + Math.random() * (b - a);
     const LAYER = [
-      { n: small ? 190 : 300, len: [18, 38], v: [1050, 1350], w: 1.2, a: .26, end: [FLOOR - 70, FLOOR + 6], hit: 0 },
-      { n: small ? 150 : 220, len: [42, 80], v: [1650, 2050], w: 1.8, a: .36, end: [FLOOR + 6, 900], hit: .55 },
-      { n: small ? 40 : 56, len: [100, 170], v: [2500, 3100], w: 2.8, a: .42, end: [890, 1060], hit: 1 }
+      { n: small ? 190 : 300, len: [18, 38], v: [1050, 1350], w: 1.2, a: .26, end: [H, H + 60], hit: 0 },
+      { n: small ? 150 : 220, len: [42, 80], v: [1650, 2050], w: 1.8, a: .36, end: [H, H + 80], hit: 0 },
+      { n: small ? 40 : 56, len: [100, 170], v: [2500, 3100], w: 2.8, a: .42, end: [H + 20, H + 120], hit: 0 }
     ];
     const drops = [], hits = [];
     const reset = (d, first) => { const L = d.L; d.len = R(L.len[0], L.len[1]); d.v = R(L.v[0], L.v[1]); d.end = R(L.end[0], L.end[1]);
@@ -3059,12 +3059,15 @@
         const lim = L.n * share;
         drops.forEach(d => { if (d.L !== L) return;
           const s = d.v * dt * fast; d.y += s; d.x += s * gust;
-          if (d.y >= d.end) { if (L.hit && d.i < lim && hits.length < 240) hits.push({ x: d.x, y: d.end, t: 0, life: R(.16, .3), s: L.hit * (.6 + (d.end - FLOOR) / 340) }); reset(d); }
+          if (d.y >= d.end) { reset(d); }
           if (d.i < lim) { x.moveTo(d.x, d.y); x.lineTo(d.x - d.len * long * gust, d.y - d.len * long); }
         });
         x.stroke();
       });
-      // 床で跳ねる：広がる小さな輪と、上へ飛ぶしぶき
+      // 2026-11-15：屋上の絵を主人公の目線（フェンスの3m手前から西）に描き直した。床は映らないので、雨は絵の下まで落ち、
+      // 跳ねるのはフェンスの下の低い壁の上の面（y≈897）だけ
+      if (hits.length < 70 && Math.random() < dt * (16 + 26 * h)) hits.push({ x: R(0, W), y: R(WALL - 4, WALL + 5), t: 0, life: R(.16, .3), s: R(.7, 1.1) });
+      // 壁の上で跳ねる：広がる小さな輪と、上へ飛ぶしぶき
       for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i]; h.t += dt; const p = h.t / h.life;
         if (p >= 1) { hits.splice(i, 1); continue; }
         const r = (3 + 13 * p) * h.s; x.globalAlpha = (1 - p) * .55; x.strokeStyle = 'rgb(205,218,235)'; x.lineWidth = 1.1;
