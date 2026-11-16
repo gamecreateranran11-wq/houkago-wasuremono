@@ -1308,12 +1308,22 @@
   let guest = null;
   function guestRender() {
     const g = $('#guestFig');
-    if (!guest || !C || !C.faces[guest.f]) { g.classList.remove('show'); return; }
+    if (!guest || !C || !C.faces[guest.f]) { guestRender.tok = (guestRender.tok || 0) + 1; g.classList.remove('show'); return; }
     // small：一回り小さい全身の絵（mio_f_*）。脚は画面の下で切れる（2026-11-10、第五章でミオがベッドから一歩さがった後）
-    if ((guest.far === 'small' || guest.far === 'distant') && !guestRender.pre) guestRender.pre = ['down', 'nb', 'nb_apology', 'nb_surprise', 'nb_down', 'nb_grief', 'nb_plead', 'nb_crysmile', 'nb_skirt', 'nbleave', 'nbleavewonder'].map(s => { const i = new Image(); i.src = `img/mio_f_${s}_inf.webp`; return i; });   // 切り替えでちらつかないよう先に読む
+    // 2026-11-16：全身の小さい絵は、ミオが出た時点で先に読んでおく（前は小さくする瞬間に読み始めていた）
+    if (guest.who === 'ミオ' && !guestRender.pre) guestRender.pre = ['down', 'nb', 'nb_apology', 'nb_surprise', 'nb_down', 'nb_grief', 'nb_plead', 'nb_crysmile', 'nb_skirt', 'nbleave', 'nbleavewonder'].map(s => { const i = new Image(); i.src = `img/mio_f_${s}_inf.webp`; return i; });   // 切り替えでちらつかないよう先に読む
     const small = guest.far === 'small' || guest.far === 'distant', url = `img/${small ? faceFile(guest.f).replace('mio_p_', 'mio_f_') : faceFile(guest.f)}.webp`;
-    if (g.getAttribute('src') !== url) g.src = url;
-    g.classList.toggle('far', guest.far === true); g.classList.toggle('mid', guest.far === 'mid'); g.classList.toggle('small', guest.far === 'small'); g.classList.toggle('distant', guest.far === 'distant'); g.classList.add('show');
+    const far = guest.far, apply = () => {
+      if (g.getAttribute('src') !== url) g.src = url;
+      g.classList.toggle('far', far === true); g.classList.toggle('mid', far === 'mid'); g.classList.toggle('small', far === 'small'); g.classList.toggle('distant', far === 'distant'); g.classList.add('show');
+    };
+    // 2026-11-16 作者の指摘：一歩下がる（small）とき、新しい絵の読み込みが終わる前に大きさの指定だけが先に変わり、前の絵が一瞬大きく映っていた。
+    // 絵が変わるときは、読み込みが終わってから絵と大きさを同時に替える
+    if (g.getAttribute('src') === url) return apply();
+    const tok = guestRender.tok = (guestRender.tok || 0) + 1, im = new Image(); im.src = url;
+    if (im.complete && im.naturalWidth) return apply();
+    const go = () => { if (guestRender.tok === tok) apply(); };
+    (im.decode ? im.decode() : new Promise((r, j) => { im.onload = r; im.onerror = j; })).then(go, go);
   }
   const guestShow = (f, far, who = 'ミオ') => () => { guest = { f, far: far === undefined && guest ? guest.far : (far || false), who }; guestRender(); };
   const guestHide = () => () => { guest = null; guestRender(); };
@@ -2942,10 +2952,20 @@
     if (!fr || !bg || !sf || !chEl) return;   // 後日談のページ（この部分のコードを取り込む）には座り姿がない
     const hit = sitRoomOfBg();
     const sit = hit && hit.ch.sit;
+    // 2026-11-16 作者の指摘：背景の絵の読み込みとずれて、椅子だけ先に出たり消えたりしていた。
+    // 背景の読み込みが終わるまでは椅子と手前の家具を出さず、椅子の絵も読み込みが終わってから見せる
+    if (bg.getAttribute('src') && !(bg.complete && bg.naturalWidth)) {
+      chEl.style.display = 'none'; fr.style.display = 'none';
+      if (!syncSitFront.wait) { syncSitFront.wait = true; bg.addEventListener('load', () => { syncSitFront.wait = false; syncSitFront(); }, { once: true }); }
+      return;
+    }
     if (sit && sit.chair) {
       const want = `img/${sit.chair}${hit.v}.webp`;
+      syncSitFront.pre = syncSitFront.pre || {};
+      if (!syncSitFront.pre[sit.chair]) syncSitFront.pre[sit.chair] = ['', '_unlit', '_1830_dark', '_1830_lit'].map(v => { const i = new Image(); i.src = `img/${sit.chair}${v}.webp`; return i; });   // 明かりが替わるときに椅子が一瞬消えないよう、4つとも先に読む
       if (chEl.getAttribute('src') !== want) chEl.setAttribute('src', want);
       chEl.setAttribute('style', sit.style); chEl.style.opacity = bg.style.opacity || '';
+      if (!(chEl.complete && chEl.naturalWidth)) { chEl.style.visibility = 'hidden'; chEl.addEventListener('load', () => syncSitFront(), { once: true }); }
     } else chEl.style.display = 'none';
     const figOn = !sf.classList.contains('gone') && !!sf.getAttribute('src') && C && hit && hit.ch === C;
     // chairWhenGone：椅子だけの絵と座り絵の椅子の形が少しちがうので、その子が座っている間は椅子だけの絵を出さない（いなくなってから出す。2026-11-11 ミオ）
@@ -7904,7 +7924,7 @@
         await say([() => bgm('tension'), guestShow('mioDown'), ['ミオ', '……失礼します', 'mioDown'], ['ツムギ', '……ミオ', 'surprise'],
                    ['ミオ', '図書委員の、水野です。……予約の本を、届けに来ました', 'mioSad'],
                    // 差し出すときは目を伏せ、「当番、だから」でツムギの目を見る。受け取られたら本を持たない絵に
-                   guestShow('mioOffer'), 'ミオは胸に抱えていた本を、両手で差し出した。『ひとりぶんの椅子』。', ['ミオ', '……当番、だから', 'mioOfferSad'],
+                   guestShow('mioOfferSad'), 'ミオは胸に抱えていた本を、両手で差し出した。『ひとりぶんの椅子』。'   /* 2026-11-16 作者の指示：次の台詞と同じ表情に */, ['ミオ', '……当番、だから', 'mioOfferSad'],
                    guestHide(), 'ツムギは本を受け取って、そっと表紙を撫でた。ページの間からしおりがのぞいている。']);
         await say([guestShow('mioNbSad'), 'ツムギがしおりを開いた。', '「一年のとき、この本を教えてくれてありがとう。一人で座っていた私に、最初に話しかけてくれたのは、ツムギだった。」',
                    '「黒板の字を書いたのは、私です。ごめんなさい。いてもいなくても同じなんかじゃない。」',
@@ -8052,6 +8072,7 @@
                                          '正門の手前で、ツムギが一度だけ振り返って、手を振った。……その隣で、ミオも小さく手を振った。'],
                                   img: 'gate_mt', alt: '夕焼けの正門で、ツムギとミオが並んで振り返り、二人とも笑って手を振っている' });
     return ending({ lines: ['ミオとツムギと一緒に、保健室を出た。', '昇降口で靴を履き替えると、二人は少しだけ間をあけて、正門へ歩いていった。',
+                            // 2026-11-16 作者の指示：文はそのまま、絵のほうをミオがツムギの半歩後ろに立つ形に直した
                             '正門の手前で、ツムギが振り返って、手を振った。……半歩後ろで、ミオもうつむいたまま小さく手を上げた。'],
                     img: 'gate_mt_awk', alt: '夕焼けの正門で、ツムギが振り返って手を振り、半歩後ろでミオがうつむいて小さく手を上げている' });
   }
