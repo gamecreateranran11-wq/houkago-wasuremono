@@ -181,8 +181,8 @@
   .choices .choice.picked:hover { color: var(--blue); }
   .choices.roof .choice.picked { color: #8d88a3; }
   .choices.roof .choice { color: #4a5a72; letter-spacing: .02em; }
-  .choices.roof .choice::before { content: "…"; }
-  .choices.roof .choice:hover::before { content: "…"; font-size: inherit; top: 9px; }
+  /* 2026-11-16 作者の指示：屋上の選択肢は「」や（）の中が「……」で始まるものが多く、頭の「…」と重なって見えるので、頭の印は出さない */
+  .choices.roof .choice::before, .choices.roof .choice:hover::before { content: none; }
   .choice .sting { display: block; font-size: .85em; color: var(--muted); margin-top: 2px; }
 
   .overlay { position: fixed; inset: 0; background: rgba(12, 10, 16, .9); display: grid; place-items: center; padding: 16px; overflow-y: auto; z-index: 10; }
@@ -566,7 +566,7 @@
   .roof-tint.on { opacity: .9; }
   .void .ov-card { background: transparent; border: 0; box-shadow: none; text-align: center; }
   .void .void-text { display: flex; flex-direction: column; gap: 18px; margin: 24px 0 8px; }
-  .void .void-text p { color: #d8d2c8; letter-spacing: .08em; }
+  .void .void-text p { color: #d8d2c8; letter-spacing: .08em; word-break: keep-all; overflow-wrap: anywhere; }   /* 2026-11-16 改行は文節の切れ目（voidPhrase の <wbr>）だけで */
   .void .row { justify-content: center; }
   .void .btn, .void .btn.primary { background: transparent; border: 0; color: #8f887c; font-size: 18px; padding: 10px 18px; animation: rise .8s ease both; animation-delay: var(--void-delay, 1.2s); }
   .void .btn.primary:focus-visible { outline: 1px solid rgba(255,255,255,.3); }
@@ -3040,9 +3040,10 @@
     cv.width = W * q; cv.height = H * q;
     const x = cv.getContext('2d'), R = (a, b) => a + Math.random() * (b - a);
     const LAYER = [
-      { n: small ? 190 : 300, len: [18, 38], v: [1050, 1350], w: 1.2, a: .26, end: [H, H + 60], hit: 0 },
-      { n: small ? 150 : 220, len: [42, 80], v: [1650, 2050], w: 1.8, a: .36, end: [H, H + 80], hit: 0 },
-      { n: small ? 40 : 56, len: [100, 170], v: [2500, 3100], w: 2.8, a: .42, end: [H + 20, H + 120], hit: 0 }
+      // 2026-11-16 作者の指示：前半（h＝0）も後半（h＝1）も、もっと強く。粒の数・濃さ・太さ・速さ・跳ねる数を上げた
+      { n: small ? 330 : 520, len: [20, 42], v: [1150, 1450], w: 1.4, a: .34, end: [H, H + 60], hit: 0 },
+      { n: small ? 260 : 380, len: [46, 88], v: [1750, 2200], w: 2.1, a: .46, end: [H, H + 80], hit: 0 },
+      { n: small ? 75 : 110, len: [110, 190], v: [2600, 3300], w: 3.2, a: .52, end: [H + 20, H + 120], hit: 0 }
     ];
     const drops = [], hits = [];
     const reset = (d, first) => { const L = d.L; d.len = R(L.len[0], L.len[1]); d.v = R(L.v[0], L.v[1]); d.end = R(L.end[0], L.end[1]);
@@ -3052,7 +3053,7 @@
     function frame(now) {
       const dt = Math.min(.05, (now - last) / 1000 || 0); last = now;
       h += (target - h) * Math.min(1, dt / 1.2);
-      const gust = -.1 - .07 * h - (.025 + .03 * h) * Math.sin(now / 2600), share = .45 + .55 * h, fast = 1 + .18 * h, long = 1 + .35 * h, bright = 1 + .3 * h;
+      const gust = -.12 - .09 * h - (.03 + .035 * h) * Math.sin(now / 2600), share = .7 + .3 * h, fast = 1.08 + .25 * h, long = 1.15 + .45 * h, bright = 1.1 + .35 * h;
       x.setTransform(q, 0, 0, q, 0, 0); x.clearRect(0, 0, W, H); x.lineCap = 'round';
       LAYER.forEach(L => {
         x.beginPath(); x.lineWidth = L.w; x.strokeStyle = `rgba(196,210,230,${L.a * bright})`;
@@ -3066,11 +3067,11 @@
       });
       // 2026-11-15：屋上の絵を主人公の目線（フェンスの3m手前から西）に描き直した。床は映らないので、雨は絵の下まで落ち、
       // 跳ねるのはフェンスの下の低い壁の上の面（y≈897）だけ
-      if (hits.length < 70 && Math.random() < dt * (16 + 26 * h)) hits.push({ x: R(0, W), y: R(WALL - 4, WALL + 5), t: 0, life: R(.16, .3), s: R(.7, 1.1) });
+      for (let k = 0, nh = dt * (34 + 50 * h); k < 3 && hits.length < 140 && Math.random() < nh - k; k++) hits.push({ x: R(0, W), y: R(WALL - 4, WALL + 5), t: 0, life: R(.16, .3), s: R(.7, 1.1) });
       // 壁の上で跳ねる：広がる小さな輪と、上へ飛ぶしぶき
       for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i]; h.t += dt; const p = h.t / h.life;
         if (p >= 1) { hits.splice(i, 1); continue; }
-        const r = (3 + 13 * p) * h.s; x.globalAlpha = (1 - p) * .55; x.strokeStyle = 'rgb(205,218,235)'; x.lineWidth = 1.1;
+        const r = (3 + 13 * p) * h.s; x.globalAlpha = (1 - p) * .65; x.strokeStyle = 'rgb(205,218,235)'; x.lineWidth = 1.3;
         x.beginPath(); x.ellipse(h.x, h.y, r, r * .28, 0, 0, Math.PI * 2);
         const u = 9 * h.s * Math.sin(p * Math.PI); x.moveTo(h.x - r * .5, h.y - u * .7); x.lineTo(h.x - r * .62, h.y - u * .7 - 2.5); x.moveTo(h.x + r * .45, h.y - u); x.lineTo(h.x + r * .55, h.y - u - 2.5);
         x.stroke(); }
@@ -3173,13 +3174,20 @@
   // 文の出る間隔と、1行が浮かぶ長さは文字の速さの設定に合わせる（「普通」が元の速さ。一括は全部の行を一緒に出す）。
   // 一度見た黒い画面は、既読スキップがONなら全部の行をすぐ出す
   const VOID_SPEED = { instant: [0, .6], fast: [.45, .7], normal: [.8, .9], slow: [1.15, 1.1] };
+  // 2026-11-16 作者の指示：黒い画面の文が、文節の途中で折り返していた。文節の切れ目（ひらがなの後に漢字・カタカナ・かぎかっこが来る所、
+  // 読点・句点・閉じかっこ・「……」の後）にだけ折り返しの候補（<wbr>）を入れ、CSS の keep-all でそれ以外では折り返さない
+  const voidPhrase = s => String(s)
+    .replace(/([ぁ-ゖ])(?=[一-龯々〆ァ-ヺ「『（A-Za-z0-9０-９])/g, '$1<wbr>')
+    .replace(/([、。！？])(?=[^、。」』）！？])/g, '$1<wbr>')
+    .replace(/([」』）])(?=[^、。」』）！？ぁ-ゖ])/g, '$1<wbr>')   // 「……」と言った：閉じかっこの後の助詞は前につける
+    .replace(/(…+)(?=[^…、。」』）！？])/g, '$1<wbr>');
   function voidWait(lines) {
     lines.forEach(t => addLog({ who: '', t }));   // 黒い画面の文もログに残す（早送り中も）
     if (replay) return Promise.resolve();   // ロード直後の早送り中は出さない
     const quick = fxSkip('void|' + lines.join('|'));
     const [step, dur] = quick ? [0, .3] : (VOID_SPEED[P.textSpeed] || VOID_SPEED.normal);
     const d = reduce ? 0 : (step * (lines.length - 1) + dur + (quick ? .1 : .7));
-    const pr = uiWait(`<div class="fade void-text">${lines.map((l, i) => `<p style="animation-delay:${(step * i).toFixed(2)}s;animation-duration:${dur}s">${l}</p>`).join('')}</div>`, 'void', ['▼']);   // 何行あっても1行ずつ出す（CSSの nth-child は10行目まで）
+    const pr = uiWait(`<div class="fade void-text">${lines.map((l, i) => `<p style="animation-delay:${(step * i).toFixed(2)}s;animation-duration:${dur}s">${voidPhrase(l)}</p>`).join('')}</div>`, 'void', ['▼']);   // 何行あっても1行ずつ出す（CSSの nth-child は10行目まで）
     card.style.setProperty('--void-delay', d + 's');
     // 文が全部出てからは、▼だけでなく画面のどこを押しても進める
     const tm = setTimeout(() => { ov.onclick = () => { const b = card.querySelector('[data-v]'); if (b) b.click(); }; }, d * 1000 + (quick ? 150 : 600));
@@ -3912,9 +3920,11 @@
                [[O, '……やっと、言えたね'], [O, 'ずっと、そう思ってたんだから'], '雨が、手帳の白い6行目をにじませていた。']][t]);
     // 助けることへの揺らぎ（2026-10-30）：頼まれずに手を出したのはエゴだったかもしれない／中途半端な言葉はかえって追い詰める／助ける側にも相応の責任と覚悟が問われることがある（「最後まで」とは言い切らない）。
     // 「生かされる」のを嫌ってきた主人公が、同じことを五人にしたかもしれない、という裏返し。是非は作中で断定しない。五人が自分から来たことと、ケイの「俺が、そうしたいだけ」の後、主人公が自分の動機を認めるところまで（五人の感謝は書かない。感謝はほどけた周回の結果論で、他の分岐で五人がどう思っていたかは分からない）
-    await say(['（……あの子たちは、本当に、助けてほしかったのかな）',
-               [O, '……分からないでしょ'], [O, '誰も、助けてなんて言ってなかったよ'],
-               [O, '……ねえ。どうして、あの子たちの扉の前で、立ち止まったの']]);
+    // 2026-11-16 作者の指示：前向きな言葉を選んだ直後に主人公が自分で疑うと不自然。もう一人の自分に聞かれて、初めて答えられないと気づく
+    await say([[O, '……ねえ。あの子たちは、本当に、助けてほしかったのかな'],
+               '答えようとして、言葉が出てこなかった。', '（……分からない。考えたことも、なかった）',
+               [O, '……でしょ'], [O, '誰も、助けてなんて言ってなかったよ'],
+               [O, '……じゃあ、どうして、あの子たちの扉の前で、立ち止まったの']]);
     // 2026-11-10：動機を決めつけない（作者の指示）。遊ぶ人が自分の動機を選び、もう一人の自分がそれをそのまま責める。是非は断定しない
     const why = await choose(['（……ここから、出たかった）', '（……自分が誰なのか、思い出したかった）', '（……何があったのか、知りたかった）', '（……放っておけなかった）', '（……分からない）']);
     tel('roof_why', { k: why });
@@ -3925,7 +3935,7 @@
                [[O, '……分からないまま、人の心に手を入れたんだ']]][why]);
     await say([
                [O, '言葉一つ間違えたら、もっと追い詰めてたかもしれないのに'],
-               [O, '誰かにつないだって、その先でまた回されて、一人に戻るだけかもしれないのに'],   // つなぐことの、もう一つの現実（2026-10-31 作者の補足を本文に。是非は断定しない）
+               [O, '誰かにつないだって、その先でまた手を離されて、一人に戻るだけかもしれないのに'],   // つなぐことの、もう一つの現実（2026-10-31 作者の補足を本文に。是非は断定しない）。2026-11-16 作者の指示で「回されて」→「手を離されて」
                [O, '手を伸ばしたなら、伸ばした分の責任だってあるのに'], [O, '……ここに立ってる人に、それが果たせるの？'],
                '（……分からない）']);
     await say([[O, '……ねえ。あの子たちには、言えたよね'], ...(said.yori.length ? said.yori.map((t, n) => [O, `『${t}』${n === said.yori.length - 1 ? 'って。……何度も' : 'って'}`])
@@ -3945,14 +3955,15 @@
     // 叫びの後の短い沈黙。もう一人の自分との場面から、五人が来る場面への区切り
     if (!replay) await sleep(1500);
     // 屋上の扉は、主人公が開けたまま（背景の絵と、TRUEの「……扉、閉めてなかったんだ」に合わせる）。五人は開いた扉から来る
-    await say(['階段を駆け上がってくる足音がした。', '「……いた！」',
-               '足音が、いくつも重なる。', '振り返ると、開いたままの扉のところに五人が立っていた。', '息を切らして。名前も知らないはずの、こちらを見て。',
+    await say(['階段を駆け上がってくる足音がした。', '「……いた！」', '足音が、いくつも重なる。']);
+    // 2026-11-10 作者の決定：屋上の一枚絵（A）。5章の結末（まっすぐ／ぎこちない／決別）で、ミオとツムギの立ち位置がちがう絵を出す（差分ができるまでは、まっすぐの周回だけ）
+    // 2026-11-16 作者の指示：絵は「足音が、いくつも重なる。」の後に出し、閉じてから「振り返ると、……五人が立っていた。」へ続ける
+    { const id = { straight: 'roof_five', awk: 'roof_five_awk', split: 'roof_five_split' }[kind];
+      if (ROOF_FIVE_READY[kind]) await cgShow(id, '雨上がりの夕焼けの屋上。開いた階段室の扉の前で、五人が立ち止まり、こちらを見つめている', ''); }
+    await say(['振り返ると、開いたままの扉のところに五人が立っていた。', '息を切らして。名前も知らないはずの、こちらを見て。',
                ['ケイ', '……やっぱり、あんただ'], ['ツムギ', '放課後、保健室に来てくれた人……だよね'],
                ...(kind === 'split' ? ['ミオとツムギは、開いた扉をはさんで、離れて立っていた。二人は一度も目を合わせなかった。'] : []),
                '誰も、近づいてこなかった。', '扉のところで、止まったまま。']);
-    // 2026-11-10 作者の決定：屋上の一枚絵（A）。5章の結末（まっすぐ／ぎこちない／決別）で、ミオとツムギの立ち位置がちがう絵を出す（差分ができるまでは、まっすぐの周回だけ）
-    { const id = { straight: 'roof_five', awk: 'roof_five_awk', split: 'roof_five_split' }[kind];
-      if (ROOF_FIVE_READY[kind]) await cgShow(id, '雨上がりの夕焼けの屋上。開いた階段室の扉の前で、五人が立ち止まり、こちらを見つめている', ''); }
     if (await choose(['「……来ないで」', '（……何も、言えない）']) === 0)
       await say(['「……もう、誰も近寄らないで」', '「あなた達には関係ない。……ほっといて」', '誰も、帰らなかった。扉のところで、止まったまま。',
                  ['ソウタ', '……知らねえよ、そんなの']]);
