@@ -1286,6 +1286,34 @@
   }
   // 地の文で子どもが立ち上がったら、そこから立った絵にする（「立ち上がりかけて」「立ち上がろうと」は座ったまま）
   const STAND_RE = /立ち上がっ|立ち上がると/, STAND_NOT = /立ち上がりかけ|立ち上がろう|丸椅子から、そっと立ち上がって/;  // 表情の絵を読み込んで持っておく（切り替えの瞬間に前の絵が残らないように）
+  // 2026-11-17 作者の指示：立ち絵の差分（表情）が変わるときは、フェードで切り替える。
+  // 出ている絵を写した「残像」を上に重ね、下の絵を新しい表情に替えてから、残像だけを消していく（新しい絵は読み終えてから替える）
+  const XFADE_MS = 350;
+  const shownFig = el => el.classList.contains('show') || (el.classList.contains('sit') && !el.classList.contains('gone') && el.style.display !== 'none');
+  // 消える絵の残像だけを残して、フェードで消す（座り姿から立ち上がるときなど。本体はすぐ消えてよい）
+  function ghostOut(el) {
+    if (!shownFig(el) || !el.getAttribute('src') || reduce || replay) return;
+    const ghost = el.cloneNode(false); ghost.removeAttribute('id'); ghost.setAttribute('aria-hidden', 'true'); ghost.alt = '';
+    ghost.style.transition = `opacity ${XFADE_MS}ms ease`; ghost.style.filter = getComputedStyle(el).filter;   /* id で当てている暗さ（#sitFig など）も写す */ ghost.style.pointerEvents = 'none';
+    el.parentNode.insertBefore(ghost, el.nextSibling);
+    requestAnimationFrame(() => requestAnimationFrame(() => { ghost.style.opacity = '0'; }));
+    setTimeout(() => ghost.remove(), XFADE_MS + 120);
+  }
+  // ポーズ差分（座り姿の絵など）：新しい絵を読み終えてから、フェードで替える
+  function crossSrcLoaded(el, url) {
+    const im = new Image(); im.src = url;
+    if (im.complete && im.naturalWidth) return crossSrc(el, url);
+    (im.decode ? im.decode() : Promise.resolve()).catch(() => {}).then(() => crossSrc(el, url));
+  }
+  function crossSrc(el, url) {
+    if (!shownFig(el) || !el.getAttribute('src') || reduce || replay) { el.src = url; return; }
+    const ghost = el.cloneNode(false); ghost.removeAttribute('id'); ghost.setAttribute('aria-hidden', 'true'); ghost.alt = '';
+    ghost.style.transition = `opacity ${XFADE_MS}ms ease`; ghost.style.filter = getComputedStyle(el).filter;   /* id で当てている暗さ（#sitFig など）も写す */ ghost.style.visibility = ''; ghost.style.pointerEvents = 'none';
+    el.parentNode.insertBefore(ghost, el.nextSibling);
+    el.src = url;
+    requestAnimationFrame(() => requestAnimationFrame(() => { ghost.style.opacity = '0'; }));
+    setTimeout(() => ghost.remove(), XFADE_MS + 120);
+  }
   let talkHold = false;
   function setTalk(on, f) {
     const faces = C ? C.faces : {};
@@ -1297,8 +1325,11 @@
       if (want !== face || pt.getAttribute('src') !== url) {
         face = want;
         const pre = FACE_CACHE[url];
-        if (pre && pre.complete && pre.naturalWidth) pt.src = url;
-        else {
+        if (pre && pre.complete && pre.naturalWidth) crossSrc(pt, url);
+        else if (wasShown) {   // 出ている絵は残したまま、新しい表情を読み終えてからフェードで替える
+          const im = new Image(); im.src = url;
+          (im.decode ? im.decode() : Promise.resolve()).catch(() => {}).then(() => { if (face === want) crossSrc(pt, url); });
+        } else {
           pt.style.visibility = 'hidden'; pt.src = url;
           (pt.decode ? pt.decode() : Promise.resolve()).catch(() => {}).then(() => { if (pt.getAttribute('src') === url) pt.style.visibility = ''; });
         }
@@ -1320,7 +1351,7 @@
     if (guest.who === 'ミオ' && !guestRender.pre) guestRender.pre = ['down', 'nb', 'nb_apology', 'nb_surprise', 'nb_down', 'nb_grief', 'nb_plead', 'nb_crysmile', 'nb_skirt', 'nbleave', 'nbleavewonder'].map(s => { const i = new Image(); i.src = `img/mio_f_${s}_inf.webp`; return i; });   // 切り替えでちらつかないよう先に読む
     const small = guest.far === 'small' || guest.far === 'distant', url = `img/${small ? faceFile(guest.f).replace('mio_p_', 'mio_f_') : faceFile(guest.f)}.webp`;
     const far = guest.far, apply = () => {
-      if (g.getAttribute('src') !== url) g.src = url;
+      if (g.getAttribute('src') !== url) crossSrc(g, url);   // 表情が変わるときはフェードで
       g.classList.toggle('far', far === true); g.classList.toggle('mid', far === 'mid'); g.classList.toggle('small', far === 'small'); g.classList.toggle('distant', far === 'distant'); g.classList.add('show');
     };
     // 2026-11-16 作者の指摘：一歩下がる（small）とき、新しい絵の読み込みが終わる前に大きさの指定だけが先に変わり、前の絵が一瞬大きく映っていた。
@@ -3145,7 +3176,9 @@
     $('#btnSkip').setAttribute('aria-pressed', P.skip ? 'true' : 'false');
 
     if (!C) return;
-    $('#sitFig').classList.toggle('gone', R.st === 'vanished' || R.st === 'shut' || !!R.standing);
+    { const sf = $('#sitFig'), g = R.st === 'vanished' || R.st === 'shut' || !!R.standing;
+      if (g && R.standing && !sf.classList.contains('gone')) ghostOut(sf);   // 立ち上がるとき：座り姿もフェードで消える（立った絵はフェードで出る）
+      sf.classList.toggle('gone', g); }
     $('#leftover').style.display = R.st === 'vanished' ? '' : 'none';
     // 2026-11-10：ほどけた後は、見送りの絵に替わるまで、調べる場所の枠を出さない（作者の指示）
     // 2026-11-15：ただし、先へ進むのに調べる必要がある場所（青い絵の具のある流しなど。章ごとの freeSpots）の枠だけは出す。
@@ -4710,9 +4743,9 @@
         // 2回目：その章だけの、窓回りの新しい情報
         // 座り姿に「窓の外を見る」絵がある章（ヒナ）は、この文の間だけその絵に替える
         const sf = $('#sitFig'), win = C.sit && C.sit.window && !sf.classList.contains('gone') && sf.getAttribute('src') === `img/${C.sit.src}.webp`;
-        if (win) sf.src = `img/${C.sit.window}.webp`;
+        if (win) crossSrcLoaded(sf, `img/${C.sit.window}.webp`);   // ポーズ差分もフェードで
         R.know.add('window2'); await say(C.window2);
-        if (win && sf.getAttribute('src') === `img/${C.sit.window}.webp`) sf.src = `img/${C.sit.src}.webp`;
+        if (win && sf.getAttribute('src') === `img/${C.sit.window}.webp`) crossSrcLoaded(sf, `img/${C.sit.src}.webp`);
         await tick();
       } else await say(['夕焼けは、少しも動かない。']);
     },
