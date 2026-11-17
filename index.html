@@ -69,6 +69,11 @@
   .cutin { position: absolute; inset: 4%; z-index: 1; opacity: 0; transform: translateX(6%) rotate(.6deg); transition: opacity .35s ease, transform .35s ease; pointer-events: none; background: #1c1620; border: 3px solid #efe6d6; box-shadow: 0 10px 30px rgba(0, 0, 0, .6); overflow: hidden; }
   .cutin.show { opacity: 1; transform: none; }
   .cutin img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; max-width: none; }
+  /* 2026-11-17 作者の指示：床に落ちた生徒手帳（立った目線から足もと0.5mを見下ろす絵）は、スマホの小さい画面では手帳とページのぶれが見えないので、手帳を中心に2倍に寄せる（画角を狭めたのと同じなので遠近は崩れない）。
+     タブレットはパソコンと同じ大きさで見せる（作者の指示）。スマホは縦持ちなら幅700px以下、横持ちなら高さ500px以下で見分ける（iPad mini でも短い辺は744px） */
+  @media (max-width: 700px), (max-height: 500px) {
+    .cutin[data-cut="protag_notebook_dusk"] img { transform: scale(2); transform-origin: 50% 52%; }
+  }
   .cutin .clock-hands { position: absolute; inset: 0; width: 100%; height: 100%; }
   /* 屋上の手帳をなぞる：拾って開いた手帳の絵（protag_notebook_front）で、右ページの名前のところへ寄る（中心 930,560・2.6倍。生徒手帳は手のひらにのる大きさなので、強めに寄る） */
   .cutin.nbz { pointer-events: auto; }
@@ -1447,7 +1452,7 @@
   const DARK_CUTS = new Set(['ci_inf_shelf', 'ci_inf_desk', 'ci_inf_cabinet', 'ci_inf_notice', 'ci_inf_scale', 'ci_inf_stool']);
   function showCut(name) {
     if (DARK_CUTS.has(name) && R && R.taken && R.taken.dark) name += '_dark';
-    const el = $('#cutin'); el.classList.remove('nbz');
+    const el = $('#cutin'); el.classList.remove('nbz'); el.dataset.cut = name;
     el.innerHTML = name === 'clock' ? clockSVG() : `<img src="${imgSrc(name)}" alt="">`;
     if (name === 'clock') {   // 時計の絵を読み込み終えてから、針を出す（針だけが先に見えないように）
       const im = el.querySelector('img'), hs = el.querySelector('svg');
