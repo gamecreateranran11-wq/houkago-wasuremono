@@ -77,6 +77,7 @@
   .cutin .clock-hands { position: absolute; inset: 0; width: 100%; height: 100%; }
   /* 屋上の手帳をなぞる：拾って開いた手帳の絵（protag_notebook_front）で、開いた手帳の見開き全体へ寄る（中心 782,580・1.9倍。2026-11-17 作者の指示：2.6倍では枠に対して大きすぎたので、表紙の両端まで枠に収める） */
   .cutin.nbz { pointer-events: auto; }
+  .cutin.fade-slow { transition: opacity .7s ease, transform .7s ease; }   /* 2026-11-17：手帳をなぞって部屋の思い返しへ移るときは、手帳も背景と同じ速さで消える */
   .nbz-in { position: absolute; inset: 0; transform-origin: 50.91% 56.64%; transform: translate(-0.91%, -6.64%) scale(1.9); transition: transform 1.4s cubic-bezier(.3, .6, .2, 1); }
   .nbz-in.far { transform: none; transition: none; }
   .cutin .nbz-in img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -104,6 +105,9 @@
   .scene.talk .bg, .scene.talk .sit { filter: brightness(.55) saturate(.8); }
   .scene .bg-clock { position: absolute; pointer-events: none; }
   .sit { position: absolute; width: auto; transition: filter .5s ease; pointer-events: none; }
+  /* 2026-11-17 作者の指示：背景がフェードで切り替わるとき、背景に合わせた椅子・わすれもの・窓の明かりも同じ動きで出入りする（背景の .bg と同じ .7s） */
+  #sitChair { transition: filter .5s ease, opacity .7s ease; }
+  #leftover, [data-hi-light] { transition: opacity .7s ease; }
   .sit.gone { display: none; }
   .scene .sit-front { pointer-events: none; }
   .scene .chime-cg { inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .9s ease; pointer-events: none; z-index: 2; }
@@ -1449,7 +1453,7 @@
   const DARK_CUTS = new Set(['ci_inf_shelf', 'ci_inf_desk', 'ci_inf_cabinet', 'ci_inf_notice', 'ci_inf_scale', 'ci_inf_stool']);
   function showCut(name) {
     if (DARK_CUTS.has(name) && R && R.taken && R.taken.dark) name += '_dark';
-    const el = $('#cutin'); el.classList.remove('nbz'); el.dataset.cut = name;
+    const el = $('#cutin'); el.classList.remove('nbz', 'fade-slow'); el.dataset.cut = name;
     el.innerHTML = name === 'clock' ? clockSVG() : `<img src="${imgSrc(name)}" alt="">`;
     if (name === 'clock') {   // 時計の絵を読み込み終えてから、針を出す（針だけが先に見えないように）
       const im = el.querySelector('img'), hs = el.querySelector('svg');
@@ -1468,7 +1472,7 @@
       return Promise.resolve(rec('t:' + order[0]).slice(2));
     }
     return new Promise(res => {
-      const el = $('#cutin'); el.dataset.cut = 'nbz';   // 床の手帳のスマホ用の寄せ（data-cut）を引き継がない
+      const el = $('#cutin'); el.dataset.cut = 'nbz'; el.classList.remove('fade-slow');   // 床の手帳のスマホ用の寄せ（data-cut）を引き継がない
       el.innerHTML = `<div class="nbz-in${zoom ? ' far' : ''}"><img src="${imgSrc('protag_notebook_front')}" alt="夕焼けの屋上で、拾った生徒手帳を開いている。右ページに五人の名前が並び、人差し指がページに触れている">${NB_ROWS.map(([k, cx, cy, w, h, deg]) =>
         `<button type="button" class="nbz-row${done.includes(k) ? ' done' : ''}${k === 'blank' ? ' blank' : ''}" data-k="${k}" style="left:${(cx - w / 2) / 15.36}%;top:${(cy - h / 2) / 10.24}%;width:${w / 15.36}%;height:${h / 10.24}%;transform:rotate(${deg}deg)" aria-label="${k === 'blank' ? '6行目' : ({ art: '春日ヒナ', music: '井上ソウタ', library: '水野ミオ', gym: '三浦ケイ', infirmary: '白石ツムギ' })[k]}"${done.includes(k) ? ' disabled' : ''}></button>`).join('')}</div>
         <p class="nbz-cap">名前に触れて、なぞる</p>`;
@@ -2952,6 +2956,7 @@
   function syncSitFront() {
     const fr = $('#sitFront'), bg = $('#bgImg'), sf = $('#sitFig'), chEl = $('#sitChair');
     if (!fr || !bg || !sf || !chEl) return;   // 後日談のページ（この部分のコードを取り込む）には座り姿がない
+    const lo = $('#leftover'); if (lo) lo.style.opacity = bg.style.opacity || '';   // わすれものも、背景と同じ濃さで出入りする
     const hit = sitRoomOfBg();
     const sit = hit && hit.ch.sit;
     // 2026-11-16 作者の指摘：背景の絵の読み込みとずれて、椅子だけ先に出たり消えたりしていた。
@@ -3839,7 +3844,7 @@
       }
       done.push(id);
       if (done.length === 1) await say(['……なぞると、思い出すことがあった。']);
-      hideCut();
+      $('#cutin').classList.add('fade-slow'); hideCut();   // 手帳も、背景・椅子と同じ .7s で消える
       const c = CHAPTERS[id], m = c && (c.touchMemory || (c.memory && c.memory[1])), sm = SMALL[id];
       await endScene(IMG[id]);
       if (m) await say([m.replace('（もう一つ。', '（')]);
@@ -4259,14 +4264,14 @@
   async function endScene(img) {
     closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = '';
     guest = null; guestRender();   // その場にいた子（ミオなど）の立ち絵も消す
-    $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = ''; $('#leftover').style.display = 'none';
-    const bg = $('#bgImg');
-    if ((bg.getAttribute('src') || '').replace(/^.*?(?=img\/[^\/]+$)/, '') === `img/${img}.webp`) return;
-    if (replay) { bg.src = `img/${img}.webp`; bg.style.opacity = '1'; return; }   // 早送り中はすぐ切り替える
+    $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = '';
+    const bg = $('#bgImg'), lo = $('#leftover');
+    if ((bg.getAttribute('src') || '').replace(/^.*?(?=img\/[^\/]+$)/, '') === `img/${img}.webp`) { lo.style.display = 'none'; return; }
+    if (replay) { lo.style.display = 'none'; bg.src = `img/${img}.webp`; bg.style.opacity = '1'; return; }   // 早送り中はすぐ切り替える
     const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
     const pre = new Image(); pre.src = `img/${img}.webp`;
-    bg.style.opacity = '0'; await Promise.all([wait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);
-    bg.src = pre.src; try { await bg.decode(); } catch (e) {}
+    bg.style.opacity = '0'; await Promise.all([wait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);   // 椅子・わすれものも、背景と一緒に消えていく
+    lo.style.display = 'none'; bg.src = pre.src; try { await bg.decode(); } catch (e) {}
     bg.style.opacity = '1'; await wait(750);
   }
   // BAD5 空席の教室：消えた子の教室を順に映し（席にはわすれものだけ）、最後はチャイムの鳴らない夕焼けに一人
