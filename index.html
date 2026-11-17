@@ -4020,7 +4020,7 @@
     await say([
                [O, '言葉一つ間違えたら、もっと追い詰めてたかもしれないのに'],
                [O, '……思い出せなかった所に、間違えた『もしも』の結末をいくつも作ってたよね'],   // 2026-11-17 作者と決定：消えた・閉め出された・BADなどの分岐は、思い出せない所を埋めた思い出し違い（世界の塗り替えではない）。「怖い」とは決めつけない（身代わり・共依存なども含む）。「（……また、間違えた）」とつながる
-               [O, '誰かにつないだって、その先でまた手を離されて、一人に戻るだけかもしれないのに'],   // つなぐことの、もう一つの現実（2026-10-31 作者の補足を本文に。是非は断定しない）。2026-11-16 作者の指示で「回されて」→「手を離されて」
+               [O, '誰かにつないだって、その先で途中で投げ出されて、誰にも頼れなくなるだけかもしれないのに'],   // つなぐことの、もう一つの現実（2026-10-31 作者の補足を本文に。是非は断定しない）。2026-11-16「回されて」→「手を離されて」、2026-11-18 作者の指示で「途中で投げ出されて、誰にも頼れなくなる」（自立のために手を離す＝送り出すことや、一人になること自体は悪くない。悪いのは、まだ助けが要るうちに無責任に投げ出され、頼る先を失うこと）
                [O, '手を伸ばしたなら、伸ばした分の責任だってあるのに'], [O, '……ここに立ってる人に、それが果たせるの？'],
                '（……分からない）']);
     await say([[O, '……ねえ。あの子たちには、言えたよね'], ...(said.yori.length ? said.yori.map((t, n) => [O, `『${t}』${n === said.yori.length - 1 ? 'って。……何度も' : 'って'}`])
@@ -4601,6 +4601,8 @@
     crossSrcLoaded(sf, `img/${isDark ? (dark || name + '_dark') : name}.webp`);
     // ケイ：ボールを指で転がす姿にするときは、背景の床のボールを同時にフェードで消す（拾ったボール）
     if (name === 'kei_sit_close') fadeBg('gym_noball');
+    // ソウタ：鍵盤の蓋に額をつけるときは、蓋に頭の映り込みと影のある背景へ（2026-11-18 作者の指示）
+    if (name === 'sota_sit_lid' && ($('#bgImg').getAttribute('src') || '').endsWith('img/m_room.webp')) fadeBg('m_room_lid');
   };
   const sitClose = () => () => { if (C && C.sit && C.sit.close) sitPose(C.sit.close, C.sit.closeDark)(); };
   // 背景を同じ構図の別の絵へ、フェードで替える（座り姿の切り替えと同じ速さ）
@@ -4621,7 +4623,7 @@
     const sf = $('#sitFig'); if (!C || !C.sit) return;
     const def = `img/${C.sit.dark && sf.classList.contains('pretoned') ? C.sit.dark : C.sit.src}.webp`;
     if (!(sf.getAttribute('src') || '').endsWith(def)) sf.src = def;
-    const bg = $('#bgImg'); if ((bg.getAttribute('src') || '').endsWith('img/gym_noball.webp')) bg.src = `img/${C.bg}.webp`;
+    const bg = $('#bgImg'), bs = bg.getAttribute('src') || ''; if (bs.endsWith('img/gym_noball.webp') || bs.endsWith('img/m_room_lid.webp')) bg.src = `img/${C.bg}.webp`;
   }
   async function closeHeart(after) {
     // 心を閉ざしたら、その場でチャイムの時間まで飛ばす
