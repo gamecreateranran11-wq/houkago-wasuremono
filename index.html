@@ -1594,7 +1594,7 @@
   function veilOff() {
     if (veilFailed) return;
     veilResume = false; clearTimeout(veilTimer);
-    setTimeout(() => { if (!veilResume && !veilFailed) veil.hidden = true; }, 30);   // 絵と文章が画面に出てから幕を上げる
+    setTimeout(() => { if (!veilResume && !veilFailed) { veil.hidden = true; } }, 30);   // 絵と文章が画面に出てから幕を上げる
   }
   // 通信エラー：読みこみの幕が出ているときは幕の中に、遊んでいる最中は画面の上に小さく出す（オフライン版では出さない）
   function netFail() {
@@ -8275,8 +8275,10 @@
     if (!P.diffSet && ch === ORDER[0] && !opt.skipPuzzle) await chooseDiff();
     bgm(null);   // 2026-11-10 章の初めの黒い画面（2周目の決意・思い返しの文も）は無音（作者の指示）
     // 2周目以降の放課後に入るとき：黒い画面に、主人公の決意を短く出す（前の周回の終わり方と、持っていくわすれもので変える）
-    if (ch === ORDER[0] && !opt.skipPuzzle && !opt.recall && (P.runNo || 1) > 1 && !Object.keys(P.cur.results).length && !P.cur.resolved) { P.cur.resolved = true; saveP(); await voidWait(resolveLines()); }
-    if (opt.recall) await voidWait(opt.recall);
+    // 2026-11-17 作者の指示：思い返し・2周目の決意の黒い画面は、章の絵や音を全部読み込み終えてから出す（読みこみの間は、ふだんのベージュの読みこみ画面）。
+    // そのあと続けて章の初めの黒い画面に入るので、明るい画面を挟まない
+    let pre = opt.recall || null;
+    if (!pre && ch === ORDER[0] && !opt.skipPuzzle && (P.runNo || 1) > 1 && !Object.keys(P.cur.results).length && !P.cur.resolved) { P.cur.resolved = true; saveP(); pre = resolveLines(); }
     veilOn(); closeOverlay(); clearRoof();
     busy = true; P.played = true; if (ch === 'infirmary') P.metTsumugi = true; saveP(); bgm(null); guest = null; guestRender();
     if (R && R.ch) keepMem();
@@ -8284,7 +8286,9 @@
     if (P.diff === 'easy') nmMark('easy');   // 章を「やさしい」で遊んだら、この周回は隠しの演出の対象から外す
     if (P.mem[ch] && P.mem[ch].length) { P.mem[ch].forEach(k => R.know.add(k)); R.memIn = true; }
     render();   // 探索の曲は、章の初めの黒い画面が終わってから（intro）
-    busy = false; veilOff();
+    busy = false;
+    if (pre) { const p = voidWait(pre); veilOff(); await p; }   // 黒い画面を出してから幕を上げる（黒→黒で、明るくならない）
+    else veilOff();
     tel('ch_start', { c: ch, skip: opt.skipPuzzle ? 1 : 0, recall: opt.recall ? 1 : 0, diff: P.diff === 'easy' ? 'easy' : 'normal' });
     act(scriptFn('intro'), 'intro');
   }
