@@ -3367,7 +3367,7 @@
     else { R.ticks = 0; R.taken = {}; R.stage = 0; R.drawerOpen = false; R.seen = new Set(); if (C.onLoopReset) C.onLoopReset(); }
     const hadItems = R.items.size > 0;
     if (!vanishing) R.items = new Set();
-    render(); hideCut(); setCG(false);
+    sitReset(); render(); hideCut(); setCG(false);   // 黙ったときの座り姿・ボールのない床を、チャイムで元に戻す（消える場面でも）
     if (vanishing) { await vanish(); return; }
     if (R.loop === 1 && !remembered(C.key) && !R.memIn) {
       // わすれものを持たない周回で、初めて時間が巻き戻ったとき
@@ -4593,10 +4593,42 @@
     return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
   }
   const burn = () => { if (R && R.lastPick && Array.isArray(R.failed) && !R.failed.includes(R.lastPick)) R.failed.push(R.lastPick); };
+  // 2026-11-17 作者の指示：慰めた後に心を閉ざすときは、背景の座り姿も黙ったときの姿（sit.close）へフェードで替える。次のチャイムで元に戻す
+  // 2026-11-18 作者の指示：ふだんの「黙った」ときも、文に合わせた座り姿（sitPose('名前')）に替える。暗い部屋の版は「名前_dark」
+  const sitPose = (name, dark) => () => {
+    const sf = $('#sitFig'); if (!C || !C.sit || sf.classList.contains('gone')) return;
+    const isDark = C.sit.dark && sf.classList.contains('pretoned');
+    crossSrcLoaded(sf, `img/${isDark ? (dark || name + '_dark') : name}.webp`);
+    // ケイ：ボールを指で転がす姿にするときは、背景の床のボールを同時にフェードで消す（拾ったボール）
+    if (name === 'kei_sit_close') fadeBg('gym_noball');
+  };
+  const sitClose = () => () => { if (C && C.sit && C.sit.close) sitPose(C.sit.close, C.sit.closeDark)(); };
+  // 背景を同じ構図の別の絵へ、フェードで替える（座り姿の切り替えと同じ速さ）
+  function fadeBg(name) {
+    const bg = $('#bgImg'), url = `img/${name}.webp`, im = new Image(); im.src = url;
+    const go = () => {
+      if (reduce || replay || !bg.getAttribute('src')) { bg.src = url; return; }
+      const ghost = bg.cloneNode(false); ghost.removeAttribute('id'); ghost.setAttribute('aria-hidden', 'true'); ghost.alt = '';
+      ghost.style.transition = `opacity ${XFADE_MS}ms ease`; ghost.style.pointerEvents = 'none';
+      bg.parentNode.insertBefore(ghost, bg.nextSibling); bg.src = url;
+      requestAnimationFrame(() => requestAnimationFrame(() => { ghost.style.opacity = '0'; }));
+      setTimeout(() => ghost.remove(), XFADE_MS + 120);
+    };
+    if (im.complete && im.naturalWidth) go(); else (im.decode ? im.decode() : Promise.resolve()).catch(() => {}).then(go);
+  }
+  // 次のチャイムで、座り姿と背景を元に戻す
+  function sitReset() {
+    const sf = $('#sitFig'); if (!C || !C.sit) return;
+    const def = `img/${C.sit.dark && sf.classList.contains('pretoned') ? C.sit.dark : C.sit.src}.webp`;
+    if (!(sf.getAttribute('src') || '').endsWith(def)) sf.src = def;
+    const bg = $('#bgImg'); if ((bg.getAttribute('src') || '').endsWith('img/gym_noball.webp')) bg.src = `img/${C.bg}.webp`;
+  }
   async function closeHeart(after) {
     // 心を閉ざしたら、その場でチャイムの時間まで飛ばす
     burn(); R.lastEnd = 'shut';
-    await say(typeof C.closeLines === 'function' ? C.closeLines() : C.closeLines);
+    // 2026-11-17 作者の指示：2段目で慰めた周回（R.cons）に心を閉ざすときは、失望の閉ざし方（closeCons）。流れ・結果は同じ
+    const cl = R.cons && C.closeCons ? C.closeCons : C.closeLines;
+    await say(typeof cl === 'function' ? cl() : cl);
     if (after) await after();
     R.ticks = CHIME_AT - 1; await tick();
   }
@@ -4605,15 +4637,15 @@
      言い直すと「ためらいの段」が挟まる。言い訳や重ねた謝罪では心を閉ざし、受け止める・黙って待つで、話の続きに戻れる。
      戻り値 true：この会話は終わった（消える道か、心を閉ざした） */
   const HESITATE = {
-    art: { lines: [['ヒナ', '……さっきの、まだ痛いんだけど', 'sad'], ['ヒナ', '……で？', 'angry']],
+    art: { lines: [['ヒナ', '……さっきの、まだ痛いんだけど', 'sad'], ['ヒナ', '……で？', 'angry']], consLines: [['ヒナ', '……また、そうやって', 'angry'], ['ヒナ', 'どっちが本当なの', 'angry']],
            ok: ['ヒナはしばらく窓の外を見ていた。', ['', 'それから袖を握っていた手を、ほんの少しだけゆるめた。', 'down']] },
-    music: { lines: [['ソウタ', '……今日会ったばっかりで、よくそういうこと言えるな', 'angry']],
+    music: { lines: [['ソウタ', '……今日会ったばっかりで、よくそういうこと言えるな', 'angry']], consLines: [['ソウタ', '……さっきから、言うことがころころ変わるな', 'angry']],
              ok: ['ソウタは蓋の上の自分の手を、しばらく見ていた。', ['', '……それから、小さく息を吐いた。', 'down']] },
-    library: { lines: [['ミオ', '……さっきの言葉、多分ずっと残ると思う', 'sad']],
+    library: { lines: [['ミオ', '……さっきの言葉、多分ずっと残ると思う', 'sad']], consLines: [['ミオ', '……どっちを信じたらいいのか、分かんないよ', 'sad']],
                ok: ['ミオは胸に抱えた本の角を、指でなぞっていた。', ['', '……それから、少しだけ顔を上げた。', 'down']] },
-    gym: { lines: [['ケイ', '……はは。きっついな、今の', 'reject'], ['ケイ', '……で、まだ何か言う？', 'reject']],
+    gym: { lines: [['ケイ', '……はは。きっついな、今の', 'reject'], ['ケイ', '……で、まだ何か言う？', 'reject']], consLines: [['ケイ', '……はは。今度はそっちか', 'reject'], ['ケイ', '……で、どれが本音？', 'reject']],
            ok: ['ケイはテーピングの指を、ゆっくり握ったり開いたりしていた。', ['', '……それから、笑顔をやめてこっちを見た。', 'down']] },
-    infirmary: { lines: [['ツムギ', '……いいよ、べつに。慣れてるから', 'smile']],
+    infirmary: { lines: [['ツムギ', '……いいよ、べつに。慣れてるから', 'smile']], consLines: [['ツムギ', '……いいよ。どっちでも。慣れてるから', 'smile']],
                  ok: ['ツムギは笑ったまま、カーディガンの袖を握りしめた。', ['', '……その笑顔が少しだけ、ほどけた。', 'down']] },
   };
   async function hurt(lines) {
@@ -4624,7 +4656,7 @@
     if (await choose(['（……何も言えない）', '「……ごめん。今のは、違った」']) === 0) { await doom(lines.slice(cut)); return true; }
     R.repaired = true;
     const h = HESITATE[C.id];
-    await say(h.lines);
+    await say(R.cons && h.consLines ? h.consLines : h.lines);   // 2026-11-17 作者の指示：慰めた後に追い詰めて言い直すと、信じきれない返事
     const opts = [['「……うん。傷つける言い方だった」', 'ok'], ['「そういうつもりじゃ、なかったんだ」', 'excuse'], ['（何も言わずに、待つ）', 'ok'], ['「ごめん。本当に、ごめん」', 'again']];
     const k = opts[await choose(opts.map(o => o[0]))][1];
     if (k === 'excuse') { nmMark('miss'); await say([[C.name, (C.key === 'sota' || C.key === 'kei' ? '……つもりじゃなくても、言っただろ' : '……つもりじゃなくても、言ったでしょ'), 'angry']]); await closeHeart(); return true; }
@@ -4901,8 +4933,9 @@
                 ['ヒナ', '……失敗作なら、失敗作らしく、最後は……', 'despair']],
     // 心を閉ざすときの姿は、直前の動きに合わせる（手首を隠した／膝に顔をうずめた／窓へ顔をそむけた／それ以外＝言い訳や重ねた謝罪の後）
     // 2026-11-14 作者の指摘：窓へ顔をそむけた直後に「うつむいたまま」は合わないので、窓の外を見たままに
+    closeCons: () => { R.pose = null; return [sitPose('hina_sit_wrist'), 'ヒナは袖を引っ張って手首を隠したまま、それきり一度もこちらを見なかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。']; },   // 慰めた後に突き放したとき（失望）
     closeLines: () => { const p = R.pose; R.pose = null;
-      return [p === 'wrist' ? 'ヒナは手首を隠したまま、もう何も言わなかった。' : p === 'knees' ? 'ヒナは膝に顔をうずめたまま、もう何も言わなかった。'
+      return [sitPose(p === 'wrist' ? 'hina_sit_wrist' : p === 'knees' ? 'hina_sit_knees' : p === 'window' ? 'hina_sit_window' : 'hina_sit'), p === 'wrist' ? 'ヒナは手首を隠したまま、もう何も言わなかった。' : p === 'knees' ? 'ヒナは膝に顔をうずめたまま、もう何も言わなかった。'
             : p === 'window' ? 'ヒナは窓の外へ顔を向けたまま、もう何も言わなかった。' : 'ヒナはうつむいたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。']; },
     hotspots: [
       ['sink', '流し', 'left:83.3%;top:37.5%;width:16.7%;height:45.8%'],
@@ -5585,7 +5618,7 @@
     // 心に触れたときの記憶のかけら（2つ目）。連弾の後の心の声と同じ記憶
     touchMemory: '（火曜の放課後。階段に座って、少し開いた扉のすき間から二人の音を聴いていた。……二人とも、こっちには気づかなかった）', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room', bgClock: { cx: 756, cy: 245, rx: 36, ry: 37 },
     // 2026-11-10：座り絵の椅子だけの絵を、ソウタが消えても残す（背景の椅子は消した）
-    sit: { src: 'sota_sit', chair: 'sota_bench', style: 'left:54.2%;top:46.5%;height:29.5%' },
+    sit: { src: 'sota_sit', close: 'sota_sit_close', chair: 'sota_bench', style: 'left:54.2%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
     faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', wetHand: 'sota_wethand', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
     lost: 'ソウタのパートだけの楽譜',
@@ -5638,8 +5671,9 @@
                 ['ソウタ', '……それでも、ここよりは、あいつに近い気がするから', 'despair']],
     unravelMood: 'musicbox',
     // 先にピアノを弾いていたら、蓋は開いたまま
+    closeCons: () => { R.seen.delete('lid'); return [sitClose(), 'ソウタは膝の上で拳を握り込んだまま、二度とこちらを見なかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。']; },   // 慰めた後に突き放したとき（失望）
     closeLines: () => { const open = R.seen.has('lid'); R.seen.delete('lid');
-      return [open ? 'ソウタは開いたままだった鍵盤の蓋をそっと閉じて、その上に額をつけた。もう何も言わなかった。' : 'ソウタは閉じた鍵盤の蓋に額をつけたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。']; },
+      return [sitPose('sota_sit_lid'), open ? 'ソウタは開いたままだった鍵盤の蓋をそっと閉じて、その上に額をつけた。もう何も言わなかった。' : 'ソウタは閉じた鍵盤の蓋に額をつけたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。']; },
     hotspots: [
       ['window', '窓', 'left:0;top:0;width:18%;height:52%'],
       ['board', '黒板', 'left:32.8%;top:28.7%;width:33.9%;height:19%'],
@@ -6203,7 +6237,7 @@
     window2: ['窓の下の低い書架に、鉢植えが置いてある。土は、まだ湿っていた。', '鉢に、水やり当番の札が刺さっている。丸い字の「白石」は、西日で薄くなっていた。', 'その下に、細い字で「水野」。こちらの字は、まだ新しい。'],
     clock2: ['時計の下に、開館時間の札。「放課後　〜17:00」。', 'その下に小さな付箋が貼ってある。「7/15　当番　水野・伊藤」。……閉館の時刻を過ぎても残っているのは、ミオ一人だけらしい。'],
     id: 'library', key: 'mio', memory: ['（……ミオは本を胸に抱え直してから、手帳の端に小さく名前を書いた。貸出カードと同じ字だった）', '（図書室の隅の席。閉館のチャイムが鳴るまで、ここにいた日がある。……家に、帰りたくなかった）'], name: 'ミオ', who: 'この子', startMin: 60, room: '図書室', hall: 'hall_library', label: '第三章「図書室」', bg: 'library', bgClock: { cx: 1437, cy: 78, rx: 31, ry: 61 },
-    sit: { src: 'mio_sit', chair: 'mio_chair', chairWhenGone: true, style: 'left:12.2%;top:42.0%;height:46.5%', front: 'polygon(0.00% 62.99%, 6.97% 62.99%, 6.97% 65.23%, 11.20% 65.43%, 11.46% 66.31%, 13.74% 67.19%, 13.87% 100.00%, 0.00% 100.00%)' },   // 手前の低い書架は、座り絵より前（2026-11-11）
+    sit: { src: 'mio_sit', close: 'mio_sit_close', chair: 'mio_chair', chairWhenGone: true, style: 'left:12.2%;top:42.0%;height:46.5%', front: 'polygon(0.00% 62.99%, 6.97% 62.99%, 6.97% 65.23%, 11.20% 65.43%, 11.46% 66.31%, 13.74% 67.19%, 13.87% 100.00%, 0.00% 100.00%)' },   // 手前の低い書架は、座り絵より前（2026-11-11）
     // 消えた後机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
     faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap', clench: 'mio_clench', clenchDown: 'mio_clenchdown', frown: 'mio_frown', look: 'mio_look' },   // clenchDown：本を握りしめて伏せ目／frown：眉をひそめてうつむく   // lap：本を膝の上に下ろして小さく決意した顔／clench：本を強く握りしめ、目をぎゅっとつむった悲痛な顔
@@ -6243,7 +6277,8 @@
                 ['ミオ', '……私には、もう、運んでもらう資格なんてないから', 'despair'],
                 ['', 'ミオは本の表紙をそっと撫でた。', 'stroke'],
                 ['ミオ', '教室のどこにも、自分の椅子がなかったとき。……ツムギも、こんな気持ちだったのかな', 'stroke']],
-    closeLines: ['ミオは本を抱えたまま、もう顔を上げなかった。', '沈黙のまま、時計の針だけが17:30へ近づいていった。'],
+    closeLines: () => [sitPose('mio_sit_hug'), 'ミオは本を抱えたまま、もう顔を上げなかった。', '沈黙のまま、時計の針だけが17:30へ近づいていった。'],
+    closeCons: () => [sitClose(), 'ミオは本を開いた。けれど、ページは一度もめくられなかった。', '沈黙のまま、時計の針だけが17:30へ近づいていった。'],   // 慰めた後に突き放したとき（失望）
     hotspots: [
       ['window', '窓', 'left:0;top:0;width:18%;height:40%'],
       ['clock', '時計', 'left:90%;top:2%;width:6%;height:9%'],
@@ -6835,7 +6870,7 @@
     clock2: ['時計の下に、体育館の使用予定表が貼ってある。', '「7/15（火）　16:00〜17:15（片付け〜17:30）　A面：男子バレー部　B面：男子バスケットボール部」',
              '「17:30〜18:00　延長（大会前）：男子バスケットボール部　全面　片付け・鍵の返却：部長」', '延長の欄にだけ、顧問の赤ペンで線が引かれていた。……今日の延長はなくなったらしい。'],
     id: 'gym', key: 'kei', memory: ['（……大きな、まっすぐな字で、ケイは手帳に名前を書いてくれた。ペンを返しながら少しだけ笑った）', '（遅くまで残っていた日。明かりのついた体育館で、一人で走り続ける影を見たことがある。……あれは、ケイだったんだ）'], name: 'ケイ', who: 'この人', startMin: 90, room: '体育館', hall: 'hall_gym', label: '第四章「体育館」', bg: 'gym', bgClock: { cx: 1464, cy: 90, rx: 31, ry: 32 },
-    sit: { src: 'kei_sit', style: 'left:79.5%;top:45.1%;height:21.8%' },
+    sit: { src: 'kei_sit', close: 'kei_sit_close', style: 'left:79.5%;top:45.1%;height:21.8%' },
     // 消えた後床に残るバッシュ（わすれものの絵と同じ靴を、ケイが座っていた床に置いた重ね絵）
     leftover: '', leftoverImg: 'g_left',
     faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', softSmile: 'kei_softsmile', serious: 'kei_serious', breath: 'kei_breath', blank: 'kei_blank', teary: 'kei_teary', sadGrip: 'kei_sadgrip' },
@@ -6878,7 +6913,8 @@
                 'ケイは、テーピングの巻かれた自分の指をじっと見つめていた。',
                 ['ケイ', '……あいつら、俺がいなくても、ちゃんと走れるよな', 'despair']],
     // 心を閉ざした後：直前の様子（ボールかごのほうを向く・タオルで顔を覆う）とつながるよう、表情には触れない
-    closeLines: ['それきり、ケイはもうこちらを見なかった。', '沈黙のまま、時計の針だけが18:00へ近づいていった。'],
+    closeLines: () => [sitPose('kei_sit_away'), 'それきり、ケイはもうこちらを見なかった。', '沈黙のまま、時計の針だけが18:00へ近づいていった。'],
+    closeCons: () => [sitClose(), 'ケイは笑ったまま、床のボールを指で転がしていた。……もう、こちらを見なかった。', '沈黙のまま、時計の針だけが18:00へ近づいていった。'],   // 慰めた後に突き放したとき（失望）
     hotspots: [
       ['window', '窓', 'left:0;top:0;width:20%;height:22%'],
       ['clock', '時計', 'left:93%;top:4%;width:6%;height:9%'],
@@ -7559,7 +7595,7 @@
     id: 'infirmary', key: 'tsumugi', memory: ['（……保健室を出る前、ツムギは丸い、柔らかな字で手帳に名前を書いてくれた）', '（帰り道、保健室の窓の前を通ったことがある。ガラスに指で書いた『またね』が透けていた。……誰に宛てたのかは知らない。ただ、そう書いてもらえる誰かがいるのが、うらやましかった）'], name: 'ツムギ', who: 'この子', startMin: 120, room: '保健室', hall: 'hall_infirmary', label: '第五章「保健室」',
     bg: 'infirmary', bgClock: { cx: 830, cy: 202, rx: 40, ry: 40 },
     // 手前のベッド（1）の角に座る。明かりを消すと、部屋の暗さ・色味に合わせた絵（dark）に替える
-    sit: { src: 'tsumugi_sit', dark: 'tsumugi_sit_dark', style: 'left:78.19%;top:34.57%;height:55.37%' },
+    sit: { src: 'tsumugi_sit', dark: 'tsumugi_sit_dark', close: 'tsumugi_sit_close', closeDark: 'tsumugi_sit_close_dark', style: 'left:78.19%;top:34.57%;height:55.37%' },
     leftover: '', leftoverImg: 'i_left', leftoverDark: 'i_left_dark',   // 消えた後、シーツの上に来室カード（細長い厚紙）。暗い部屋では暗い版
     faces: { normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
              grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile', crumple: 'tsumugi_crumple',
@@ -7614,7 +7650,8 @@
               ['ツムギ', '教室にも、保健室にも、私の椅子はないの。……だったら、もう、どこにもいなくていいよね', 'despair'],
               'ツムギは窓の外の通路を、じっと見ていた。', ['ツムギ', '……またね', 'despair']];
     },
-    closeLines: ['それきり、ツムギはもう何も言わなかった。', '沈黙のまま、時計の針だけが18:30へ近づいていった。'],
+    closeLines: () => [sitPose('tsumugi_sit_down'), 'それきり、ツムギはもう何も言わなかった。', '沈黙のまま、時計の針だけが18:30へ近づいていった。'],
+    closeCons: () => [['ツムギ', '……ごめんね。ちょっと、疲れちゃった', 'smile'], sitClose(), 'ツムギは笑ったまま、窓のほうを向いた。それきり、何も言わなかった。', '沈黙のまま、時計の針だけが18:30へ近づいていった。'],   // 慰めた後に突き放したとき（失望）
     hotspots: [
       ['window', '窓', 'left:0;top:0;width:20%;height:46%'],
       ['clock', '時計', 'left:50%;top:13%;width:8%;height:12%'],
