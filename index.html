@@ -72,12 +72,12 @@
   /* 2026-11-17 作者の指示：床に落ちた生徒手帳（立った目線から足もと0.5mを見下ろす絵）は、スマホの小さい画面では手帳とページのぶれが見えないので、手帳を中心に2倍に寄せる（画角を狭めたのと同じなので遠近は崩れない）。
      タブレットはパソコンと同じ大きさで見せる（作者の指示）。スマホは縦持ちなら幅700px以下、横持ちなら高さ500px以下で見分ける（iPad mini でも短い辺は744px） */
   @media (max-width: 700px), (max-height: 500px) {
-    .cutin[data-cut="protag_notebook_dusk"] img { transform: scale(2); transform-origin: 50% 52%; }
+    .cutin[data-cut="protag_notebook_dusk"]:not(.nbz) > img { transform: scale(2); transform-origin: 50% 52%; }   /* なぞる場面（.nbz）の絵にはかけない */
   }
   .cutin .clock-hands { position: absolute; inset: 0; width: 100%; height: 100%; }
-  /* 屋上の手帳をなぞる：拾って開いた手帳の絵（protag_notebook_front）で、右ページの名前のところへ寄る（中心 930,560・2.6倍。生徒手帳は手のひらにのる大きさなので、強めに寄る） */
+  /* 屋上の手帳をなぞる：拾って開いた手帳の絵（protag_notebook_front）で、開いた手帳の見開き全体へ寄る（中心 782,580・1.9倍。2026-11-17 作者の指示：2.6倍では枠に対して大きすぎたので、表紙の両端まで枠に収める） */
   .cutin.nbz { pointer-events: auto; }
-  .nbz-in { position: absolute; inset: 0; transform-origin: 60.55% 54.69%; transform: translate(-10.55%, -4.69%) scale(2.6); transition: transform 1.4s cubic-bezier(.3, .6, .2, 1); }
+  .nbz-in { position: absolute; inset: 0; transform-origin: 50.91% 56.64%; transform: translate(-0.91%, -6.64%) scale(1.9); transition: transform 1.4s cubic-bezier(.3, .6, .2, 1); }
   .nbz-in.far { transform: none; transition: none; }
   .cutin .nbz-in img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .nbz-row { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
@@ -1468,7 +1468,7 @@
       return Promise.resolve(rec('t:' + order[0]).slice(2));
     }
     return new Promise(res => {
-      const el = $('#cutin');
+      const el = $('#cutin'); el.dataset.cut = 'nbz';   // 床の手帳のスマホ用の寄せ（data-cut）を引き継がない
       el.innerHTML = `<div class="nbz-in${zoom ? ' far' : ''}"><img src="${imgSrc('protag_notebook_front')}" alt="夕焼けの屋上で、拾った生徒手帳を開いている。右ページに五人の名前が並び、人差し指がページに触れている">${NB_ROWS.map(([k, cx, cy, w, h, deg]) =>
         `<button type="button" class="nbz-row${done.includes(k) ? ' done' : ''}${k === 'blank' ? ' blank' : ''}" data-k="${k}" style="left:${(cx - w / 2) / 15.36}%;top:${(cy - h / 2) / 10.24}%;width:${w / 15.36}%;height:${h / 10.24}%;transform:rotate(${deg}deg)" aria-label="${k === 'blank' ? '6行目' : ({ art: '春日ヒナ', music: '井上ソウタ', library: '水野ミオ', gym: '三浦ケイ', infirmary: '白石ツムギ' })[k]}"${done.includes(k) ? ' disabled' : ''}></button>`).join('')}</div>
         <p class="nbz-cap">名前に触れて、なぞる</p>`;
@@ -1486,7 +1486,7 @@
     });
   }
   function hideCut() {
-    $('#cutin').classList.remove('nbz');
+    $('#cutin').classList.remove('nbz'); delete $('#cutin').dataset.cut;
     $('#cutin').classList.remove('show');
     $('#scene').classList.remove('cut');
   }
@@ -8260,6 +8260,7 @@
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
         ${(P.runNo || 1) > 1 && recallSrc() ? '<button type="button" class="btn" id="tRecall">放課後を思い返す<span class="sub">好きな章から、やり直せます</span></button>' : ''}
+        ${!roof && loadRoofStart() ? '<button type="button" class="btn" id="tRoofBack">屋上に戻る<span class="sub">最後に着いた屋上の初めから</span></button>' : ''}
         ${extrasAny() ? '<button type="button" class="btn" id="tExtra">おまけ</button>' : ''}
         <button type="button" class="btn" id="tSet">設定<span class="sub">既読スキップ・文字の速さ・音量</span></button>
         <button type="button" class="btn-reset" id="tWipe">プレイデータをリセット</button>
@@ -8293,7 +8294,8 @@
       loadSlot({ ...roof, rain: false, wind: false, resume: { key: roof.resume.key, lines: 0, inputs: [] } });
     };
     if ($('#tShelf')) $('#tShelf').onclick = showShelf;
-    if ($('#tRecall')) $('#tRecall').onclick = showRecall;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
+    if ($('#tRecall')) $('#tRecall').onclick = showRecall;
+    if ($('#tRoofBack')) $('#tRoofBack').onclick = askRoofBack;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
     if ($('#tExtra')) $('#tExtra').onclick = showExtras;
     $('#tSet').onclick = showSettings;
     if ($('#tLoad')) $('#tLoad').onclick = () => showSlots('load');
@@ -8427,7 +8429,7 @@
       if (!can) return `<div class="recall-row off"><span class="rc-ch">？？？</span></div>`;
       return `<button type="button" class="recall-row" data-i="${i}"><span class="rc-ch">${ch.label}</span><span class="rc-res">${r ? RES_LABEL[r] || '' : (src.live ? '今の章' : '')}</span></button>`;
     });
-    if (roofD) rows.push(`<button type="button" class="recall-row" data-i="${ORDER.length}"><span class="rc-ch">屋上　18:30</span><span class="rc-res"></span></button>`);
+    // 2026-11-17 作者の指示：屋上は思い返しではなく現実の時間なので、この一覧には入れない（タイトルの「屋上に戻る」から）
     openOverlay(`<p class="eyebrow">タイトル</p><h2>放課後を思い返す</h2>
       <p class="note">${src.live ? '今の放課後' : 'さっきの放課後'}の、好きなところから思い返せます。この放課後で手に入れたわすれものは、戻っても、この放課後のうちは使えません。</p>
       <div class="recall-list">${rows.join('')}</div>
@@ -8458,6 +8460,24 @@
       return;
     }
     startRun(ORDER[i], { recall: lines });
+  }
+  /* ---------- 屋上に戻る（2026-11-17 作者と決定）：屋上は主人公の思い返しではなく現実の時間なので、「放課後を思い返す」とは別の入り口にする。
+     つなぐのは、最後に屋上に着いた周回の屋上の初め（その周回の結果ごと）。放課後のやり直しの途中なら、今の放課後の続きは消える。
+     周回の番号は戻さない（今の番号のまま、屋上に着いた周回の結果を写して屋上を始める）。わすれもの棚・実績・アルバムは残る。戻った周回はノーミスに数えない。
+     戻るときの黒い画面は、18:30のチャイムの音だけ（心の声は入れない） ---------- */
+  async function askRoofBack() {
+    const d = loadRoofStart(); if (!d) return showTitle();
+    const live = Object.keys(P.cur.results || {}).length || loadRun() || loadRoof();
+    const v = await overlayWait(`<p class="eyebrow">屋上に戻る</p><h2>屋上の初めに戻りますか？</h2>
+      <p>最後に屋上に着いた放課後の、屋上の初めから始まります。</p>
+      ${live ? '<p>今の放課後の続きは消えます。</p>' : ''}
+      <p class="note">わすれもの棚とアルバムは、そのまま残ります。</p>`, '', ['戻る', 'やめる']);
+    if (v !== 0) return showTitle();
+    const rc = JSON.parse(JSON.stringify((d.prog && d.prog.cur) || P.cur || { results: {} }));
+    P.cur = { ...rc, nm: { ...(rc.nm || {}), rewind: true } };
+    saveP(); clearRun(); clearRoof();
+    openOverlay('', 'void'); bell(); await sleep(2600); closeOverlay();
+    loadSlot({ ...d, rain: false, wind: false, prog: { ...d.prog, shelf: { ...P.shelf }, shelfRun: { ...P.shelfRun }, runNo: P.runNo, cur: JSON.parse(JSON.stringify(P.cur)) } });
   }
   /* ---------- アルバム（おまけ）：ストーリーの中で見た一枚絵と、わすれもの（姿を変える前と後を並べて）を、後から見返せる。
      調べるときのカットインは入れない。見ていないものは「？？？」。1つ見るまで、タイトルにボタンを出さない ---------- */
