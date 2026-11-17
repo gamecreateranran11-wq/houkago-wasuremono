@@ -957,7 +957,7 @@
       <img id="portraitGlint" class="portrait glint" alt="" aria-hidden="true">
       <img id="portraitSpark" class="portrait spark" alt="" aria-hidden="true">
       <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="fRoomDark" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".64 0 0 0 0  0 .54 0 0 0  0 0 .56 0 0  0 0 0 1 0"/></filter><filter id="fRoomDarkP" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".76 0 0 0 0  0 .66 0 0 0  0 0 .68 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_art" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.89 0 0 0 0  0 0.8 0 0 0  0 0 0.68 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_music" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.84 0 0 0 0  0 0.67 0 0 0  0 0 0.5 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_library" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.83 0 0 0 0  0 0.83 0 0 0  0 0 0.89 0 0  0 0 0 1 0"/></filter><filter id="fUnlit_gym" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0.64 0 0 0 0  0 0.62 0 0 0  0 0 0.92 0 0  0 0 0 1 0"/></filter></svg>
-      <img class="chime-cg" src="img/chime_sky.webp" alt="17:00の夕焼け空。チャイムが響いている">
+      <img class="chime-cg" src="img/chime_sky.webp" alt="17:00の空。チャイムが響いている">
     </div>
   </div>
 
@@ -1190,7 +1190,7 @@
   const replayed = () => (replay && replay.inputs.length ? { v: rec(replay.inputs.shift()) } : null);
   let gen = 0;  // タイトルに戻るたびに増やす。古い放課後の文章送りタイマーが、新しい放課後に割り込まないように
   let lastSkipped = false;  // 直前の文章を既読スキップで飛ばしたか
-  // noSkip：既読でも早送りしない（チャイムの夕焼けなど、必ず見せたい演出）
+  // noSkip：既読でも早送りしない（チャイムの空など、必ず見せたい演出）
   function line(l, wait = true, noSkip = false) {
     const g = gen;
     { const [w0, t0] = Array.isArray(l) ? l : ['', l];
@@ -1263,14 +1263,14 @@
   const FACE_CACHE = {};
   // 立ち絵は「座った絵（_s）」と「立った絵（_p）」の2組。部屋では座っていて、立ち上がる場面から立った絵に切り替える（R.standing）
   // 立った絵は表情の数が少ないので、ない表情は近いものを使う
-  const STAND_SET = { hina: 'angry despair down grief sad smile surprise pout awaysmile', sota: 'angry crysmile despair down grief sad smile surprise',
+  const STAND_SET = { hina: 'angry despair down grief sad smile surprise surprisefront pout awaysmile', sota: 'angry crysmile despair down grief sad smile surprise',
                       mio: 'angry crysmile despair down grief sad smile surprise stroke offer offer_sad nb nb_apology nb_grief nb_crysmile nb_skirt nb_surprise nb_down nb_plead nbleave nbleavewonder', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { crumple: 'crysmile', reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry', window: 'sad',
                        blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', wethand: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', grip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise', sleeve: 'sad', wristhate: 'sad' };
   // 座り絵が無い表情は、近い座り絵で代える（ミオの表紙を撫でる→撫でてうつむく。ヒナのむくれ顔は立って描いた後の一言だけで、
   // 座ってむくれる場面はないが、先読みで無い絵を探しに行かないように、うつむきにしておく）
-  const SIT_NEAR = { hina: { pout: 'down', awaysmile: 'smile' }, mio: { stroke: 'strokedown' } };
+  const SIT_NEAR = { hina: { pout: 'down', awaysmile: 'smile', surprisefront: 'surprise' }, mio: { stroke: 'strokedown' } };
   function faceFile(f) {
     const v = C.faces[f], key = v.slice(0, v.indexOf('_')), suf = v.slice(key.length + 1);
     if ((!R || !R.standing) && key === C.key) { const t = (SIT_NEAR[key] || {})[suf] || suf; return t === 'bust' ? `${key}_s` : `${key}_s_${t}`; }
@@ -3334,7 +3334,7 @@
     if (C.onTick) await C.onTick();
     if (C.onTick2) await C.onTick2();
   }
-  // 17:00のチャイム：鳴っている間は夕焼け空の一枚絵に切り替え、明けたら部屋に戻す
+  // 17:00のチャイム：鳴っている間は空の一枚絵に切り替え、明けたら部屋に戻す
   function setCG(on) { $('#scene').classList.toggle('cg', on); }
   async function chime() {
     // 3回目のチャイムの直前：心に触れていた子は、この先を示す言葉を残す
@@ -4391,7 +4391,7 @@
     hideCut(); setTalk(false);
     if (C.id === 'infirmary' && !R.touched && mioRes() === 'saved') await say(['扉の窓の向こうに、本を抱えた影が何度か見えた気がした。……どのチャイムの後も、ノックの音はしなかった。']);
     // 「何もしてあげられない」を選んだとき（心には触れていた）は、届かなかったのではなく、届きかけた手を自分で下ろした形にする
-    await say(['チャイムを数えるのを、いつのまにかやめていた。', R.touched ? '届きかけた手を、自分から下ろしてしまった。夕焼けは少しも動かない。' : '誰の心にも、手が届かないまま。夕焼けは少しも動かない。',
+    await say(['チャイムを数えるのを、いつのまにかやめていた。', R.touched ? '届きかけた手を、自分から下ろしてしまった。窓の外の空は少しも動かない。' : '誰の心にも、手が届かないまま。窓の外の空は少しも動かない。',
                '自分の名前を、思い出せなくなっていた。……それでも、放課後は終わらなかった。']);
     keepMem();
     R.over = true; clearRun(); P.endings.BAD1 = true; saveP(); render(); idle();
@@ -4698,6 +4698,7 @@
     R.over = true; clearRun(); P.saved[C.key] = true; saveP(); albumSync(); render(); idle(); if (music) keepBgm(music, [music]); else keepBgm('unravel', WARM);
     const next = recordResult('saved');
     closeOverlay();
+    $('#hsLayer').innerHTML = '';   // 2026-11-17 作者の指摘：見送るボタンの後、明転している間に調べる場所の白い枠（流しなど）が出ていた
     // 見送りの絵へは明転で切り替える（作者の指示）。絵は先に読みこんでおく
     try { const pre = new Image(); pre.src = `img/${img}.webp`; await pre.decode(); } catch (e) {}
     await whiteSwap(() => {
@@ -4738,7 +4739,7 @@
       const first = !R.know.has('window'), second = !first && C.window2 && !R.know.has('window2');
       showCut((!first && C.windowImg2) || C.windowImg || 'ci_window');
       if (first) {
-        await say([...(C.window1 || ['窓の外は、ずっと同じ夕焼け。校庭には誰もいない。']), ...(C.windowNote ? C.windowNote() : []), ...windowLine()]);
+        await say([...(C.window1 || ['窓の外は、ずっと同じ空。校庭には誰もいない。']), ...(C.windowNote ? C.windowNote() : []), ...windowLine()]);
         R.know.add('window'); await tick();
       } else if (second) {
         // 2回目：その章だけの、窓回りの新しい情報
@@ -4748,7 +4749,7 @@
         R.know.add('window2'); await say(C.window2);
         if (win && sf.getAttribute('src') === `img/${C.sit.window}.webp`) crossSrcLoaded(sf, `img/${C.sit.src}.webp`);
         await tick();
-      } else await say(['夕焼けは、少しも動かない。']);
+      } else await say(['窓の外の空は、少しも動かない。']);
     },
     async clock() {
       showCut('clock');
@@ -4849,8 +4850,8 @@
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
     faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout', awaySmile: 'hina_awaysmile', grip: 'hina_grip', window: 'hina_window',
              // スケッチブックの入った鞄を抱えてから、空を描き始めるまで
-             bag: 'hina_bag', bagSad: 'hina_bag_sad', bagGrief: 'hina_bag_grief', bagSmile: 'hina_bag_smile', bagCrySmile: 'hina_bag_crysmile', bagDown: 'hina_bag_down',
-             sleeve: 'hina_sleeve', wristHate: 'hina_wristhate' },   // 袖の中で手を握りこむ（悲しみ）／左手首を押さえたまま自分を嫌う顔
+             bag: 'hina_bag', bagSad: 'hina_bag_sad', bagGrief: 'hina_bag_grief', bagSmile: 'hina_bag_smile', bagCrySmile: 'hina_bag_crysmile', bagDown: 'hina_bag_down', bagSmileFront: 'hina_bag_smilefront',
+             sleeve: 'hina_sleeve', wristHate: 'hina_wristhate', surpriseFront: 'hina_surprisefront' },   // surpriseFront：立って、こちらを見て驚く（2026-11-17）   // 袖の中で手を握りこむ（悲しみ）／左手首を押さえたまま自分を嫌う顔
     lost: '顔のないスケッチブック',
     freeSpots: () => R.items.has('blue') ? ['char'] : ['sink'],   // ほどけた後に調べられる場所
     idleFree: '（ヒナが待っている。チャイムが鳴る前に）',
@@ -4891,7 +4892,7 @@
              '「痛くなったら、あんたの袖をつかむね。あんたが痛くなったら、私の袖をつかんで」',
              'そうしているうちに、どちらの痛みなのか分からなくなっていった。',
              '「ここにいれば、誰にも比べられないね」', 'ヒナが笑う。同じ顔で、笑った。',
-             '扉はどちらからも開けようとしなかった。夕焼けは、ずっと同じ色のままだった。'],
+             '扉はどちらからも開けようとしなかった。窓の外の空は、ずっと同じ色のままだった。'],
     samePose: '窓際には、さっきとまったく同じ姿勢でヒナが座っていた。',
     loopReply: [['ヒナ', '……は？ チャイムなんて鳴ってないけど', 'angry'], ['ヒナ', 'ていうか、誰？', 'angry']],
     lastWords: [['ヒナ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ヒナ', '……お母さんの声が、聞こえないところ', 'despair'],
@@ -4917,7 +4918,7 @@
     ],
     async intro(rem) {
       if (!rem) {
-        await say(['……目を覚ますと、美術室にいた。', '窓の外は夕焼け。時計は16:00を指している。', ...locked('美術室'),
+        await say(['……目を覚ますと、美術室にいた。', '窓の外は、まだ明るい夏の空。時計は16:00を指している。', ...locked('美術室'),
                    '誰かに連絡しようと、ポケットを探った。……スマホがない。ポケットの中は空っぽだった。',
                    '（……どうして、ここにいるんだっけ）',
                    '窓際に女子生徒が一人座っていた。',
@@ -4983,12 +4984,12 @@
           R.know.add('notice'); await tick();
         } else if (!R.know.has('notice2')) {
           R.know.add('notice2');
-          await say(['金賞のリボンが夕日を受けて光っている。',
+          await say(['金賞のリボンが日差しを受けて光っている。',
                      '画鋲が一つ外れて、貼り紙の端がめくれていた。……裏に鉛筆の小さな字がある。',
                      '「サクラ先輩の妹」じゃなくて、名前で呼ばれたい。',
                      '何度も消しゴムでこすった跡。最後まで消しきれなかったみたいだ。']);
           await tick();
-        } else await say(['金賞のリボンが夕日を受けて光っている。裏の「名前で呼ばれたい」は、めくれたままだ。']);
+        } else await say(['金賞のリボンが日差しを受けて光っている。裏の「名前で呼ばれたい」は、めくれたままだ。']);
       },
       async trash() {
         if (!R.taken.trash) {
@@ -5153,7 +5154,7 @@
                                 ['ヒナ', '……出てって', 'reject'],
                                 'ヒナは窓のほうを向いたまま、二度とこちらを振り返らなかった。'],
                                ['扉を叩いた。返事はない。', '……扉の向こうで、紙を引き裂く音が聞こえた。', '少しして、また一枚。……また一枚。']);
-      await say([['ヒナ', '……きれい？', 'surprise'], ['ヒナ', '……そんなふうに言われたの、初めて', 'down'], 'ヒナはしばらく黙って、窓の外の夕焼けを見ていた。', 'それからぽつりと言った。', ['ヒナ', '破ったのは、お母さん', 'down'], ['ヒナ', '……昨日、ここで描いたの。乾かそうと思ってスケッチブックに挟んだら、そのまま鞄に入れて帰っちゃって', 'sad'], ['ヒナ', 'お母さん、毎晩スケッチブックを見るの。お風呂から戻ったら、あの絵が机の上に出してあって、裏に、お母さんの字が書いてあった', 'sad'], ['ヒナ', '『こんなもの描いてる暇があるなら』って。……県展の絵、まだ一枚も描けてないから', 'sad'], ['ヒナ', '言い返したら、目の前で、びりびりに', 'sad'], 'ヒナの声が少しだけ震えた。',
+      await say([['ヒナ', '……きれい？', 'surprise'], ['ヒナ', '……そんなふうに言われたの、初めて', 'down'], 'ヒナはしばらく黙って、窓の外の空を見ていた。', 'それからぽつりと言った。', ['ヒナ', '破ったのは、お母さん', 'down'], ['ヒナ', '……昨日、ここで描いたの。乾かそうと思ってスケッチブックに挟んだら、そのまま鞄に入れて帰っちゃって', 'sad'], ['ヒナ', 'お母さん、毎晩スケッチブックを見るの。お風呂から戻ったら、あの絵が机の上に出してあって、裏に、お母さんの字が書いてあった', 'sad'], ['ヒナ', '『こんなもの描いてる暇があるなら』って。……県展の絵、まだ一枚も描けてないから', 'sad'], ['ヒナ', '言い返したら、目の前で、びりびりに', 'sad'], 'ヒナの声が少しだけ震えた。',
                  ...(R.know.has('resign')
                    ? [['ヒナ', '……引き出しの、退部届も見たんでしょ', 'down'],   // 2026-11-10 作者の指摘：見た証拠がないので、ヒナの推測の言い方に
                       ['ヒナ', 'お母さんね、本気で『あなたのため』だと思ってるの。……だから、何も言い返せない', 'sad']]
@@ -5184,7 +5185,7 @@
                  ['', 'ヒナは袖の中で指先を握りしめた。', 'sleeve'],
                  ['ヒナ', 'お母さんに『よくできたね』って言われたこと、一回もない。……お姉ちゃんには、毎日言ってるのに', 'sleeve']]);
       if (R.know.has('sketch')) await say(['（……ゴミ箱の、描きかけの雲。この子は今日も描こうとしていた）']);
-      const HINA_MOM = [['ヒナ', '……お母さんね、ちゃんとしてる人なの。毎朝お弁当作って、画材も塾も、言えば全部そろえてくれた', 'down'],
+      const HINA_MOM = [['ヒナ', '……お母さんね、ちゃんとしてる人なの。毎朝お弁当作って、塾にも通わせてくれて、画材も言えば全部そろえてくれた', 'down'],
                    ['ヒナ', '『環境は全部用意したでしょ。サクラは、同じ部屋の、同じ机で、ちゃんとやったのよ』って', 'sad'],
                    // 2026-11-13 作者の指摘：感想カードだけでは、同じ机で手が止まる理由の説明になっていない。
                    // 姉は構図を決めて本番の一枚を描き切る。ヒナは小さな習作を何枚も描くうちに描きたい一枚が見えてくる。母はそれを寄り道とみなすので、家では習作を描けない（01 の設定）。
@@ -5215,11 +5216,12 @@
         await say([['ヒナ', '……結果で見返せたら、とっくにやってるよ', 'down'], ...HINA_MOM]);
       } else {
         await say([['', 'ヒナの指が、袖の中で少しだけゆるんだ。', 'sleeve'],
-                   ['ヒナ', '……うん', 'sad'], ...HINA_MOM]);
+                   // 2026-11-17 作者の指示：ゆるんだ後もしばらく袖の中で指を握る差分のまま（顔を少し埋めている）。自分の描き方の話に移るところで顔を戻す
+                   ['ヒナ', '……うん', 'sleeve'], ...HINA_MOM.map((l, i) => i < 2 ? [l[0], l[1], 'sleeve'] : l)]);
       }
 
       // 3段目
-      await say([['', 'ヒナは左の袖口をぎゅっと握った。', 'grip']]);
+      await say([['', 'しばらく、どちらも何も言わなかった。', 'down']]);   // 2026-11-17 作者の指示：すぐ後に手首を押さえるので、袖口を握る描写と差分（grip）はやめる（手の周りが忙しくなる）
       if (R.seen.has('drawer')) {
         await line(['ヒナ', '……引き出しも、見たんでしょ', 'down']);
       } else {
@@ -5303,12 +5305,12 @@
                  ['', 'ヒナはスケッチブックの入った鞄を、胸にぎゅっと抱えた。', 'bagGrief'],
                  ['ヒナ', '……それに、自分の顔なんて。見たら、きっと嫌いになる', 'bagGrief'],   // 2026-11-15 作者の指示：鞄を抱えた泣き顔のまま
                  ['', '「嫌いになっても、いいと思う。……それでも、今のヒナさんの顔を、ヒナさん自身に見てあげてほしい」', 'bagGrief'],
-                 'ヒナは長い間黙っていた。窓の外の夕焼けを見て、それから自分の手を見た。']);
+                 'ヒナは長い間黙っていた。窓の外の空を見て、それから自分の手を見た。']);
       bgm(null);  // チェロとフルートを消して、しばらく音のない時間
       await say(['ぎゅっと鞄を抱えていた腕から、少しずつ力が抜けていく。',
                  ['', 'こわばっていた口元がゆるんで、ヒナは小さく息を吐いた。', 'bag']]);
       bgm('musicbox');
-      await say([['ヒナ', '……描いても、いいのかな', 'bagDown'],
+      await say([['ヒナ', '……描いても、いいのかな', 'bagDown'],   // 2026-11-17 作者の指示：次の行（bagSad）と同じポーズ。hina_s_bag_sad を bag_down の頭の傾きで描き直した
                  ['ヒナ', 'お母さんが嫌な顔しても。……自分のこと、こんなに傷つけてる私でも', 'bagSad'],
                  ['ヒナ', '褒められるためじゃなくて。……こんな私の顔を、私が、大事に描いてあげても', 'bagGrief'],
                  '「いいよ。……ヒナさんの顔は、ヒナさんが大事にしていいんだ」',
@@ -5316,7 +5318,7 @@
                  ['', 'ヒナは袖で目元をこすって、それから少しだけ笑った。', 'bagCrySmile']]);   // 2026-11-15 作者の指示：涙を浮かべて微笑む
       R.st = 'unraveled'; render();
       bgm('unravel');
-      await say([`……張りつめていた部屋の空気がふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ヒナ', 'ねえ。青い絵の具、持ってない？', 'smile']]);
+      await say([`……張りつめていた部屋の空気がふっとゆるんだ気がした。時計は${$('#clock').textContent}。チャイムは、まだ鳴らない。`, ['ヒナ', 'ねえ。青い絵の具、持ってない？', 'bagSmileFront']]);
       if (R.items.has('blue')) return hinaPaint();
       if (!P.blueLate) R.forceRead = true;   // この流れを初めて通るときは、既読スキップを止める
       await say(['（流しに、青い絵の具があったはずだ）']);
@@ -5327,7 +5329,7 @@
     await say(['青い絵の具を渡すと、ヒナは新しい画用紙をイーゼルに立てかけた。',
                ...(R.know.has('recipe')
                  ? ['パレットに青を出して、白を足す。それからほんの少しだけ、黄色。', '「……セルリアンに白。ほんの少しだけ黄色、だっけ」',
-                    ['ヒナ', '……なんで知ってんの、それ', 'surprise'], ['ヒナ', '画板の裏、見たんでしょ。……恥ずかしいんだけど', 'pout'], 'そう言いながら、ヒナの筆は止まらなかった。']
+                    ['ヒナ', '……なんで知ってんの、それ', 'surpriseFront'], ['ヒナ', '画板の裏、見たんでしょ。……恥ずかしいんだけど', 'pout'], 'そう言いながら、ヒナの筆は止まらなかった。']
                  : []),
                '筆が走る。空の青を紙いっぱいに広げていく。']);
     const pre = new Image(); pre.src = 'img/sky.webp';
@@ -5624,7 +5626,7 @@
              '自分の名前はもう思い出せなかった。思い出す必要も、なかった。',
              '「……ここにいれば、もう誰にも取り上げられないな」',
              '鍵盤にはどちらも触れなかった。続きを弾いたら、終わってしまう気がしたから。',
-             '扉はどちらからも開けようとしなかった。夕焼けは、ずっと同じ色のままだった。'],
+             '扉はどちらからも開けようとしなかった。窓の外の空は、ずっと同じ色のままだった。'],
     samePose: 'ピアノの前には、さっきとまったく同じ姿勢でソウタが座っていた。',
     loopReply: [['ソウタ', '……チャイム？ 鳴ってないだろ', 'angryUp'], ['ソウタ', 'ていうか、誰', 'angryUp']],
     // ソウタは、ハルが怒ったままいなくなったと思いこんでいる（楽譜の裏の「仲直りしたら、続き弾こう」を見ていない）。
@@ -5652,7 +5654,7 @@
     ],
     async intro(rem) {
       if (!rem) {
-        await say(['重い扉を開けて、中に入った。', '後ろで、扉の閉まる音がした。', '窓の外は夕焼け。時計は16:30を指している。', ...locked('音楽室'), 'グランドピアノの前に、男子生徒が一人座っていた。',
+        await say(['重い扉を開けて、中に入った。', '後ろで、扉の閉まる音がした。', '窓から、少し傾いた日が差しこんでいる。時計は16:30を指している。', ...locked('音楽室'), 'グランドピアノの前に、男子生徒が一人座っていた。',
                    '鍵盤の蓋は閉じたまま。両手を膝に置いて、じっとうつむいている。……声をかけてみる。',
                    '「……ピアノ、弾くの？」',
                    ['', '彼が少しだけ顔を上げた。目の下に濃いくまが浮いていた。', 'lookUp'], ['', '焦点の合わない目。座っているだけなのに、上体がときどき、ふらりと揺れる。', 'lookUp'],
@@ -5796,11 +5798,11 @@
           showCut('mci_timpani');
           await say(['ティンパニの脚と壁の間に、ほこりをかぶった紙切れが落ちていた。', '拾い上げると、五線譜の切れ端だった。']);
           R.taken.timpani = true; await gotItem('frag3'); await tick();
-        } else if (!R.know.has('rival')) { R.know.add('rival'); await say(['銅の胴に夕日が映っている。',
+        } else if (!R.know.has('rival')) { R.know.add('rival'); await say(['銅の胴に西日が映っている。',
                           'ティンパニの陰に、空の紙パックが二つ並んで置き去りになっていた。コーヒー牛乳と、いちごオレ。',
                           'コーヒー牛乳のほうに油性ペンで「あと一小節で、俺の勝ちだった」。きっちりした字だ。',
                           'いちごオレのほうには、右上がりの字で「ソウタのおごり（負けたので）」。']); await tick(); }
-        else await say(['銅の胴に夕日が映っている。',
+        else await say(['銅の胴に西日が映っている。',
                           'ティンパニの陰に、空の紙パックが二つ並んで置き去りになっていた。コーヒー牛乳と、いちごオレ。',
                           'コーヒー牛乳のほうに油性ペンで「あと一小節で、俺の勝ちだった」。きっちりした字だ。',
                           'いちごオレのほうには、右上がりの字で「ソウタのおごり（負けたので）」。']);
@@ -5854,7 +5856,7 @@
     },
     shelfItem(saved) {
       return saved
-        ? { thumb: 'm_duet', title: '最後まで弾いた楽譜', body: `<img class="cg" src="img/m_duet.webp" alt="夕日の音楽室で、ソウタと並んで連弾している"><p>初めのフレーズだけ、二人で。続きは、ソウタが一人で最後まで弾いた。</p>` }
+        ? { thumb: 'm_duet', title: '最後まで弾いた楽譜', body: `<img class="cg" src="img/m_duet.webp" alt="西日の差す音楽室で、ソウタと並んで連弾している"><p>初めのフレーズだけ、二人で。続きは、ソウタが一人で最後まで弾いた。</p>` }
         : { thumb: 'm_score', title: 'ソウタのパートだけの楽譜', body: `<img class="cg" src="img/m_score_back.webp" alt="楽譜の裏の書き込み"><p>最後のページの裏に、ハルの字で「仲直りしたら、続き弾こう。」</p>` };
     },
     async talk() {
@@ -6056,7 +6058,7 @@
     const ok = await keyboard(true);
     if (!ok) { bgm('musicbox'); return say([['ソウタ', '……ゆっくりでいいよ', 'smile']]); }
     bgm('sota');
-    await overlayWait(`<img class="cg" src="img/m_duet.webp" alt="夕日の音楽室で、ソウタと並んで連弾している">
+    await overlayWait(`<img class="cg" src="img/m_duet.webp" alt="西日の差す音楽室で、ソウタと並んで連弾している">
       <p>ソウタの旋律に、ハルのパートが重なる。</p><p>たった4小節。それでも、二人の音が確かに一つになった。</p><p>フレーズの終わりで手を止めると、ソウタはそのまま一人で続きを弾き始めた。最後の小節まで、一度も止まらずに。</p>`, '', ['続ける']);
     closeOverlay();
     await say(['（……この旋律を、知っている）', '（火曜の放課後。階段に座って、少し開いた扉のすき間から二人の音を聴いていた。……二人とも、こっちには気づかなかった）']);
@@ -6185,14 +6187,14 @@
     await choose(['ミオを見送る']);
     // ミオの校門は、第五章でツムギと仲直りした後、二人でくぐる絵に取っておく
     ending({ lines: ['ミオと一緒に図書室を出て、本校舎へ続く渡り廊下まで歩いた。', 'ミオは渡り廊下の途中で一度だけ振り返ると、保健室のほうへ歩いていった。『ひとりぶんの椅子』を胸に抱えて。'],
-             img: 'l_bridge', alt: '夕日の差す渡り廊下の途中で、本を胸に抱えたミオが振り返っている',
+             img: 'l_bridge', alt: '西日の差す渡り廊下の途中で、本を胸に抱えたミオが振り返っている',
              stop: '渡り廊下の手前で、足が止まる。まだこの先へは行けない。' });
   }
 
   const LIBRARY = {
     // 図書室は特別教室棟の2階で、窓は西向き（本校舎も保健室も見えない）。5章のツムギ（保健室の窓からミオの帰り道を見送っていた）と対になる伏線
     windowImg: 'ci_window_library',   // 2階の窓（美術室・音楽室の3階より1階分低い。木々の茂みが窓の下を覆う）
-    window1: ['西向きの窓。すぐ外の木々の茂みの上に、ずっと同じ夕焼けが広がっている。', '木々の間から家並みが少しのぞき、その向こうに山並み。太陽は山の少し上にかかったまま、動かない。'],
+    window1: ['西向きの窓。すぐ外の木々の茂みの上に、ずっと同じ空が広がっている。', '木々の間から家並みが少しのぞき、その向こうに山並み。太陽は山の少し上にかかったまま、動かない。'],
     windowNote: () => knewArt('recipe') ? ['（17時の空。……「ここにオレンジを一滴。入れすぎない」。ヒナなら、この空をどう塗るだろう）'] : [],
     window2: ['窓の下の低い書架に、鉢植えが置いてある。土は、まだ湿っていた。', '鉢に、水やり当番の札が刺さっている。丸い字の「白石」は、西日で薄くなっていた。', 'その下に、細い字で「水野」。こちらの字は、まだ新しい。'],
     clock2: ['時計の下に、開館時間の札。「放課後　〜17:00」。', 'その下に小さな付箋が貼ってある。「7/15　当番　水野・伊藤」。……閉館の時刻を過ぎても残っているのは、ミオ一人だけらしい。'],
@@ -6230,7 +6232,7 @@
              'しおりの手紙はミオの手で小さく折りたたまれて、本の一番奥にしまわれた。もう誰にも、届かない場所に。',
              '「ここにいれば、もう誰にも見つからないね」', '「うん。……誰にも、見つからない」',
              '並べた椅子に二人で座っていた。椅子は二つになったのに、どちらも、ひとりぶんのままだった。',
-             '扉はどちらからも開けようとしなかった。夕焼けは、ずっと同じ色のままだった。'],
+             '扉はどちらからも開けようとしなかった。窓の外の空は、ずっと同じ色のままだった。'],
     samePose: '閲覧机の端には、さっきとまったく同じ姿勢でミオが本を抱えて座っていた。',
     loopReply: [['ミオ', '……チャイム？ まだ、鳴ってないと思う', 'surprise'], ['ミオ', '……あの。どなたですか', 'reject']],
     lastWords: [['ミオ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ミオ', '……誰も、椅子を運んでこないところ', 'despair'],
@@ -6251,7 +6253,7 @@
     ],
     async intro(rem) {
       if (!rem) {
-        await say(['引き戸を開けて、中に入った。', '後ろで、戸の閉まる音がした。', '窓の外は夕焼け。時計は17:00を指している。', ...locked('図書室'), '閲覧机の端に女子生徒が一人座っていた。',
+        await say(['引き戸を開けて、中に入った。', '後ろで、戸の閉まる音がした。', '窓から、西日が差しこんでいる。時計は17:00を指している。', ...locked('図書室'), '閲覧机の端に女子生徒が一人座っていた。',
                    '一冊の本を両腕で抱えるようにして。……声をかけてみる。',
                    '「あの……ここ、図書室だよね」',
                    '彼女はびくりと肩を震わせてこちらを見た。',
@@ -6586,7 +6588,7 @@
                  ['ミオ', '次の日の朝、当番で返却ポストを開けたら、この本が入ってたの。ツムギが借りてた本', 'sad'],
                  ['ミオ', 'あの日、帰りに返していったんだと思う。……もう、いらないって言われた気がした', 'sad'],
                  ['ミオ', '棚に戻したら、本当に全部終わっちゃう気がして。……返却の手続きをして、そのまま私が借りたの', 'down'],
-                 '窓の外の夕日がミオの横顔を赤く染めていた。',
+                 '窓から差す西日が、ミオの横顔を照らしていた。',
                  '「……それで、今は？」',
                  ['', 'ミオは手を伸ばして、机の上のスマホを伏せた。', 'clench'],
                  ['ミオ', '……今度は、私の番なの', 'sad'],
@@ -6823,7 +6825,7 @@
   const GYM = {
     // 体育館は本校舎の北（中庭をはさんで向かい）の別棟。西の高窓からは、すぐ下に部室棟と、その前の道が見える（校門は本校舎の向こうで見えない）
     windowImg: 'ci_window_gym', windowImg2: 'ci_window_gym2',
-    window1: ['高窓の外はずっと同じ夕焼け。すぐ下の部室棟の前の道にも、誰もいない。'],
+    window1: ['高窓の外はずっと同じ空。すぐ下の部室棟の前の道にも、誰もいない。'],
     window2: ['高窓の外。部室棟の前の道の端に、さっきはいなかった誰かがしゃがみ込んでいた。', '少し小柄な、制服姿の男子。……ずっと体育館のほうを見ている。'],
     clock2: ['時計の下に、体育館の使用予定表が貼ってある。', '「7/15（火）　16:00〜17:15（片付け〜17:30）　A面：男子バレー部　B面：男子バスケットボール部」',
              '「17:30〜18:00　延長（大会前）：男子バスケットボール部　全面　片付け・鍵の返却：部長」', '延長の欄にだけ、顧問の赤ペンで線が引かれていた。……今日の延長はなくなったらしい。'],
@@ -6863,7 +6865,7 @@
              '「ここなら、もう誰にも怒鳴られないな」', '「うん。……ここなら、誰も来ない」',
              '体育館の扉を、誰かが外から叩いた気がした。ケイはボールをつく音を大きくして、それを消した。……止めなかった。',
              'ネットが揺れる音だけが、いつまでも続いていた。',
-             '扉は、どちらからも開けようとしなかった。夕焼けはずっと同じ色のままだった。'],
+             '扉は、どちらからも開けようとしなかった。窓の外の空はずっと同じ色のままだった。'],
     samePose: 'ボールかごのそばの床に、さっきとまったく同じ姿勢で、ケイが座り込んでいた。',
     loopReply: [['ケイ', 'チャイム？ ……鳴ったっけ？', 'surprise'], ['ケイ', 'てか、あんた誰？ 見学？', 'normal']],
     lastWords: [['ケイ', '……そろそろ、行かなきゃ', 'down'], '「行くって、どこへ？」', ['ケイ', '……もう、誰にも怒鳴られないところ', 'despair'],
@@ -6886,7 +6888,7 @@
     ],
     async intro(rem) {
       if (!rem) {
-        await say(['重い扉を開けて、中に入った。', '後ろで、扉の閉まる音がした。', '西の高窓から、低い夕日が床を赤く染めている。時計は17:30を指している。', ...locked('体育館'),
+        await say(['重い扉を開けて、中に入った。', '後ろで、扉の閉まる音がした。', '西の高窓から、傾いた日差しが床を照らしている。時計は17:30を指している。', ...locked('体育館'),
                    'ボールはかごに戻されているのに、一個だけ、コートに転がったまま。得点板も出しっぱなしだ。片付けは途中で止まっていた。',
                    'ボールかごのそばの床に、男子生徒が一人座り込んでいた。',
                    '首に白いタオル。指には何重にもテーピングが巻かれている。……声をかけてみる。',
@@ -7106,7 +7108,7 @@
     },
     async vanishScene() {
       await say(['ボールかごのそばに、ケイの姿はなかった。', '床にバッシュが片方だけ残っている。']);
-      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>片方だけのバッシュ</h2><img class="cg" src="img/g_shoe.webp" alt="夕日の床に、すり切れたバッシュが片方だけ転がっている">
+      await overlayWait(`<p class="eyebrow">わすれもの</p><h2>片方だけのバッシュ</h2><img class="cg" src="img/g_shoe.webp" alt="西日の差す床に、すり切れたバッシュが片方だけ転がっている">
         <p>すり切れたバッシュ。紐はほどけたままで、中敷きの端が少しめくれている。</p>`, '', ['中敷きをめくる']);
       await overlayWait(`<p class="eyebrow">わすれもの</p><h2>中敷きの下のメモ</h2>
         <p class="quote">「次の部長へ。ごめん、もう守ってあげられない」</p>
@@ -8217,9 +8219,9 @@
     if (id === 'infirmary') fetchLateBgm();   // 第五章：このあとの屋上・エンディングの曲を取り寄せておく
     // チャイムの空：その章でチャイムが鳴る時刻（章の終わり）の空にする（16:30・17:00・17:30・18:00・18:30）
     { const end = chEnd(), file = { 30: 'chime_sky_1630', 60: 'chime_sky', 90: 'chime_sky_1730', 120: 'chime_sky_1800', 150: 'chime_sky_1830' }[end] || 'chime_sky';
-      const cg = $('.chime-cg'); if (cg) { cg.src = `img/${file}.webp`; cg.alt = `${hm(end)}の夕焼け空。チャイムが響いている`; } }
+      const cg = $('.chime-cg'); if (cg) { cg.src = `img/${file}.webp`; cg.alt = `${hm(end)}の${end >= 120 ? '夕焼け空' : '空'}。チャイムが響いている`; } }
     const scene = $('#scene');
-    scene.setAttribute('aria-label', `夕暮れの${C.room}`);
+    scene.setAttribute('aria-label', `放課後の${C.room}`);
     scene.style.visibility = 'hidden';
     $('#bells').style.visibility = '';   // 部屋に入ったら、チャイムの数を戻す
     clearStage();
