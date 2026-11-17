@@ -1473,9 +1473,13 @@
     }
     return new Promise(res => {
       const el = $('#cutin'); el.dataset.cut = 'nbz'; el.classList.remove('fade-slow');   // 床の手帳のスマホ用の寄せ（data-cut）を引き継がない
-      el.innerHTML = `<div class="nbz-in${zoom ? ' far' : ''}"><img src="${imgSrc('protag_notebook_front')}" alt="夕焼けの屋上で、拾った生徒手帳を開いている。右ページに五人の名前が並び、人差し指がページに触れている">${NB_ROWS.map(([k, cx, cy, w, h, deg]) =>
-        `<button type="button" class="nbz-row${done.includes(k) ? ' done' : ''}${k === 'blank' ? ' blank' : ''}" data-k="${k}" style="left:${(cx - w / 2) / 15.36}%;top:${(cy - h / 2) / 10.24}%;width:${w / 15.36}%;height:${h / 10.24}%;transform:rotate(${deg}deg)" aria-label="${k === 'blank' ? '6行目' : ({ art: '春日ヒナ', music: '井上ソウタ', library: '水野ミオ', gym: '三浦ケイ', infirmary: '白石ツムギ' })[k]}"${done.includes(k) ? ' disabled' : ''}></button>`).join('')}</div>
-        <p class="nbz-cap">名前に触れて、なぞる</p>`;
+      const rowsHtml = `${NB_ROWS.map(([k, cx, cy, w, h, deg]) =>
+        `<button type="button" class="nbz-row${done.includes(k) ? ' done' : ''}${k === 'blank' ? ' blank' : ''}" data-k="${k}" style="left:${(cx - w / 2) / 15.36}%;top:${(cy - h / 2) / 10.24}%;width:${w / 15.36}%;height:${h / 10.24}%;transform:rotate(${deg}deg)" aria-label="${k === 'blank' ? '6行目' : ({ art: '春日ヒナ', music: '井上ソウタ', library: '水野ミオ', gym: '三浦ケイ', infirmary: '白石ツムギ' })[k]}"${done.includes(k) ? ' disabled' : ''}></button>`).join('')}`;
+      const zin = el.classList.contains('nbz') && el.classList.contains('show') && el.querySelector('.nbz-in');
+      if (zin) {   // 手帳を拾ったときから出ている絵に、なぞるボタンだけを足す（絵は出し直さない）
+        zin.querySelectorAll('.nbz-row').forEach(x => x.remove()); el.querySelectorAll('.nbz-cap').forEach(x => x.remove());
+        zin.insertAdjacentHTML('beforeend', rowsHtml); el.insertAdjacentHTML('beforeend', '<p class="nbz-cap">名前に触れて、なぞる</p>');
+      } else el.innerHTML = `<div class="nbz-in${zoom ? ' far' : ''}"><img src="${imgSrc('protag_notebook_front')}" alt="夕焼けの屋上で、拾った生徒手帳を開いている。右ページに五人の名前が並び、人差し指がページに触れている">${rowsHtml}</div><p class="nbz-cap">名前に触れて、なぞる</p>`;
       el.classList.add('show', 'nbz'); $('#scene').classList.add('cut');
       if (zoom) requestAnimationFrame(() => requestAnimationFrame(() => { const z = el.querySelector('.nbz-in'); if (z) z.classList.remove('far'); }));
       el.querySelectorAll('.nbz-row').forEach(b => b.onclick = ev => {
@@ -1488,6 +1492,14 @@
         setTimeout(() => res(rec('t:' + k).slice(2)), 1000);
       });
     });
+  }
+  // 2026-11-17 作者の指示：手帳を拾ったときから、なぞる手帳の絵を出す（なぞるボタンは、今まで通り traceName のときに出す）
+  function showNotebookView() {
+    if (replay) return;
+    const el = $('#cutin'); el.dataset.cut = 'nbz'; el.classList.remove('fade-slow');
+    el.innerHTML = `<div class="nbz-in far"><img src="${imgSrc('protag_notebook_front')}" alt="夕焼けの屋上で、拾った生徒手帳を開いている。右ページに五人の名前が並んでいる"></div>`;
+    el.classList.add('show', 'nbz'); $('#scene').classList.add('cut');
+    requestAnimationFrame(() => requestAnimationFrame(() => { const z = el.querySelector('.nbz-in'); if (z) z.classList.remove('far'); }));
   }
   function hideCut() {
     $('#cutin').classList.remove('nbz'); delete $('#cutin').dataset.cut;
@@ -3811,7 +3823,7 @@
                  '……風が、手帳をつま先まで押し戻してきた。']);
     }
     hideCut();
-    await say(['手帳を拾った。', '開いていたのは、名前のページだった。', '春日ヒナ。井上ソウタ。水野ミオ。三浦ケイ。白石ツムギ。', '一行ずつ、違う字だった。',
+    await say([() => showNotebookView(), '手帳を拾った。', '開いていたのは、名前のページだった。', '春日ヒナ。井上ソウタ。水野ミオ。三浦ケイ。白石ツムギ。', '一行ずつ、違う字だった。',
                'さらさらと流れる字。一画ずつ丁寧な字。小さくて整った字。大きくて真っ直ぐな字。丸くて柔らかい字。',
                'その下に、6行目があった。', '何も書かれていない。', '（ここには、誰の名前が入るはずだったんだろう）']);
     // 5つの記憶のかけらを、ここで一続きに思い出す。5人の章は、主人公の放課後でもあった（見ていたのに、誰にも見られていなかった）。
@@ -3837,7 +3849,7 @@
     const IMG = { art: 'hall_art', music: 'hall_music', library: 'library', gym: 'gym', infirmary: 'hall_infirmary' };
     const done = []; let blank = 0;
     while (done.length < 5) {
-      const id = await traceName(done, !done.length && !blank);
+      const id = await traceName(done, false);   // 1回目は、拾ったときに出した絵（寄り終わっている）にボタンを足す
       if (id === 'blank') {
         await say(blank++ ? ['……なぞる字は、まだなかった。'] : ['6行目には、何も書かれていない。', '……なぞる字が、なかった。']);
         continue;
