@@ -1499,10 +1499,12 @@
     if (DARK_CUTS.has(name) && R && R.taken && R.taken.dark) name += '_dark';
     const el = $('#cutin'); el.classList.remove('nbz', 'fade-slow'); el.dataset.cut = name;
     el.innerHTML = name === 'clock' ? clockSVG() : `<img src="${imgSrc(name)}" alt="">`;
+    if (name.startsWith('lci_phone')) el.insertAdjacentHTML('beforeend', phoneTimeSVG(name));   // ロック画面の時刻（分）を今の時刻に
     if (name === 'clock') {   // 時計の絵を読み込み終えてから、針を出す（針だけが先に見えないように）
       const im = el.querySelector('img'), hs = el.querySelector('svg');
       if (im && hs && !(im.complete && im.naturalWidth)) { hs.style.visibility = 'hidden'; im.onload = im.onerror = () => { hs.style.visibility = ''; }; }
     }
+    imgWait(el);   // 2026-11-18：カットインも、読み込み中は「読み込み中」を出す
     el.classList.add('show');
     $('#scene').classList.add('cut');
   }
@@ -1550,6 +1552,41 @@
     $('#cutin').classList.remove('show');
     $('#scene').classList.remove('cut');
   }
+  // 2026-11-18 作者の指示（Museのテストプレイ）：ミオのスマホのロック画面の時刻を、今の時刻に合わせる。
+  //   絵（lci_phone・lci_phone2）は「17:」だけ残して分の2桁を消してある（チャッピーで消した絵を、分の所だけ元の絵に重ねた）。
+  //   分の2桁を、元の「0」「3」の外形から測った位置・傾きで重ねる（座標は 1536×1024 基準）。端末のフォントに左右されないよう、数字は線で描く
+  const PHONE_DIG = {
+    '0': '<ellipse cx="31" cy="51" rx="26" ry="48"/>',
+    '1': '<path d="M16 22 L38 3 L38 100"/>',
+    '2': '<path d="M7 24 C8 10 19 3 32 3 C47 3 56 13 56 26 C56 44 40 58 6 99 L59 99"/>',
+    '3': '<path d="M7 18 C13 7 22 3 32 3 C46 3 54 12 54 25 C54 39 44 47 27 48 C46 48 58 59 58 74 C58 90 46 99 31 99 C19 99 9 93 4 83"/>',
+    '4': '<path d="M45 100 L45 4 L3 70 L60 70"/>',
+    '5': '<path d="M53 4 L14 4 L9 47 C17 41 24 38 32 38 C48 38 58 52 58 68 C58 88 46 99 31 99 C19 99 9 93 4 83"/>',
+    '6': '<path d="M51 12 C45 5 39 3 32 3 C14 3 5 27 5 54 C5 84 15 99 32 99 C48 99 58 87 58 70 C58 52 48 40 32 40 C18 40 8 50 5 60"/>',
+    '7': '<path d="M4 4 L58 4 L21 100"/>',
+    '8': '<ellipse cx="31" cy="27" rx="22" ry="24"/><ellipse cx="31" cy="74" rx="27" ry="25"/>',
+    '9': '<path d="M11 90 C17 97 24 99 31 99 C49 99 57 75 57 48 C57 18 47 3 30 3 C14 3 4 15 4 32 C4 50 14 62 30 62 C44 62 54 52 57 42"/>',
+    ':': '<circle cx="31" cy="36" r="3"/><circle cx="31" cy="80" r="3"/>',
+  };
+  // 分の十の位・一の位：[左上, 右上, 左下]。2026-11-18 作者の指摘で、元の「17」と同じ傾き（右へ倒れる）・高さ・上端の線にそろえた
+  const PHONE_CELLS = [[[1072.85, 320.6], [1100.85, 323.4], [1061.15, 346.6]], [[1108.85, 324.2], [1136.85, 327.0], [1097.15, 350.2]]];   // 2026-11-18 二度目の指摘：一回り小さく、日付の行と同じパース（右へ下がる線）・「17」と同じ倒れ
+  // 2026-11-18 作者の指示：お母さんの通知（lci_phone2 の一番上）の時刻も、調べた時刻に合わせる（チャイムで巻き戻ったあとに見ても食い違わないように）。「17:」は元の字、分の2桁を重ねる
+  // 2026-11-18 三度目の指摘（ずれ・汚れ）：通知の時刻は「17:」も含めて全部消し、5文字（1・7・:・分の2桁）を同じ線で描く。位置は元の「17:02」の字から測った
+  const PHONE_NOTE_CELLS = [[[1194.44, 395.27], [1200.64, 395.98], [1193.76, 400.82]], [[1200.74, 395.99], [1206.94, 396.7], [1200.06, 401.64]], [[1205.85, 396.58], [1212.05, 397.29], [1205.15, 402.3]], [[1212.35, 397.33], [1218.55, 398.04], [1211.65, 403.15]], [[1220.16, 398.22], [1226.36, 398.94], [1219.44, 404.16]]];
+  function phoneDigits(cells, mm) {
+    return cells.map(([TL, TR, BL], i) => {
+      // 字の外形 (4,3)-(58,99) を、左上・右上・左下の3点へ写す
+      const a = (TR[0] - TL[0]) / 54, b = (TR[1] - TL[1]) / 54, c = (BL[0] - TL[0]) / 96, d = (BL[1] - TL[1]) / 96;
+      return `<g transform="matrix(${a} ${b} ${c} ${d} ${TL[0] - 4 * a - 3 * c} ${TL[1] - 4 * b - 3 * d})">${PHONE_DIG[mm[i]] || ''}</g>`;
+    }).join('');
+  }
+  function phoneTimeSVG(name) {
+    const mm = (($('#clock').textContent || '17:00').split(':')[1] || '00').padStart(2, '0');
+    const note = name === 'lci_phone2'
+      ? `<g fill="none" stroke="#32302e" stroke-width="15" stroke-linecap="round" stroke-linejoin="round" opacity=".95" style="filter: blur(.25px)">${phoneDigits(PHONE_NOTE_CELLS, '17:' + mm)}</g>` : '';
+    return `<svg class="clock-hands" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <g fill="none" stroke="#c4bfb6" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" opacity=".85" style="filter: blur(.6px)">${phoneDigits(PHONE_CELLS, mm)}</g>${note}</svg>`;
+  }
   // 時計のカットイン：針のない時計の絵に、今の時刻の針を重ねる（座標は ci_clock 画像 1536×1024 基準）
   function clockSVG() {
     const min = chStart() + (R.st === 'unraveled' ? SPAN + 1 : R.ticks * MIN_PER_TICK);
@@ -1591,7 +1628,7 @@
   function openOverlay(html, cls = '', cardCls = 'ov-card') {
     ov.className = 'overlay ' + cls; card.className = cardCls; card.innerHTML = html; ov.hidden = false;
     if (veilResume && (!replay || !replay.inputs.length)) veilOff();   // 再開の途中で答えを待つ画面が出たら、幕を上げる
-    if (card.querySelector('.alb-view, .alb-pair') || /^アルバム/.test((card.querySelector('.eyebrow') || {}).textContent || '')) imgWait(card);
+    imgWait(card);   // 2026-11-18 作者の指示（Museのテストプレイ）：わすれものの詳細などの絵も、読み込み中は「読み込み中」を出す（アルバムだけだったのを全部に）
     wirePhoneBar(card);
     const f = card.querySelector('.primary, button'); if (f) f.focus({ preventScroll: true });
   }
@@ -1630,7 +1667,13 @@
       if (i.complete && i.naturalWidth) return;
       i.classList.add('img-wait');
       i.addEventListener('load', () => i.classList.remove('img-wait'), { once: true });
-      i.addEventListener('error', () => { i.classList.remove('img-wait'); i.classList.add('img-fail'); i.alt = ''; i.removeAttribute('src'); }, { once: true });
+      // 読み込めなかったときは、一度だけ読み直す。それでもだめなら「読み込めませんでした」
+      let retried = false;
+      const fail = () => {
+        if (!retried && i.getAttribute('src')) { retried = true; const s = i.getAttribute('src'); i.src = s + (s.includes('?') ? '&' : '?') + 'r=' + Date.now(); return; }
+        i.removeEventListener('error', fail); i.classList.remove('img-wait'); i.classList.add('img-fail'); i.alt = ''; i.removeAttribute('src');
+      };
+      i.addEventListener('error', fail);
     });
   }
   function overlayWait(html, cls, buttons) {
@@ -4143,10 +4186,12 @@
                     awk: ['養護の先生が教えてくれた。ツムギは朝、しばらく迷ってから、3組へ行ったって。'],
                     split: ['ツムギは今日も保健室にいた。隣のベッドのふちに座って、窓の外を見ていた。'] }[kind]),
                ]);
-    await whiteSwap(() => { bgClockOverride = '10:50'; syncBgClock(); });   // 8:30 → 10:50（明転）
+    // 2026-11-18 作者の指示：保健室の窓の外の空を時刻に合わせる（8:30 朝／10:50 昼前／11:10 昼。景色は同じ）
+    ['infirmary_1050', 'infirmary_1110'].forEach(n => { const im = new Image(); im.src = `img/${n}.webp`; });
+    await whiteSwap(() => { bgClockOverride = '10:50'; $('#bgImg').src = 'img/infirmary_1050.webp'; syncBgClock(); });   // 8:30 → 10:50（明転）
     await say(['昼前、急に重さが戻ってきた。', '理由は分からない。ただ、息が浅くなった。', '（……やっぱり、何も変わってないのかもしれない）',
                kind === 'split' ? 'ツムギは何も言わずに、ただそこにいてくれた。' : '養護の先生は何も言わずに、ただそこにいてくれた。']);
-    await whiteSwap(() => { bgClockOverride = '11:10'; syncBgClock(); });   // 10:50 → 11:10（明転）
+    await whiteSwap(() => { bgClockOverride = '11:10'; $('#bgImg').src = 'img/infirmary_1110.webp'; syncBgClock(); });   // 10:50 → 11:10（明転）
     await say(['終業式が終わって、扉が叩かれた。',
                ...({ straight: ['入ってきたのは、ヒナとソウタとケイ。それからミオとツムギが、二人で。', 'ミオは丸椅子を一つ運んできて、ツムギの隣に置いて座った。'],
                     awk: ['入ってきたのは、ヒナとソウタとケイ。それから、ミオとツムギ。',   // 2026-11-17 作者の指示：遅れて来る理由がないので、ほかの3人と同時に来る '二人は隣に座ったけれど、間に少しすき間があった。',
@@ -4866,7 +4911,7 @@
       <img src="img/sky.webp" alt=""><img id="greyLayer" class="grey" src="img/sky.webp" alt=""></div>`;   // 2026-11-15：サインは絵の中（新しい紙に今日描いた絵なので「7.15 Hina」。破られた絵は「7.14 Hina」）
   }
   const SKETCH_FACE = `<img class="sketch" src="img/sketchbook_face.webp" alt="スケッチブックの最後のページ。自画像の真っ白だった顔に、震える細い線で、泣きそうで少しだけ笑った目元が描かれている">`;
-  const SKETCH = `<img class="sketch" src="img/sketchbook.webp" alt="破り取られたページの残るスケッチブック。最後のページの自画像は、顔だけが消されている">`;
+  const SKETCH = `<img class="sketch" src="img/sketchbook.webp" alt="破り取られたページの残るスケッチブック。最後のページの自画像は、顔だけが消されて、紙が毛羽立ち、ところどころ破れている">`;
   async function combinePainting() {
     ['pieceA', 'pieceB', 'pieceC'].forEach(p => R.items.delete(p));
     R.items.add('painting'); render();
@@ -5191,12 +5236,12 @@
       await say(['窓際の席に、ヒナの姿はなかった。', '椅子の上にスケッチブックが一冊だけ残っている。']);
       await overlayWait(`<p class="eyebrow">わすれもの</p><h2>顔のないスケッチブック</h2>${SKETCH}
         <p>ほとんどのページは破り取られていた。最後のページにだけ、女の子の絵が残っている。</p>
-        <p>髪も、長袖の制服も、細かく描き込まれているのに、顔だけが真っ白だった。消しゴムで何度も消した跡がある。</p>`, '', ['閉じる']);
+        <p>髪も、長袖の制服も、細かく描き込まれているのに、顔だけが真っ白だった。消しゴムで何度もこすった紙が毛羽立って、ところどころ小さく破れている。</p>`, '', ['閉じる']);
     },
     shelfItem(saved) {
       return saved
         ? { thumb: 'sketchbook_face', title: '顔のあるスケッチブック', body: `${SKETCH_FACE}<p>真っ白だった顔に、ヒナが自分で線を引いた。まだ目元だけ。震えていて、泣きそうで、少しだけ笑っている。</p>` }
-        : { thumb: 'sketchbook', title: '顔のないスケッチブック', body: `${SKETCH}<p>最後のページの自画像。顔だけが、何度も消されて真っ白になっている。</p>` };
+        : { thumb: 'sketchbook', title: '顔のないスケッチブック', body: `${SKETCH}<p>最後のページの自画像。顔だけが、何度も消されて真っ白になっている。こすりすぎた紙は毛羽立って、ところどころ破れている。</p>` };
     },
     async talk() {
       if (R.st === 'vanished') return say(['椅子の上には、スケッチブックだけが残っている。']);
@@ -6771,7 +6816,7 @@
                    //   まばたきなど体が勝手にする動きは止まらない（自分では止めることも動かすこともできない）
                    ['', '返事はなかった。まばたきだけが、ときどき、思い出したように落ちる。', 'frown'],
                    '長い針が、もうひと目盛り進んだ。',
-                   //   硬直は一度に解けない。口元だけが先に動く
+                   //   硬直は一度に解けることも、少しずつ解けることもある。どこから動くかも決まっていない（指先・足先のことも）。今回のミオは少しずつ解けて、口元だけが先に動いた
                    ['', 'やがて、体は止まったまま、唇だけがかすかに動いた。', 'frown'],
                    ['ミオ', '……分かってる。……分かってる、けど', 'down'],
                    ['', 'その先を言おうとして、また唇が止まった。……声にならなかった。', 'down'], ...missing]);
