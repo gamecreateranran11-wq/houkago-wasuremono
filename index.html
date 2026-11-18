@@ -1560,6 +1560,10 @@
     el.classList.add('show', 'nbz'); $('#scene').classList.add('cut');
     requestAnimationFrame(() => requestAnimationFrame(() => { const z = el.querySelector('.nbz-in'); if (z) z.classList.remove('far'); }));
   }
+  // 2026-11-19 Museのテストプレイ（読み上げで、閉じた手帳の名前のボタンや前の絵の説明が残り続けた）：
+  //   カットインは見えなくなっても中身が残るので、出ていない間は読み上げ・操作の対象から外す
+  { const cut = $('#cutin'); const sync = () => { const on = cut.classList.contains('show'); cut.inert = !on; if (on) cut.removeAttribute('aria-hidden'); else cut.setAttribute('aria-hidden', 'true'); };
+    new MutationObserver(sync).observe(cut, { attributes: true, attributeFilter: ['class'] }); sync(); }
   function hideCut() {
     $('#cutin').classList.remove('nbz'); delete $('#cutin').dataset.cut;
     $('#cutin').classList.remove('show');
@@ -3923,7 +3927,8 @@
 
   async function roofScene(split) {
     const kind = split ? 'split' : (P.cur.mtKind || 'straight');
-    C = { ...INFIRMARY, id: 'roof', key: 'roof', name: '#roof', faces: {} };   // 名前は誰の台詞とも一致しない印（地の文でも立ち絵を出さない）   // 屋上では立ち絵を出さない（5人は文と声だけ）
+    C = { ...INFIRMARY, id: 'roof', key: 'roof', name: '#roof', room: '屋上', faces: {} };
+    $('#scene').setAttribute('aria-label', '屋上');   // 名前は誰の台詞とも一致しない印（地の文でも立ち絵を出さない）   // 屋上では立ち絵を出さない（5人は文と声だけ）
     talkHold = false; guest = null; guestRender();
     $('#inv').innerHTML = ''; $('#hsLayer').innerHTML = '';   // 保健室の持ち物と調べる場所は、屋上では出さない
     // 上の欄：時刻は18:30のまま。チャイムの残りとヒント・チャイムを待つ・セーブは使わない
@@ -4406,7 +4411,10 @@
       .then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
   }
   // エンディングの場面に切り替える。人物や調べる場所を消し、背景をフェードアウト→フェードインで差し替える
+  // 2026-11-19：結末・屋上の場面では、場面の名前（読み上げ）も絵の場所に合わせる（前は最後の章の「放課後の保健室」のままだった）
+  const SCENE_NAME = [[/^rooftop|^chime_sky/, '屋上'], [/^stairs/, '屋上へ続く階段'], [/^true_gate|_gate/, '正門'], [/^infirmary/, '保健室'], [/^hall_/, '廊下']];
   async function endScene(img) {
+    { const m = SCENE_NAME.find(([re]) => re.test(img)); if (m) $('#scene').setAttribute('aria-label', m[1]); }
     closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = ''; clearMsg();
     guest = null; guestRender();   // その場にいた子（ミオなど）の立ち絵も消す
     $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = '';
