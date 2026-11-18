@@ -3643,8 +3643,8 @@
       P.firstEndTold = true; saveP();
       firstNote = `<p class="eyebrow">しくみ</p><p class="note">最初の放課後では、まだ誰の心にも届ききりません。<br>${hasLeft ? '消えた子が残したわすれものを持って、もう一度放課後を歩くと、届かなかった言葉の先へ進めます。' : '心を閉ざした子とも、言葉を変えれば、別の道が開けるかもしれません。'}<br>ここまでが、物語の始まりです。</p>`;
     }
-    const head = dawnEnd ? `<div class="end-ttl"><p class="end-kind">${end[0].replace('2', '')} END</p><h1 class="end-name">${end[1]}</h1></div>`
-                         : `<div class="fade bad-head"><p class="bad-kind">BAD END</p><h2 class="bad-name">${end[1]}</h2></div>`;
+    const head = dawnEnd ? `<div class="end-ttl"><p class="end-kind">${endKind(end[0])}</p><h1 class="end-name">${end[1]}</h1></div>`
+                         : `<div class="fade bad-head"><p class="bad-kind">${endKind(end[0])}</p><h2 class="bad-name">${end[1]}</h2></div>`;
     overlayWait(`${head}
       ${TRIAL(ORDER.length) ? `<p class="note">試作版は第${"一二三四五"[ORDER.length - 1]}章までのため、${ORDER.length}章の結果で判定しています。</p>` : ''}
       <p class="note">${endNote}</p>${firstNote}${achNote(got)}
@@ -3873,7 +3873,10 @@
             ['高校に入ってすぐ、自己紹介カードが配られた。', '「得意なこと」の欄だけ、書いては消して、最後まで埋められなかった。', '白いまま出した。……誰にも、何も言われなかった。']],
       music: ['（……自分も、眠れないまま朝になる夜を、知っている気がした）',
               ['中学三年の冬。「……最近、夜あんまり眠れなくて」と言いかけたら、「分かる！私も最近徹夜しててさ」と、話は相手のことになった。',
-               '最後まで聞いて、相づちを打った。自分の話の続きを、聞く人はいなかった。……それからは、話しかけるのを少しためらうようになった。']],
+               '最後まで聞いて、相づちを打った。自分の話の続きを、聞く人はいなかった。',
+               // 2026-11-18 作者と決定：その夜の一人反省会（頭の中で。癖だとは説明しない）。眠れない話をした日の夜も、眠れない
+               'その夜も眠れずに、昼の会話を頭の中でなぞった。……わざわざ言うほどのことじゃなかったのかもしれない。',
+               '……それからは、話しかけるのを少しためらうようになった。']],
       library: ['（……自分にも、言いたかったのに、ずっと言えなかった言葉がある気がした）',
                 ['中学二年のころ。ノートの一番後ろのページに、小さく書いた。「苦しくてたまらない」', '読み返したら、大げさに見えた。……大したことないのに。', 'ページを閉じた。誰にも見られないところに、しまっておいた。']],
       gym: ['（……その笑い方を、自分も知っている気がした）',
@@ -4023,7 +4026,9 @@
                [[O, '……分からないまま、人の心に手を入れたんだ']]][why]);
     await say([
                [O, '言葉一つ間違えたら、もっと追い詰めてたかもしれないのに'],
-               [O, '……思い出せなかった所に、間違えた『もしも』の結末をいくつも作ってたよね'],   // 2026-11-17 作者と決定：消えた・閉め出された・BADなどの分岐は、思い出せない所を埋めた思い出し違い（世界の塗り替えではない）。「怖い」とは決めつけない（身代わり・共依存なども含む）。「（……また、間違えた）」とつながる
+               [O, '……見つけられないって決めつけて、間違えた『もしも』の結末をいくつも作ってたよね'],   // 2026-11-17 作者と決定（11-18 に言い回しを改めた）：消えた・閉め出された・BADなどの分岐は、思い出せない所を埋めた思い出し違い（世界の塗り替えではない）。「怖い」とは決めつけない（身代わり・共依存なども含む）。「（……また、間違えた）」とつながる
+               // 2026-11-18 作者と決定：思い返しの決まり（いる間は届かない・消えてから見つかる）は、主人公の「諦めた側」と「望みの側」が形になったもの。ここで遊ぶ人が気づき、5人が来る所と TRUE の鍵で打ち消す
+               [O, 'いなくなってからじゃないと、誰も見つけてくれない。……あの子たちのわすれものだって、そうだったでしょ'],
                [O, '誰かにつないだって、その人が助けられるとは限らない。投げ出されて、誰にも頼れなくなるかもしれないのに'],   // つなぐことの、もう一つの現実（2026-10-31 作者の補足を本文に。是非は断定しない）。2026-11-16「回されて」→「手を離されて」、2026-11-18 作者の指示で「投げ出されて、誰にも頼れなくなる」（「投げ出す」に「途中で」の意味が含まれるので重ねない）。同日、作者の決定（案A）：つないだ先の人が助ける道を見つけられるか、見つけても助ける力があるかは分からない、を前半に足す（自立のために手を離す＝送り出すことや、一人になること自体は悪くない。悪いのは、まだ助けが要るうちに無責任に投げ出され、頼る先を失うこと）
                [O, '手を伸ばしたなら、伸ばした分の責任だってあるのに'], [O, '……ここに立ってる人に、それが果たせるの？'],
                '（……分からない）']);
@@ -4050,6 +4055,7 @@
     { const id = { straight: 'roof_five', awk: 'roof_five_awk', split: 'roof_five_split' }[kind];
       if (ROOF_FIVE_READY[kind]) await cgShow(id, '雨上がりの夕焼けの屋上。開いた階段室の扉の前で、五人が立ち止まり、こちらを見つめている', ''); }
     await say(['振り返ると、開いたままの扉のところに五人が立っていた。', '息を切らして。名前も知らないはずの、こちらを見て。',
+               '（……いなくなってからじゃないと、見つけてもらえないはずだったのに）',   // 2026-11-18 作者と決定：もう一人の自分の「いなくなってからじゃないと〜」が、ここで破られる
                ['ケイ', '……やっぱり、あんただ'], ['ツムギ', '放課後、保健室に来てくれた人……だよね'],
                ...(kind === 'split' ? ['ミオとツムギは、開いた扉をはさんで、離れて立っていた。二人は一度も目を合わせなかった。'] : []),
                '誰も、近づいてこなかった。', '扉のところで、止まったまま。']);
@@ -4094,7 +4100,8 @@
                ['（……やっと、気づけた）', '（……普通じゃなくても、自分の名前だ）', '（……大丈夫じゃなかった。それを、やっと言える）', '（……まだ分からない。でも、聞いていく）', '（……価値があるかなんて、まだ分からない）'][t],   // 2026-11-10 フェンスの前で自分に向けて選んだ言葉に、書いた後で答える（作者の指示）
                '（……待っていたんだ。ずっと、明日が来るのを）', '（待っているだけで、自分から歩き出したことは、なかった）',
                '顔を上げると、フェンスの向こうにはもう誰もいなかった。', '代わりに、手のひらが温かい気がした。', '誰かと手をつないでいるみたいに。']);
-    await say(['扉のほうを見た。', '鍵が挿さったままだった。', '（……扉、閉めてなかったんだ）']);
+    await say(['扉のほうを見た。', '鍵が挿さったままだった。', '（……扉、閉めてなかったんだ）',
+               '本当は、誰かに見つけてほしかった。……鍵を抜かなかった手は、それを知っていた。']);   // 2026-11-18 作者と決定：本人も気づいていなかった望みの側に、ここで気づく
     bgm('unravelTrue', 2);
     // 2026-11-17 作者と決定（F）：母を悪者にせず、気づけなかった側の重さで、どこまで来ていたかを後から見せる
     await roofVoid(['ケイが呼んだ先生が来て、その後のことはあまり覚えていない。', '迎えに来た母は、何も言わずに、帰りの車の中でずっと手を握っていた。', '……母の手が、震えていた。', '家に帰ったのは、ずいぶん遅くだった。']);
@@ -4305,7 +4312,7 @@
     finishRun(true, tag);
     if (tag === 'TRUE') { P.trueKind = kindNow; saveP(); bgm('lastBell', 2); await endRoll('TRUE'); }   // 曲は仮押さえ
     const head = tag === 'TRUE' ? `<div class="end-ttl"><p class="end-kind">TRUE END</p><h1 class="end-name">${title}</h1></div>`
-                                : `<div class="fade bad-head"><p class="bad-kind">BAD END</p><h2 class="bad-name">${title}</h2></div>`;
+                                : `<div class="fade bad-head"><p class="bad-kind">${endKind(tag)}</p><h2 class="bad-name">${title}</h2></div>`;
     overlayWait(`${head}
       <p class="note">この放課後は、ここで終わった。</p>${achNote(got)}${care}${firstTrue ? '<p class="note ach-note">サイドストーリー『五人の放課後』が開きました。タイトルの「おまけ」→「サイドストーリー」から読めます。</p>' : ''}`, tag === 'TRUE' ? 'dawn endcard' : 'badcard', ['もう一度会いに行く', 'タイトルへ'])
       .then(v => v === 0 ? startRun(ORDER[0]) : showTitle(true));
@@ -4402,11 +4409,13 @@
     tel('bad', { c: C.id, tag: 'BAD1', loops: R.loop });
     const got = achGain('BAD1');
     await touchRecall();
-    const v = await overlayWait(`<div class="fade bad-head"><p class="bad-kind">BAD END</p><h2 class="bad-name">終わらない放課後</h2></div>${touchNote()}
+    const v = await overlayWait(`<div class="fade bad-head"><p class="bad-kind">${endKind('BAD1')}</p><h2 class="bad-name">終わらない放課後</h2></div>${touchNote()}
       <p class="note bad-howto">${C.room}の初めからやり直せます。調べたこと・話したことは覚えているので、謎解きは飛ばせます。</p>${achNote(got)}`,
       'badcard', [`${C.room}の初めから`, 'タイトルへ']);
     if (v === 0) startRun(C.id, { skipPuzzle: true }); else showTitle(true);
   }
+  // 結末の札の見出し：TRUE 以外は「END 〇」（番号は END_LIST の並び）
+  function endKind(tag) { const e = END_LIST.find(x => x[0] === tag); return tag === 'TRUE' ? 'TRUE END' : e ? e[1] : 'END'; }
   // 章の途中で周回が終わるBAD（共倒れ・ふたりきりの放課後）。放課後がここで終わるので、周回に数える
   async function chapterBad(tag, title, lines, mood) {
     bgm(mood);
@@ -4419,7 +4428,7 @@
     const got = achGain(tag);
     await touchRecall();
     // BAD1と同じく、その章の初めから（謎解きは飛ばして）やり直せる。「放課後をやり直す」を選んだときだけ、周回を締めくくって美術室から
-    const v = await overlayWait(`<div class="fade bad-head"><p class="bad-kind">BAD END</p><h2 class="bad-name">${title}</h2></div>${touchNote()}
+    const v = await overlayWait(`<div class="fade bad-head"><p class="bad-kind">${endKind(tag)}</p><h2 class="bad-name">${title}</h2></div>${touchNote()}
       <p class="note">この放課後は、ここで終わった。</p>
       <p class="note bad-howto">${C.room}の初めからやり直せます。調べたこと・話したことは覚えているので、謎解きは飛ばせます。</p>${achNote(got)}`, 'badcard',
       // 1章では「美術室の初めから」と「放課後をやり直す」が同じ所へ戻るので、片方だけ出す（2026-11-10 作者の指示）
@@ -8512,10 +8521,13 @@
     $('#aNext').onclick = () => !last ? readAnother(i, pg + 1) : next ? readAnother(i + 1, 0) : showAnother();
     if ($('#aToc')) $('#aToc').onclick = () => showAnother();
   }
-  // エンドリスト：BAD1〜9、NORMAL1・2、GOOD、TRUE の順。見ていない結末は「？？？」（条件も名前も出さない）
-  const END_LIST = [['BAD1', 'BAD 1', '終わらない放課後'], ['BAD2', 'BAD 2', '共倒れ'], ['BAD3', 'BAD 3', 'ふたりきりの放課後'], ['BAD4', 'BAD 4', '閉ざされた校舎'],
-    ['BAD5', 'BAD 5', '空席の教室'], ['BAD6', 'BAD 6', 'わすれものの重さ'], ['BAD7', 'BAD 7', '目をそらした夕焼け'], ['BAD8', 'BAD 8', 'こわれた心'], ['BAD9', 'BAD 9', 'ひとりきりの斜陽'], ['BAD10', 'BAD 10', 'ふたり分の鞄'],
-    ['NORMAL', 'NORMAL 1', '何人かの朝'], ['NORMAL2', 'NORMAL 2', 'それぞれの朝'], ['GOOD', 'GOOD', '送り出した屋上'], ['TRUE', 'TRUE', '6人の朝']];
+  // エンドリスト：END 1〜13（遊ぶ人が出会いやすい順。章の中＝チャイムのくり返しの中で起きるものを先に→周回の終わり→屋上）と TRUE。見ていない結末は「？？？」（条件も名前も出さない）
+  // 2026-11-18 作者の決定：BAD・NORMAL・GOOD の表記をやめる（一人で抱え込んでいる人の暮らしを「悪い結末」と呼ばないため）。TRUE は現実の物語（正史）なのでそのまま。
+  // 中の名前（BAD2 など）はセーブとの互換のために残し、画面に出す番号だけを END_NO で決める
+  const END_LIST = [['BAD1', '終わらない放課後'], ['BAD2', '共倒れ'], ['BAD3', 'ふたりきりの放課後'], ['BAD10', 'ふたり分の鞄'],
+    ['BAD5', '空席の教室'], ['BAD6', 'わすれものの重さ'], ['BAD4', '閉ざされた校舎'], ['BAD9', 'ひとりきりの斜陽'],
+    ['NORMAL', '何人かの朝'], ['NORMAL2', 'それぞれの朝'], ['GOOD', '送り出した屋上'], ['BAD7', '目をそらした夕焼け'], ['BAD8', 'こわれた心'], ['TRUE', '6人の朝']]
+    .map(([k, name], i) => [k, k === 'TRUE' ? 'TRUE' : `END ${i + 1}`, name]);
   function showEnds() {
     const seen = END_LIST.filter(([k]) => P.endings[k]).length;
     const rows = END_LIST.map(([k, label, name]) => {
@@ -8829,7 +8841,7 @@
   const ACH = [
     ['firstEnd', null, '初めて、エンディングを見る', () => ALL_ENDS.some(t => P.endings[t]), () => true],
     ['shelf5', null, '5人のわすれものを全て手に入れる', () => FIVE.every(k => P.shelf[k]), () => false],
-    ['dawn', null, 'BAD以外のエンディング（NORMAL・GOOD・TRUE）にたどり着く', () => !!(P.endings.NORMAL || P.endings.NORMAL2 || P.endings.GOOD || P.endings.TRUE), () => false],
+    ['dawn', null, '朝へ向かうエンディングにたどり着く', () => !!(P.endings.NORMAL || P.endings.NORMAL2 || P.endings.GOOD || P.endings.TRUE), () => false],
     ['allEnd', null, '全てのエンディングを見る', () => ALL_ENDS.every(t => P.endings[t]), () => true],
     ['perfect', null, '一つの周回で、チャイムを一度も聞かず、ヒントも使わず、選択肢も謎解きも間違えずに、TRUEにたどり着く', () => false, perfectShown],
     // 第五章でツムギが爆発する決別を見たとき（その場で記録し、章の終わりの画面で知らせる）。名前は仮
