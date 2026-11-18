@@ -1188,6 +1188,14 @@
   new MutationObserver(fitChoices).observe(chs, { childList: true });
   addEventListener('resize', () => { if (chs.children.length) fitChoices(); });
   let advance = null;
+  // 2026-11-18 Museのテストプレイ（明転・暗転の前後でクリックが効かない）：場面の切り替えの待ちの途中で押されたら、残りの待ちを短くする
+  const hurry = new Set();
+  const fxWait = ms => new Promise(r => {
+    const done = () => { clearTimeout(t); hurry.delete(cut); r(); };
+    const cut = () => { clearTimeout(t); t = setTimeout(done, 150); };
+    let t = setTimeout(done, reduce ? 0 : ms); hurry.add(cut);
+  });
+  let lastClicked = false;   // 直前の文を、押して送ったか（選択肢の前の「もう1回押す」を重ねないため）
   /* 会話の途中セーブ：ストーリー（調べる・持ち物・ヒント・導入など）を始めた時点の状態と、
      そこから出した文章の数・選んだ答えを記録しておく。ロードすると、始めた時点から同じ答えで
      画面に出さずに早送りし、セーブしたときの文章から表示を再開する */
@@ -1246,19 +1254,19 @@
       lastSkipped = !!(P.skip && known && !noSkip && !(R && R.forceRead));
       if (lastSkipped) {
         // 既読：その場で全文を出し、少しだけ見せて次へ（未読・選択肢・画面表示で止まる）
-        txt.textContent = full; advance = null;
+        txt.textContent = full; advance = null; lastClicked = false;
         setTimeout(() => { if (g === gen) res(); }, wait ? 70 : 0);
         return;
       }
       let i = 0, done = false, timer = null;
       const finish = () => {
         clearInterval(timer); txt.textContent = full; done = true;
-        if (!wait) { advance = null; res(); return; }
+        if (!wait) { advance = null; lastClicked = false; res(); return; }
         more.hidden = false;
       };
       advance = () => {
         if (!done) { finish(); return; }
-        advance = null; more.hidden = true; res();
+        advance = null; more.hidden = true; lastClicked = true; res();
       };
       if (reduce || !charMs()) finish();
       else {
@@ -1392,7 +1400,7 @@
   }
   // 文章送りは画面のどこを押しても進む（ボタン・選択肢・開いている画面の操作は除く）
   document.addEventListener('click', e => {
-    if (!advance) return;
+    if (!advance) { if (hurry.size && ov.hidden && !e.target.closest('button, .hs, .chip')) [...hurry].forEach(f => f()); return; }
     if (e.target.closest('.choice, .bar-actions') || !ov.hidden) return;
     e.preventDefault(); e.stopPropagation();
     advance();
@@ -1424,9 +1432,14 @@
         };
         chs.appendChild(b);
       }); };
-      // 誤タップ防止：直前の文章を読んだ後、1タップしてから選択肢を出す
-      if (txt.textContent.trim() && !lastSkipped) { more.hidden = false; advance = () => { advance = null; setTimeout(build, 120); }; }
+      // 誤タップ防止：直前の文章を読んだ後、1タップしてから選択肢を出す。
+      // 2026-11-18 Museのテストプレイ：直前の文を押して送ったときは、もう1回押させない（2回押しても同じ文のまま、と感じるため）。
+      //   代わりに、出たばかりの選択肢は少しの間押せないようにする（連打で選んでしまわないように）
+      const armed = () => { build(); chs.style.pointerEvents = 'none'; setTimeout(() => { chs.style.pointerEvents = ''; }, 350); };
+      if (txt.textContent.trim() && !lastSkipped && !lastClicked) { more.hidden = false; advance = () => { advance = null; setTimeout(build, 120); }; }
+      else if (lastClicked) armed();
       else build();
+      lastClicked = false;
     });
   }
 
@@ -3498,7 +3511,9 @@
   async function hallBg(name) {
     // 廊下の絵を読み終えてから、背景・椅子・わすれものを同時に切り替える（部屋の椅子などが先に消えないように）
     const bg = $('#bgImg'), pre = new Image(); pre.src = `img/${name}.webp`;
+    const slow = setTimeout(() => { $('#loading').hidden = false; }, 1100);
     try { await pre.decode(); } catch (e) {}
+    clearTimeout(slow); $('#loading').hidden = true;
     bg.src = pre.src;
     $('#sitFig').classList.add('gone'); $('#leftover').style.display = 'none'; $('#hsLayer').innerHTML = '';
     $('#scene').classList.remove('room-dark');   // 廊下は部屋の暗さを引き継がない
@@ -3751,7 +3766,7 @@
   // 明転：画面を白くフェードし、その間に切り替えて、白から戻す（同じ場所で時間がたつところ）
   async function whiteSwap(fn, inMs = 900, holdMs = 350, outMs = 1100) {
     if (replay) { fn(); return; }
-    const wait = ms => new Promise(r => setTimeout(r, ms));
+    const wait = fxWait;
     const d = fxLayer('white'); await wait(40); d.classList.add('on'); await wait(inMs);
     spk.hidden = true; txt.textContent = ''; chs.innerHTML = ''; more.hidden = true;
     fn(); await wait(holdMs);
@@ -4400,9 +4415,11 @@
     if (replay) { lo.style.display = 'none'; bg.src = `img/${img}.webp`; bg.style.opacity = '1'; return; }   // 早送り中はすぐ切り替える
     const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
     const pre = new Image(); pre.src = `img/${img}.webp`;
-    bg.style.opacity = '0'; await Promise.all([wait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);   // 椅子・わすれものも、背景と一緒に消えていく
+    const slow = setTimeout(() => { $('#loading').hidden = false; }, 1100);   // 2026-11-18：絵の読み込みが遅いときは、空白のままにせず「読み込み中」を出す
+    bg.style.opacity = '0'; await Promise.all([fxWait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);   // 椅子・わすれものも、背景と一緒に消えていく
     lo.style.display = 'none'; bg.src = pre.src; try { await bg.decode(); } catch (e) {}
-    bg.style.opacity = '1'; await wait(750);
+    clearTimeout(slow); $('#loading').hidden = true;
+    bg.style.opacity = '1'; await fxWait(750);
   }
   // BAD5 空席の教室：消えた子の教室を順に映し（席にはわすれものだけ）、最後はチャイムの鳴らない夕焼けに一人
   async function emptySeats(chs) {
@@ -8434,8 +8451,29 @@
     guest = null; guestRender(); talkHold = false;  // その場にいる子（ミオなど）の立ち絵も消す。途中から再開するときは、場面の読み直しでまた出る
     spk.hidden = true; txt.textContent = ''; txt.classList.add('narr'); chs.innerHTML = ''; more.hidden = true;
   }
+  // 2026-11-18 Museのテストプレイ（わすれものの詳細・カットイン・立ち絵が空白のまま）：章に入ったら、その章で使う絵を少しずつ先に読んでおく。
+  //   どの絵を使うかは、章の中身（文・関数の中身）に絵の名前が出てくるかで決める。第五章は、そのあとの結末・屋上の絵も
+  let ASSET_IMGS = null, prefGen = 0;
+  try { fetch('assets.json').then(r => r.json()).then(j => { ASSET_IMGS = Object.keys(j.files || {}).filter(f => /^img\/[^/]+\.webp$/.test(f)).map(f => f.slice(4, -5)); }).catch(() => {}); } catch (e) {}
+  function srcText(o) {
+    const seen = new Set(); let out = '';
+    const walk = v => { if (v == null) return; if (typeof v === 'function') { out += v.toString() + '\n'; return; } if (typeof v === 'string') { out += v + '\n'; return; }
+      if (typeof v !== 'object' || seen.has(v)) return; seen.add(v); Object.values(v).forEach(walk); };
+    walk(o); return out;
+  }
+  function prefetchChapter(c) {
+    if (!c) return;
+    if (!ASSET_IMGS) { setTimeout(() => { if (C === c) prefetchChapter(c); }, 1500); return; }
+    let text = srcText(c);
+    if (c.id === 'infirmary') text += [runEnd, roofScene, endRoll].map(f => f.toString()).join('\n');
+    const names = ASSET_IMGS.filter(n => text.includes(`'${n}'`) || text.includes(`"${n}"`) || text.includes(`/${n}.webp`) || n.startsWith(c.key + '_'));
+    const g = ++prefGen; let i = 0;
+    const next = () => { if (g !== prefGen || i >= names.length) return; const im = new Image(); im.decoding = 'async'; im.onload = im.onerror = () => setTimeout(next, 20); im.src = `img/${names[i++]}.webp`; };
+    setTimeout(() => { next(); next(); }, 1200);   // 部屋の絵を先に出してから
+  }
   function setChapter(id, show = true) {
     C = CHAPTERS[id] || ART;
+    prefetchChapter(C);
     if (id === 'infirmary') fetchLateBgm();   // 第五章：このあとの屋上・エンディングの曲を取り寄せておく
     // チャイムの空：その章でチャイムが鳴る時刻（章の終わり）の空にする（16:30・17:00・17:30・18:00・18:30）
     { const end = chEnd(), file = { 30: 'chime_sky_1630', 60: 'chime_sky', 90: 'chime_sky_1730', 120: 'chime_sky_1800', 150: 'chime_sky_1830' }[end] || 'chime_sky';
