@@ -1013,6 +1013,10 @@
   // diffSet：難しさを一度でも選んだ（初回の選択・設定での変更）。選ぶ画面は、まだ選んでいない初回プレイのときだけ出す。前に遊んだ人は選んだことがある
   if (P.played) P.diffSet = true;
   // heard：一度でも流れた曲（サウンドトラックで「？？？」を外すのに使う）。記録を始める前に遊んだ分は、見た結末などから推し量る
+  // 2026-11-18 作者の指示：結末の中の名前を BAD・NORMAL・GOOD から END1〜13 へ（画面の表記とそろえる）。前のセーブの名前を読みかえる（TRUE はそのまま）
+  { const RN = { BAD1: 'END1', BAD2: 'END2', BAD3: 'END3', BAD10: 'END4', BAD5: 'END5', BAD6: 'END6', BAD4: 'END7', BAD9: 'END8', NORMAL: 'END9', NORMAL2: 'END10', GOOD: 'END11', BAD7: 'END12', BAD8: 'END13' };
+    if (P.endings) Object.keys(P.endings).forEach(k => { if (RN[k]) { if (!P.endings[RN[k]]) P.endings[RN[k]] = P.endings[k]; delete P.endings[k]; } });
+    if (P.lastRun && RN[P.lastRun.end]) P.lastRun.end = RN[P.lastRun.end]; }
   P.heard = P.heard || {};
   if (!P.heardV1) {
     P.heardV1 = true;
@@ -1020,10 +1024,10 @@
     if (P.played || P.runs) { h.title = h.explore = true; }
     if (Object.keys(P.saved || {}).length) { h.core = h.musicbox = h.unravel = true; }
     if ((P.saved || {}).sota) h.sota = true;
-    if (Object.keys(P.shelf || {}).length || E.BAD5 || E.BAD6) h.vanish = true;
-    if (E.shut || E.BAD1 || E.BAD4) h.shut = true;
-    if (E.BAD2) h.coreHeavy = true;
-    if (E.BAD3) h.codep = true;
+    if (Object.keys(P.shelf || {}).length || E.END5 || E.END6) h.vanish = true;
+    if (E.shut || E.END1 || E.END7) h.shut = true;
+    if (E.END2) h.coreHeavy = true;
+    if (E.END3) h.codep = true;
   }
   if (!P.cur) P.cur = { results: {} };
   const saveP = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} };
@@ -3586,55 +3590,55 @@
     const v = keys.filter(k => res[k] === 'vanished').length, sh = keys.filter(k => res[k] === 'shut').length;
     let end;
     // [タグ, 題, ストーリーの文章, BGM, 背景]
-    if (v >= 3) end = ['BAD5', '空席の教室', [], 'vanish'];
-    else if (v >= 1) end = ['BAD6', 'わすれものの重さ', ['屋上へ続く階段の途中で、足が止まった。', '踊り場に、自分と同じ顔をした誰かが立っている。', '「救えなかったくせに」', '差し出されたわすれものは紙切れのように軽いはずなのに、両腕で抱えきれないほど重く感じた。'], 'vanish', 'stairs_1830'];   // 5章の後（18:30）の、屋上へ続く階段（照明は消えている）
+    if (v >= 3) end = ['END5', '空席の教室', [], 'vanish'];
+    else if (v >= 1) end = ['END6', 'わすれものの重さ', ['屋上へ続く階段の途中で、足が止まった。', '踊り場に、自分と同じ顔をした誰かが立っている。', '「救えなかったくせに」', '差し出されたわすれものは紙切れのように軽いはずなのに、両腕で抱えきれないほど重く感じた。'], 'vanish', 'stairs_1830'];   // 5章の後（18:30）の、屋上へ続く階段（照明は消えている）
     // ツムギが息を引き取り、他の全員にも扉を閉ざされた：唯一心に触れられた子を失い、屋上で一人日没を見る（曲は息を引き取ったときの「消えたとき」をそのまま流す）
-    else if (died && keys.length && sh === keys.length) end = ['BAD9', 'ひとりきりの斜陽', ['……気がつくと、屋上に立っていた。',
+    else if (died && keys.length && sh === keys.length) end = ['END8', 'ひとりきりの斜陽', ['……気がつくと、屋上に立っていた。',
       'フェンスの向こうで、太陽が山の稜線に沈みかけている。', 'どの扉も最後まで開かなかった。……この放課後で手が届いたのは、あの子だけだった。',
       '握っていた手のぬくもりが、まだ指に残っている。', 'ミオに渡したかった「またね」を、あの子は最後まで抱えたままだった。',
       '空の赤が少しずつ沈んでいく。', '日が沈みきるまで、ただ一人で見ていた。'], 'vanish', 'rooftop'];
-    else if (keys.length && sh === keys.length) end = ['BAD4', '閉ざされた校舎', [], 'shut'];
-    else if (!sh && !died && P.cur.mtSplit) end = ['NORMAL2', 'それぞれの朝', ['校門の向こうへ、五人が歩いていった。',
+    else if (keys.length && sh === keys.length) end = ['END7', '閉ざされた校舎', [], 'shut'];
+    else if (!sh && !died && P.cur.mtSplit) end = ['END10', 'それぞれの朝', ['校門の向こうへ、五人が歩いていった。',
       '……ミオとツムギは別々の道で校門を出ていった。ツムギは正門のほうを、ミオはいつもの図書室の窓を、一度ずつ振り返った。',
       '夕焼けの屋上に、一人で立つ。',
       'フェンスの向こうに、図書室のある棟と正門から延びる道が見えた。どちらも同じ夕日の色に染まっていた。',
       '言えなかった「またね」は、今日はどちらにも届かなかった。',
       '……それでも、明日はやってくる。二人に、それぞれの朝が。'], 'farewell', 'rooftop'];
-    else if (sh >= 1 || died || P.cur.mtSplit) end = ['NORMAL', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。',
+    else if (sh >= 1 || died || P.cur.mtSplit) end = ['END9', '何人かの朝', ['校門の向こうへ、救えた子だけが歩いていった。',
       ...(sh ? ['振り返ると、閉ざされた扉の教室にはまだ明かりがついていた。'] : []),
       ...(died ? ['一階の保健室の窓に、もうベッドのふちに座る影はなかった。'] : []),
       ...(P.cur.mtSplit ? ['ミオとツムギは別々の道で校門を出ていった。'] : []),
       '門の手前で、足が止まる。まだここは通れない。'], 'unravelDim', 'chime_sky_1830'];
-    else end = ['GOOD', '送り出した屋上', ['全員の背中を、校門の向こうへ見送った。', '夕焼けの屋上に、一人で立つ。', '足もとに、生徒手帳が一冊落ちていた。'], 'unravel', 'rooftop'];
-    if (ROOF_OPEN && (end[0] === 'GOOD' || end[0] === 'NORMAL2')) {
+    else end = ['END11', '送り出した屋上', ['全員の背中を、校門の向こうへ見送った。', '夕焼けの屋上に、一人で立つ。', '足もとに、生徒手帳が一冊落ちていた。'], 'unravel', 'rooftop'];
+    if (ROOF_OPEN && (end[0] === 'END11' || end[0] === 'END10')) {
       await endScene('chime_sky_1830');
       const v = await uiWait(`<div class="fade" style="display:flex;flex-direction:column;gap:12px"><p>五人の背中を、校門の向こうへ見送った。</p><p>……チャイムは、まだ鳴っていない。</p></div>`, 'dawn', ['（……まだ行かなきゃいけない場所がある）', '（……もう、十分だ）']);
       closeOverlay();
-      if (v === 0) return roofScene(end[0] === 'NORMAL2');
+      if (v === 0) return roofScene(end[0] === 'END10');
     }
     P.endings[end[0]] = true;
-    if (end[0] === 'GOOD' && !P.shelf.me) { P.shelf.me = true; albumSync(); }  // 主人公のわすれもの（生徒手帳）
+    if (end[0] === 'END11' && !P.shelf.me) { P.shelf.me = true; albumSync(); }  // 主人公のわすれもの（生徒手帳）
     // 朝を迎えるエンディングは、ほどけた後の曲が流れていれば続けて聴かせる。BADは、その結末の曲が流れていなければ切り替える
-    const dawnEnd = ['NORMAL', 'NORMAL2', 'GOOD'].includes(end[0]);
-    if (end[0] === 'GOOD') keepBgm(end[3], WARM);
-    else if (end[0] === 'NORMAL' && !P.cur.mtSplit) bgm(end[3], 1.6);   // 『見送る背中』（『夕映えの微笑み』の静かなアレンジ、何人かの朝）。前の曲から、ゆっくり入れ替える
+    const dawnEnd = ['END9', 'END10', 'END11'].includes(end[0]);
+    if (end[0] === 'END11') keepBgm(end[3], WARM);
+    else if (end[0] === 'END9' && !P.cur.mtSplit) bgm(end[3], 1.6);   // 『見送る背中』（『夕映えの微笑み』の静かなアレンジ、何人かの朝）。前の曲から、ゆっくり入れ替える
     // 決別した周回（「それぞれの朝」と、決別したうえで誰かを閉め出した「何人かの朝」）は、決別のあとから流れている曲（静かな決別）を切らずに続ける
-    else if (end[0] === 'NORMAL2' || (end[0] === 'NORMAL' && P.cur.mtSplit)) keepBgm('farewell', ['farewell', 'farewellLate']);
+    else if (end[0] === 'END10' || (end[0] === 'END9' && P.cur.mtSplit)) keepBgm('farewell', ['farewell', 'farewellLate']);
     else { bgm(end[3]); if (end[3] === 'shut') shutKnocks(); }
     const got = achGain(end[0]);
     finishRun(true, end[0]);
-    if (end[0] === 'BAD4') await closedSchool();
-    if (end[0] === 'BAD5') await emptySeats(ORDER.map(id => CHAPTERS[id]).filter(ch => res[ch.key] === 'vanished'));
+    if (end[0] === 'END7') await closedSchool();
+    if (end[0] === 'END5') await emptySeats(ORDER.map(id => CHAPTERS[id]).filter(ch => res[ch.key] === 'vanished'));
     if (end[2].length) {
       await endScene(end[4]);
       // GOOD：最後の一文（足もとの生徒手帳）で、夕焼けの屋上に落ちた生徒手帳のカットインを出す（絵は仮採用）
-      if (end[0] === 'GOOD') { await say(end[2].slice(0, -1)); showCut('protag_notebook_dusk'); await say(end[2].slice(-1)); hideCut(); }
+      if (end[0] === 'END11') { await say(end[2].slice(0, -1)); showCut('protag_notebook_dusk'); await say(end[2].slice(-1)); hideCut(); }
       else await say(end[2]);
       $('#bgImg').style.opacity = '';
     }
     // わすれものを一つも持っていないうちは、「わすれもの」という言葉を出さない（まだ知らない仕組みを先に見せない）
     const hasLeft = Object.keys(P.shelf || {}).some(k => P.shelf[k]);
-    const endNote = end[0] === 'BAD9' ? 'この放課後は、ここで終わった。……握っていた手のぬくもりだけが、まだ指に残っている。'
+    const endNote = end[0] === 'END8' ? 'この放課後は、ここで終わった。……握っていた手のぬくもりだけが、まだ指に残っている。'
                   : hasLeft ? 'この放課後は、ここで終わった。……わすれものの記憶だけが、手の中に残っている。' : 'この放課後は、ここで終わった。';
     if (dawnEnd) await endRoll(end[0]);
     // 初めての放課後を見送らずに終えたとき（1周目はかならずここ）：届かなかったのは作りどおりだと、しくみの案内で一度だけ伝える（2026-11-01・作者の指示。離脱を減らすため。台詞ではなく、しくみの案内として）
@@ -3658,7 +3662,7 @@
   const ROOF = /[?&]roof\b/.test(location.search);   // 確認用の裏口（コンソールから屋上・エンドロールを呼ぶ）
   const ROOF_OPEN = true;   // 屋上（18:30）を本編で開く
   // 確認用：?roof のときだけ、コンソールから屋上の場面を直接始められる（__roof('split'|'awk'|'straight')）
-  if (ROOF) window.__roll = t => endRoll(t || 'GOOD');
+  if (ROOF) window.__roll = t => endRoll(t || 'END11');
   if (ROOF) window.__roof = k => { P.cur.mtKind = k === 'awk' ? 'awk' : 'straight'; return roofScene(k === 'split'); };
   const sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
   // 言葉の字：明朝と手書き（Yomogi・Zen Kurenaido）を混ぜる。色々な人から言われた言葉に見えるように
@@ -4152,7 +4156,7 @@
                '夕日が山の向こうへ沈んでいく。', '最後の光が消えるまで、目をそらさなかった。……夕日からだけは。']);
     // 2026-11-11 作者の指示：日が沈まない・時が止まる書き方は超常現象に見えるので、ふつうに沈ませる。目をそらし続けることは、夕日だけを見続けたことで表す
     await endScene('rooftop_dusk');   // 日が沈んだ後の屋上（7/15 19:15ごろ。2026-11-11）
-    return roofEnd('BAD7', '目をそらした夕焼け');
+    return roofEnd('END12', '目をそらした夕焼け');
   }
   async function roofBad8(from) {
     clearRoof(); scr = null; syncSave();
@@ -4173,7 +4177,7 @@
     // そこで、知らせが届く前の朝で止める。翌日7/16は終業式。五人は校門であの人を待つが、来ない。その後何を聞いたかは書かない
     await roofVoid(['次の日の朝。終業式の日だった。', '五人は、校門の前であの人を待っていた。', '名前も、クラスも、知らないまま。']);
     await roofVoid(['予鈴が鳴っても、あの人は来なかった。', '……五人は、それぞれの教室へ向かった。']);
-    return roofEnd('BAD8', 'こわれた心', '<p class="note bad-care">あの人のことが、ひとごとに思えなかったら。その気持ちを、誰かに話してみてください。身近な人でも、相談窓口でも。</p>');
+    return roofEnd('END13', 'こわれた心', '<p class="note bad-care">あの人のことが、ひとごとに思えなかったら。その気持ちを、誰かに話してみてください。身近な人でも、相談窓口でも。</p>');
   }
 
 
@@ -4245,7 +4249,7 @@
     // わすれものは、この周回の結末に合った姿で（ほどけた子は姿を変えた後、そうでなければ棚に並んだ姿）
     WASURE.forEach(([, k, get]) => { if (P.shelf[k]) { try { const it = get().shelfItem(k === 'me' ? !!P.saved[k] : !!(cur.results && cur.results[k] === 'saved')); if (it && it.thumb) extra.push(it.thumb); } catch (e) {} } });
     if (tag === 'TRUE') extra.push('infirmary_morning', 'protag_notebook', 'true_gate');
-    else if (tag === 'GOOD') extra.push('protag_notebook_dusk', 'rooftop');
+    else if (tag === 'END11') extra.push('protag_notebook_dusk', 'rooftop');
     else extra.push('chime_sky_1830');
     return [...new Set([...seen, ...extra])];
   }
@@ -4405,11 +4409,11 @@
     await say(['チャイムを数えるのを、いつのまにかやめていた。', R.touched ? '届きかけた手を、自分から下ろしてしまった。窓の外の空は少しも動かない。' : '誰の心にも、手が届かないまま。窓の外の空は少しも動かない。',
                '自分の名前を、思い出せなくなっていた。……それでも、放課後は終わらなかった。']);
     keepMem();
-    R.over = true; clearRun(); P.endings.BAD1 = true; saveP(); render(); idle();
-    tel('bad', { c: C.id, tag: 'BAD1', loops: R.loop });
-    const got = achGain('BAD1');
+    R.over = true; clearRun(); P.endings.END1 = true; saveP(); render(); idle();
+    tel('bad', { c: C.id, tag: 'END1', loops: R.loop });
+    const got = achGain('END1');
     await touchRecall();
-    const v = await overlayWait(`<div class="fade bad-head"><p class="bad-kind">${endKind('BAD1')}</p><h2 class="bad-name">終わらない放課後</h2></div>${touchNote()}
+    const v = await overlayWait(`<div class="fade bad-head"><p class="bad-kind">${endKind('END1')}</p><h2 class="bad-name">終わらない放課後</h2></div>${touchNote()}
       <p class="note bad-howto">${C.room}の初めからやり直せます。調べたこと・話したことは覚えているので、謎解きは飛ばせます。</p>${achNote(got)}`,
       'badcard', [`${C.room}の初めから`, 'タイトルへ']);
     if (v === 0) startRun(C.id, { skipPuzzle: true }); else showTitle(true);
@@ -4587,7 +4591,7 @@
     const pv = await choose(['「……だったら、同じところに立てば分かる？」', '（……何も言えない）']);
     tel('pity_branch', { c: C.id, k: pv === 0 ? 'stand' : 'silent' });
     if (pv === 0) {
-      bgm('coreHeavy'); await say([...(PITY_STAND[C.id] || []), ...(PITY_RESOLVE[C.id] || []), ...C.badSubTalk]); return chapterBad('BAD2', '共倒れ', C.badSub, 'coreHeavy');
+      bgm('coreHeavy'); await say([...(PITY_STAND[C.id] || []), ...(PITY_RESOLVE[C.id] || []), ...C.badSubTalk]); return chapterBad('END2', '共倒れ', C.badSub, 'coreHeavy');
     }
     return lastWrong();   // 「何か、あと一つ足りない気がする」は出さない（届かなかったのは向き合い方のせいで、わすれものが足りないからではない）
   }
@@ -4596,13 +4600,13 @@
     await say(['（……駄目だ。これ以上、かける言葉が見つからない）', `（それに、自分には${C.who}の痛みを取り除くこともできない）`]);
     await line('（……こんな時、どうすれば……）', false);
     const t = await choose([`分からない……。けど、${C.who}を放っておけない`, '……ごめん。今の自分じゃ、何もしてあげられない', '辛いなら、ずっとそばにいるよ']);
-    if (t === 0) { bgm('coreHeavy'); await say(C.badSubTalk); return chapterBad('BAD2', '共倒れ', C.badSub, 'coreHeavy'); }
+    if (t === 0) { bgm('coreHeavy'); await say(C.badSubTalk); return chapterBad('END2', '共倒れ', C.badSub, 'coreHeavy'); }
     if (t === 1) { await say(typeof C.giveUp === 'function' ? C.giveUp() : C.giveUp); return bad1(); }
     bgm('codep');
     await say([`${C.name}の顔にほっとしたような色が浮かんだ。……それなのに、その目はこちらがいなくならないかを確かめるみたいに、ずっとこちらを追っていた。`,
                '（……ずっと、と言ってしまった。それ以外の言葉が、もう見つからなかった）']);
     await say(C.badDepTalk);
-    return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
+    return chapterBad('END3', 'ふたりきりの放課後', C.badDep, 'codep');
   }
   const burn = () => { if (R && R.lastPick && Array.isArray(R.failed) && !R.failed.includes(R.lastPick)) R.failed.push(R.lastPick); };
   // 2026-11-17 作者の指示：慰めた後に心を閉ざすときは、背景の座り姿も黙ったときの姿（sit.close）へフェードで替える。次のチャイムで元に戻す
@@ -5315,7 +5319,7 @@
                    ['ヒナ', 'あんたがいてくれるなら、お母さんの声も、聞こえない気がするの', 'sad'],
                    'その手を、振りほどけなかった。']);
         await say([DEP_NOTE[C.id]]);
-        return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
+        return chapterBad('END3', 'ふたりきりの放課後', C.badDep, 'codep');
       }
       if (a === 'pity') return (R.pose = 'wrist', pityBranch([...(R.cons ? [['ヒナ', '……見てるって、そういう意味だったんだ', 'reject']] : []), ['ヒナ', '……そんな目で見ないで', 'reject'],
                    ['ヒナ', 'かわいそうな子だって、思ったんでしょ', 'angry'],
@@ -6051,7 +6055,7 @@
                    ['ソウタ', '……なあ。ここ、座っててくれる？ ハルの代わりに', 'sad'],
                    'うなずくことしか、できなかった。']);
         await say([DEP_NOTE[C.id]]);
-        return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
+        return chapterBad('END3', 'ふたりきりの放課後', C.badDep, 'codep');
       }
       if (a === 'nagu') {
         R.cons++;
@@ -6712,7 +6716,7 @@
                    ['ミオ', '……ねえ。ここに座ってて。ひとりぶんの椅子じゃ、寂しいから', 'sad'],
                    'その椅子に、座ってしまった。']);
         await say([DEP_NOTE[C.id]]);
-        return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
+        return chapterBad('END3', 'ふたりきりの放課後', C.badDep, 'codep');
       }
       if (a === 'nagu') {
         R.cons++;
@@ -7306,7 +7310,7 @@
                    ['ケイ', '……じゃあさ。もうちょっとだけ、ここでシュート練習しない？ 一人だと、寂しいから', 'sad'],
                    'そのボールを、受け取ってしまった。']);
         await say([DEP_NOTE[C.id]]);
-        return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
+        return chapterBad('END3', 'ふたりきりの放課後', C.badDep, 'codep');
       }
       if (a === 'nagu') {
         R.cons++;
@@ -8048,7 +8052,7 @@
         await say([['ツムギ', '……寂しい？ 私がいないと？', 'surprise'], ['ツムギ', '……そっか', 'normal'],
                    'ツムギはベッドの隣を、ぽんぽんと叩いた。', ['ツムギ', 'じゃあ、ここにいて。……ずっと', 'sad'], '隣に腰を下ろしてしまった。']);
         await say([DEP_NOTE[C.id]]);
-        return chapterBad('BAD3', 'ふたりきりの放課後', C.badDep, 'codep');
+        return chapterBad('END3', 'ふたりきりの放課後', C.badDep, 'codep');
       }
       if (a === 'nagu') { R.cons++; await say([['ツムギ', '……ありがと', 'normal'], ['ツムギ', 'でも、みんなそう言うの。いなくなるまでは', 'sad'], ...missing]); return lastWrong(); }
       if (a === 'pity') return pityBranch([...(R.cons ? [['ツムギ', '……さっきの『すぐ戻ってこられる』も、同じだったんだね', 'sad']] : []), ['ツムギ', '……うん。みんな、そう言ってくれる', 'smile'], ['ツムギ', '……元気な人には分かんないよ', 'sad']], missing);
@@ -8260,7 +8264,7 @@
     await voidWait(['九月、始業式の朝。昇降口で、ミオを見かけた。', 'ツムギのことを尋ねると、ミオは少しだけ目を伏せた。',
                     '「入院、延びちゃった。昨日も会いに行ったけど、大丈夫って笑ってた」', '「……私も、大丈夫」',
                     'ミオのポケットの中で、スマホがずっと震えていた。']);
-    return chapterBad('BAD10', 'ふたり分の鞄', [], 'coreHeavy');
+    return chapterBad('END4', 'ふたり分の鞄', [], 'coreHeavy');
   }
   // 決別：quiet（静かな決別）／burst（ツムギが爆発する決別）。ツムギはほどけるが、ミオとは仲直りできない
   async function mtSplit(kind, from = '') {
@@ -8524,9 +8528,9 @@
   // エンドリスト：END 1〜13（遊ぶ人が出会いやすい順。章の中＝チャイムのくり返しの中で起きるものを先に→周回の終わり→屋上）と TRUE。見ていない結末は「？？？」（条件も名前も出さない）
   // 2026-11-18 作者の決定：BAD・NORMAL・GOOD の表記をやめる（一人で抱え込んでいる人の暮らしを「悪い結末」と呼ばないため）。TRUE は現実の物語（正史）なのでそのまま。
   // 中の名前（BAD2 など）はセーブとの互換のために残し、画面に出す番号だけを END_NO で決める
-  const END_LIST = [['BAD1', '終わらない放課後'], ['BAD2', '共倒れ'], ['BAD3', 'ふたりきりの放課後'], ['BAD10', 'ふたり分の鞄'],
-    ['BAD5', '空席の教室'], ['BAD6', 'わすれものの重さ'], ['BAD4', '閉ざされた校舎'], ['BAD9', 'ひとりきりの斜陽'],
-    ['NORMAL', '何人かの朝'], ['NORMAL2', 'それぞれの朝'], ['GOOD', '送り出した屋上'], ['BAD7', '目をそらした夕焼け'], ['BAD8', 'こわれた心'], ['TRUE', '6人の朝']]
+  const END_LIST = [['END1', '終わらない放課後'], ['END2', '共倒れ'], ['END3', 'ふたりきりの放課後'], ['END4', 'ふたり分の鞄'],
+    ['END5', '空席の教室'], ['END6', 'わすれものの重さ'], ['END7', '閉ざされた校舎'], ['END8', 'ひとりきりの斜陽'],
+    ['END9', '何人かの朝'], ['END10', 'それぞれの朝'], ['END11', '送り出した屋上'], ['END12', '目をそらした夕焼け'], ['END13', 'こわれた心'], ['TRUE', '6人の朝']]
     .map(([k, name], i) => [k, k === 'TRUE' ? 'TRUE' : `END ${i + 1}`, name]);
   function showEnds() {
     const seen = END_LIST.filter(([k]) => P.endings[k]).length;
@@ -8557,18 +8561,18 @@
     const L = ['（……また、この放課後の入り口に立っている）'];
     // 前の放課後を、五人を見送る結末（TRUE・GOOD・それぞれの朝）で終えていたら、悔いや「今度は」を言わない。
     // 結末を記録する前のセーブは、五つの章が全てほどけていたかで見分ける
-    const prevEnd = P.lastRun && (P.lastRun.end || (last.length >= ORDER.length && last.every(r => r === 'saved') ? (P.lastRun.cur.mtSplit ? 'NORMAL2' : 'GOOD') : null));
+    const prevEnd = P.lastRun && (P.lastRun.end || (last.length >= ORDER.length && last.every(r => r === 'saved') ? (P.lastRun.cur.mtSplit ? 'END10' : 'END11') : null));
     // 屋上で終わった（BAD7・BAD8）：五人の話は最後まで聞いて、見送っている。届かなかったのは、自分の話のほう（2026-11-01）
-    if (prevEnd === 'BAD7' || prevEnd === 'BAD8') {
+    if (prevEnd === 'END12' || prevEnd === 'END13') {
       L.push('（五人の背中を、校門の向こうへ見送った）',
-             prevEnd === 'BAD7' ? '（……屋上で、手帳から目をそらしたことを、覚えている）' : '（……屋上で聞いた、あの声を、まだ覚えている）');
+             prevEnd === 'END12' ? '（……屋上で、手帳から目をそらしたことを、覚えている）' : '（……屋上で聞いた、あの声を、まだ覚えている）');
       if (carry) L.push('（手の中に、あの子たちが残していったものがある）');
-      L.push(prevEnd === 'BAD7' ? '（……もう一度。今度は、目をそらさない）' : '（……もう一度。今度は、自分の話を途中でやめない）');
+      L.push(prevEnd === 'END12' ? '（……もう一度。今度は、目をそらさない）' : '（……もう一度。今度は、自分の話を途中でやめない）');
       return L;
     }
-    if (prevEnd === 'TRUE' || prevEnd === 'GOOD' || prevEnd === 'NORMAL2') {
+    if (prevEnd === 'TRUE' || prevEnd === 'END11' || prevEnd === 'END10') {
       if (prevEnd === 'TRUE') L.push('（あの屋上で迎えた朝を、まだ覚えている）');
-      else if (prevEnd === 'GOOD') L.push('（五人の背中を、校門の向こうへ見送った）', '（足もとに落ちていた生徒手帳を、まだ覚えている）');
+      else if (prevEnd === 'END11') L.push('（五人の背中を、校門の向こうへ見送った）', '（足もとに落ちていた生徒手帳を、まだ覚えている）');
       else L.push('（五人の背中を、校門の向こうへ見送った）', '（……言えなかった「またね」が、まだ胸に残っている）');
       if (carry) L.push('（手の中に、あの子たちが残していったものがある）');
       L.push(prevEnd === 'TRUE' ? '（……もう一度、あの日の五人に会いに行こう）' : '（……もう一度、あの放課後を歩いてみよう）');
@@ -8697,7 +8701,7 @@
             <div class="quote">${NB_MSGS.map(([n, m]) => `<p>${n}　「${m}」</p>`).join('')}</div>` }
         : { thumb: 'protag_notebook_dusk', title: '生徒手帳', body: `<img class="cg" src="img/protag_notebook_dusk.webp" alt="夕焼けの屋上に落ちている生徒手帳"><p>夕焼けの屋上の足もとに落ちていた、自分の生徒手帳。書きこまれたページは、一枚だけ。……五人の名前が、並んでいた。</p>` };
     } };
-  if (P.endings.GOOD && !P.shelf.me) { P.shelf.me = true; saveP(); }
+  if (P.endings.END11 && !P.shelf.me) { P.shelf.me = true; saveP(); }
   const WASURE = [['ヒナ', 'hina', () => ART], ['ソウタ', 'sota', () => MUSIC], ['ミオ', 'mio', () => LIBRARY], ['ケイ', 'kei', () => GYM], ['ツムギ', 'tsumugi', () => INFIRMARY], ['自分', 'me', () => ME]];
   function albumSync() {
     let ch = false;
@@ -8831,17 +8835,17 @@
   }
 
   /* ---------- アチーブメント（おまけ）：取ったものは周回をまたいで残る。名前は管理人が付ける（未定の間は条件だけを出す） ---------- */
-  const ALL_ENDS = ['TRUE', 'GOOD', 'NORMAL', 'NORMAL2', 'BAD1', 'BAD2', 'BAD3', 'BAD4', 'BAD5', 'BAD6', 'BAD7', 'BAD8', 'BAD9', 'BAD10'];
+  const ALL_ENDS = ['TRUE', 'END11', 'END9', 'END10', 'END1', 'END2', 'END3', 'END7', 'END5', 'END6', 'END12', 'END13', 'END8', 'END4'];
   const FIVE = ['hina', 'sota', 'mio', 'kei', 'tsumugi'];
   /* [id, 名前（未定はnull）, 条件, 判定, 取る前に条件を見せるか]
      条件そのものがネタバレになるもの（わすれもの・NORMAL以上の結末など）は、取るまで「？？？」のまま。
      ノーミスのTRUEは、GOOD以上を一度見ていて、5人のわすれものを全部持っているときだけ条件を見せる。一度見せたら、リセットするまで出しつづける。
      条件が見えていなくても、取ることはできる */
-  const perfectShown = () => !!(P.achShown && P.achShown.perfect) || (!!(P.endings.GOOD || P.endings.TRUE) && FIVE.every(k => P.shelf[k]));
+  const perfectShown = () => !!(P.achShown && P.achShown.perfect) || (!!(P.endings.END11 || P.endings.TRUE) && FIVE.every(k => P.shelf[k]));
   const ACH = [
     ['firstEnd', null, '初めて、エンディングを見る', () => ALL_ENDS.some(t => P.endings[t]), () => true],
     ['shelf5', null, '5人のわすれものを全て手に入れる', () => FIVE.every(k => P.shelf[k]), () => false],
-    ['dawn', null, '朝へ向かうエンディングにたどり着く', () => !!(P.endings.NORMAL || P.endings.NORMAL2 || P.endings.GOOD || P.endings.TRUE), () => false],
+    ['dawn', null, '朝へ向かうエンディングにたどり着く', () => !!(P.endings.END9 || P.endings.END10 || P.endings.END11 || P.endings.TRUE), () => false],
     ['allEnd', null, '全てのエンディングを見る', () => ALL_ENDS.every(t => P.endings[t]), () => true],
     ['perfect', null, '一つの周回で、チャイムを一度も聞かず、ヒントも使わず、選択肢も謎解きも間違えずに、TRUEにたどり着く', () => false, perfectShown],
     // 第五章でツムギが爆発する決別を見たとき（その場で記録し、章の終わりの画面で知らせる）。名前は仮
@@ -8850,7 +8854,7 @@
     ['burst', '友情クラッシャー', 'ツムギの本心に触れる', () => false, () => !!P.metTsumugi]  // 条件は、5章に初めて進んで（ツムギに出会って）から見せる
   ];
   // エンディング以外で取ったアチーブメント：章の終わりの画面でまとめて知らせる
-  if (!P.metTsumugi && (P.cur.results.tsumugi || P.shelf.tsumugi || P.saved.tsumugi || P.endings.NORMAL || P.endings.GOOD || P.endings.BAD4 || P.endings.BAD5 || P.endings.BAD6 || P.endings.BAD9)) { P.metTsumugi = true; saveP(); }
+  if (!P.metTsumugi && (P.cur.results.tsumugi || P.shelf.tsumugi || P.saved.tsumugi || P.endings.END9 || P.endings.END11 || P.endings.END7 || P.endings.END5 || P.endings.END6 || P.endings.END8)) { P.metTsumugi = true; saveP(); }
   function achGrant(id) { if (P.ach[id]) return; P.ach[id] = Date.now(); P.achPending = (P.achPending || []).concat(id); saveP(); }
   function achNoteTake() { const g = P.achPending || []; if (!g.length) return ''; P.achPending = []; saveP(); return achNote(g); }
   P.ach = P.ach || {};
@@ -9082,7 +9086,7 @@
     ['lastBell', 'Last Bell in July（仮）', '', '（説明は未定）'],
     ['sotaDuet', '放課後', '連弾', 'ボーナストラック（本編には出てこない曲）。ソウタとハルが4本の手で弾く連弾版'],
   ];
-  const ostOpen = () => !!(P.endings && (P.endings.NORMAL || P.endings.NORMAL2 || P.endings.GOOD || P.endings.TRUE));
+  const ostOpen = () => !!(P.endings && (P.endings.END9 || P.endings.END10 || P.endings.END11 || P.endings.TRUE));
   const ostList = () => OST.filter(([k]) => k !== 'sotaDuet' || !!(P.endings && P.endings.TRUE));
   const ostHeard = k => k === 'sotaDuet' || !!P.heard[k];
   function showSoundtrack() {
