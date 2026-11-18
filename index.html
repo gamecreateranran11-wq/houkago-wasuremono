@@ -106,7 +106,8 @@
   .scene .bg-clock { position: absolute; pointer-events: none; }
   .sit { position: absolute; width: auto; transition: filter .5s ease, opacity .5s ease; pointer-events: none; }
   /* 2026-11-18 作者の指示（テストプレイで「立ち絵と部屋の中の同じ人物が2人いるように見える」）：話している間だけ、部屋の中の座り絵を少し薄暗くする。話していないときは戻す */
-  #scene.talk:not(.room-dark) #sitFig { filter: brightness(.36) saturate(.6); }   /* 透かすと幽霊のように見えるので、透明にはせず暗さだけ */
+  /* 透かすと幽霊のように見えるので、透明にはせず暗さだけ。2026-11-18 作者の指摘（暗いまま戻らないことがある）：会話の印（talk）ではなく、立ち絵が出ているあいだだけ暗くする（sitdim） */
+  #scene.sitdim:not(.room-dark) #sitFig { filter: brightness(.36) saturate(.6); }
   /* 2026-11-18 作者の指示：音楽室のピアノは、鍵盤の蓋を開けている間だけ、蓋の開いた透過素材（m_piano_open）を背景に重ねる */
   .piano-open { opacity: 0; transition: opacity .4s ease; pointer-events: none; }
   .piano-open.on { opacity: 1; }
@@ -1325,6 +1326,8 @@
     setTimeout(() => ghost.remove(), XFADE_MS + 120);
   }
   let talkHold = false;
+  // 部屋の中の座り絵を暗くするのは、立ち絵（#portrait）が出ているあいだだけ。立ち絵が消えたら、どの流れで消えても必ず戻す
+  if ($('#portrait')) new MutationObserver(() => { $('#scene').classList.toggle('sitdim', $('#portrait').classList.contains('show')); }).observe($('#portrait'), { attributes: true, attributeFilter: ['class'] });
   function setTalk(on, f) {
     const faces = C ? C.faces : {};
     const pt = $('#portrait'), wasShown = pt.classList.contains('show');
@@ -3432,7 +3435,9 @@
            hall: 'hall_music', arrive: () => ['音楽室の前まで来た。', 'ピアノのある部屋なのに、何の音もしなかった。', '重い扉に手をかけた。'] },
     music: { before: () => ['階段を下りて、2階の廊下に出た。'], savedBefore: () => [], hall: 'hall_library',   // savedBefore：ソウタを校門まで見送った後は、上の階から下りてこないので、この一文は出さない
              arrive: () => ['壁の掲示板に図書だよりが貼ってある。', '小さくて整った字。名前の欄に「水野」とある。', '図書室の扉の窓から、明かりが漏れていた。', '引き戸に手をかけた。'] },
-    library: { before: () => ['校舎を出ると、中庭の向こうの体育館に明かりが見えた。', ...(shutLit() ? [`振り返ると、特別教室棟の窓に明かりが${shutLit()}つ残っていた。`] : [])],
+    // 2026-11-18 作者の決定（案A）：図書室前の廊下（背景）からは中庭も特別教室棟も見えないので、明かりを数える一文はやめる
+    //   （閉め出した部屋の明かりの数は、5章のあと保健室前の廊下で、窓の外の絵と一緒に出る）。歩き出す一文も、絵と食い違わない言い方に
+    library: { before: () => ['階段を下りて、体育館へ向かった。'],
                hall: 'hall_gym', arrive: () => ['ボールの弾む音が一度だけした。', '続きの音は、しなかった。', '重い扉に手をかけた。'] },
     gym: { before: () => ['渡り廊下を戻って本校舎に入った。'], hall: 'hall_infirmary',
            arrive: () => P.cur.results.mio === 'saved' ? [] : ['一階の廊下は、明かりが消えていた。', '少し先の扉の窓だけが、白く光っている。札に「保健室」とある。', '下校の時刻は、とうに過ぎているのに。', '引き戸に手をかけた。'] },
@@ -4759,7 +4764,8 @@
   const litLeft = () => ORDER.some(id => id !== C.id && (!P.cur.results[CHAPTERS[id].key] || P.cur.results[CHAPTERS[id].key] === 'shut'));
   // 2026-11-08：ほどけたときも、消えた・閉め出されたときと同じ流れにした（作者の指示）。結果の画面と「次の章に進む／タイトルへ」のボタンはやめて、
   // 見送りの絵を背景に文章送りで見せ、取り戻した記憶（あれば）を1枚出してから、廊下を歩いて次の章へそのまま入る。第5章は放課後の終わりへ
-  async function ending({ lines, img, alt, stop = '門の手前で、足が止まる。まだここは通れない。', album = img, music = null }) {
+  // look：振り返って見えるものの文（その場所から見えないものを言わないよう、章ごとに替えられる。2026-11-18）
+  async function ending({ lines, img, alt, stop = '門の手前で、足が止まる。まだここは通れない。', album = img, music = null, look }) {
     talkHold = false;
     if (album) albumSee(album);
     R.standing = true;  // 見送りの場面では立っている
@@ -4775,7 +4781,7 @@
       const bg = $('#bgImg'); bg.src = `img/${img}.webp`; bg.alt = alt || '';
       $('#sitFig').classList.add('gone'); $('#leftover').style.display = 'none'; $('#hsLayer').innerHTML = '';
     });
-    await say([...lines, stop, litLeft() ? '振り返ると、他の教室にはまだ明かりがついていた。' : '振り返ると、他の教室の明かりは、もうどれも消えていた。']);
+    await say([...lines, stop, ...(look !== undefined ? (look ? [look] : []) : [litLeft() ? '振り返ると、他の教室にはまだ明かりがついていた。' : '振り返ると、他の教室の明かりは、もうどれも消えていた。'])]);
     // 取り戻した記憶は、見送りの後に1枚分けて出す（見送りの文を長くしない）
     if (C.memory && C.memory.length && !replay) {
       await uiWait(`<img class="cg recall" src="img/${img}.webp" alt="">
@@ -6269,7 +6275,9 @@
     // ミオの校門は、第五章でツムギと仲直りした後、二人でくぐる絵に取っておく
     ending({ lines: ['ミオと一緒に図書室を出て、本校舎へ続く渡り廊下まで歩いた。', 'ミオは渡り廊下の途中で一度だけ振り返ると、保健室のほうへ歩いていった。『ひとりぶんの椅子』を胸に抱えて。'],
              img: 'l_bridge', alt: '西日の差す渡り廊下の途中で、本を胸に抱えたミオが振り返っている',
-             stop: '渡り廊下の手前で、足が止まる。まだこの先へは行けない。' });
+             stop: '渡り廊下の手前で、足が止まる。まだこの先へは行けない。',
+             // 2026-11-18 作者の指摘：図書室は特別教室棟の2階なので、ここから3階の教室（美術室・音楽室）の明かりは見えない。見えるのは、今出てきた2階の廊下だけ
+             look: '振り返ると、廊下の奥の図書室の明かりは、もう消えていた。' });
   }
 
   const LIBRARY = {
