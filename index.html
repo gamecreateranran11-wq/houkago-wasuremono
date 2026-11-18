@@ -3253,7 +3253,10 @@
     .replace(/([、。！？])(?=[^、。」』）！？])/g, '$1<wbr>')
     .replace(/([」』）])(?=[^、。」』）！？ぁ-ゖ])/g, '$1<wbr>')   // 「……」と言った：閉じかっこの後の助詞は前につける
     .replace(/(…+)(?=[^…、。」』）！？])/g, '$1<wbr>');
+  // 2026-11-18 作者の指示：暗転・明転で場面が切り替わるときは、直前の文をメッセージ欄に残さない
+  const clearMsg = () => { spk.hidden = true; txt.textContent = ''; chs.innerHTML = ''; more.hidden = true; };
   function voidWait(lines) {
+    clearMsg();
     lines.forEach(t => addLog({ who: '', t }));   // 黒い画面の文もログに残す（早送り中も）
     if (replay) return Promise.resolve();   // ロード直後の早送り中は出さない
     const quick = fxSkip('void|' + lines.join('|'));
@@ -3798,6 +3801,7 @@
     if (replay) return;   // 早送り中は出さない
     const quick = fxSkip('late|' + list[0][0]), r = rainRate();
     const box = fxLayer('late');
+    clearMsg();   // 2026-11-18 作者の指示：言葉の雨のあとも、前の文（「頭に誰かの手が置かれる感触がした。」）を残さない
     for (const [l, k] of list) {
       const e = document.createElement('p'); e.className = `lw ${k} ${rainFont()}`; e.textContent = `「${l}」`; box.appendChild(e);
       await sleep(quick ? 220 : 1700 * r);
@@ -4308,7 +4312,7 @@
   }
   // エンディングの場面に切り替える。人物や調べる場所を消し、背景をフェードアウト→フェードインで差し替える
   async function endScene(img) {
-    closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = '';
+    closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = ''; clearMsg();
     guest = null; guestRender();   // その場にいた子（ミオなど）の立ち絵も消す
     $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = '';
     const bg = $('#bgImg'), lo = $('#leftover');
@@ -4322,7 +4326,7 @@
   }
   // BAD5 空席の教室：消えた子の教室を順に映し（席にはわすれものだけ）、最後はチャイムの鳴らない夕焼けに一人
   async function emptySeats(chs) {
-    closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = '';
+    closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = ''; clearMsg();
     $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = '';
     const bg = $('#bgImg'), lo = $('#leftover');
     const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
@@ -8145,7 +8149,9 @@
                ['', 'ツムギは何か言いかけて、黙り込んだ。本を持つ手に力が入っていた。', 'down']]);
     // 3段目：ツムギが黙りこむ
     await say(['（ツムギが何か言おうとしている。……言葉にならないまま、本を握りしめている）']);
-    c = [1, 0, 2][await choose(['無理に、今決めなくてもいいんじゃないかな', '今度はミオさんがつらいんだから、許してあげようよ', '……ツムギさん、と、名前だけ呼ぶ'])];   // 0：正論 1：慰める 2：正解
+    c = [1, 0, 3, 2][await choose(['無理に、今決めなくてもいいんじゃないかな', '今度はミオさんがつらいんだから、許してあげようよ', 'これからは、ミオさんがツムギさんを支えてあげて', '……ツムギさん、と、名前だけ呼ぶ'])];   // 0：正論 1：慰める 2：正解 3：ミオ一人に背負わせる（共倒れ）
+    // 2026-11-18 作者の決定：ミオ一人にツムギを任せると、ミオは全部を一人で背負い、ツムギは言いかけた言葉を言えないまま。BAD10「ふたり分の鞄」
+    if (c === 3) { nmMark('miss'); return mtFall(); }
     if (c === 0) {
       nmMark('miss');
       await say(['「今度はミオさんがつらいんだから、許してあげようよ」']);
@@ -8210,6 +8216,42 @@
                             // 2026-11-16 作者の指示：文はそのまま、絵のほうをミオがツムギの半歩後ろに立つ形に直した
                             '正門の手前で、ツムギが振り返って、手を振った。……半歩後ろで、ミオもうつむいたまま小さく手を上げた。'],
                     img: 'gate_mt_awk', alt: '夕焼けの正門で、ツムギが振り返って手を振り、半歩後ろでミオがうつむいて小さく手を上げている' });
+  }
+  // 5章の共倒れ（BAD10「ふたり分の鞄」）：ツムギは「ほどけなかった」、ミオは「またからまった」。
+  // 校門・廊下（ほどけた子の行き先）の絵は使わず、保健室の中だけ。最後は空欄の来室カード、九月の話は暗い画面に文だけ。曲は最後まで『影に沈む手』
+  async function mtFall() {
+    bgm(null);
+    await say(['「これからは、ミオさんがツムギさんを支えてあげて」', () => bgm('coreHeavy'),
+               ['ミオ', '……うん', 'mioNbSadDown'],
+               ['ミオ', '全部、私がやる。入院しても、毎日行く。ツムギがしてほしいこと、全部', 'mioNbSkirt'],
+               ['ツムギ', '……ミオ。別々にいようって言ったの、私――', 'down'],
+               ['ミオ', 'いいの。ツムギは何も悪くない。……全部、私がやるから', 'mioNbSkirt'],
+               ['', 'ツムギの口が、言いかけたまま止まった。', 'surprise'],
+               ['ツムギ', '……うん。ありがと。大丈夫、私、大丈夫だから', 'smile'],
+               'ツムギは笑った。一人で話していたときと、同じ笑い方だった。',
+               ['ミオ', '……お迎えが来るまで、いる', 'mioNbDown'],
+               guestHide(), 'ミオは丸椅子をベッドのそばに寄せて座った。',
+               'スマホが短く震えた。ミオは画面を見ずに、ポケットの上から押さえた。',
+               ['ツムギ', '……ミオ、スマホ', 'sad'],
+               ['ミオ', 'いいの。大丈夫', null],
+               'ミオも笑った。……さっきのツムギと、同じ笑い方だった。',
+               ['', 'ツムギは本を握りしめたまま、うなずくだけだった。', 'down'],
+               'ミオはツムギの鞄を膝に抱えた。',
+               ['ミオ', '正門まで、これ運ぶから', null]]);
+    bell(); R.ticks = CHIME_AT; render();   // 時計も18:30に
+    await say(['18:30のチャイムが鳴った。',
+               () => { $('#sitFig').classList.add('gone'); },
+               'ミオは二人分の鞄を肩にかけて、ツムギの歩幅に合わせて扉を出ていった。',
+               '廊下を、二つの足音が同じ速さで遠ざかっていく。']);
+    showCut('ci_card_blank');
+    await say(['机の上に、来室カードが残っていた。', '最後の行は、空いたままだった。']);
+    hideCut();
+    // 2026-11-18 作者の指示：九月の暗い画面のあと、結末の札の後ろに保健室と時刻を出さない（次の章を始めるときに戻る）
+    $('#scene').style.visibility = 'hidden'; $('.clock').style.visibility = 'hidden'; $('#msg').style.visibility = 'hidden';   // メッセージ欄も（作者の指示）
+    await voidWait(['九月、始業式の朝。昇降口で、ミオを見かけた。', 'ツムギのことを尋ねると、ミオは少しだけ目を伏せた。',
+                    '「入院、延びちゃった。昨日も会いに行ったけど、大丈夫って笑ってた」', '「……私も、大丈夫」',
+                    'ミオのポケットの中で、スマホがずっと震えていた。']);
+    return chapterBad('BAD10', 'ふたり分の鞄', [], 'coreHeavy');
   }
   // 決別：quiet（静かな決別）／burst（ツムギが爆発する決別）。ツムギはほどけるが、ミオとは仲直りできない
   async function mtSplit(kind, from = '') {
@@ -8283,7 +8325,7 @@
     const scene = $('#scene');
     scene.setAttribute('aria-label', `放課後の${C.room}`);
     scene.style.visibility = 'hidden';
-    $('#bells').style.visibility = '';   // 部屋に入ったら、チャイムの数を戻す
+    $('#bells').style.visibility = ''; $('.clock').style.visibility = ''; $('#msg').style.visibility = '';   // 部屋に入ったら、チャイムの数・時刻を戻す（BAD10 で隠した分も）
     clearStage();
     if (show) $('#loading').hidden = false;
     const bg = $('#bgImg'), sit = $('#sitFig');
@@ -8364,6 +8406,7 @@
     if (C && C.id === 'roof') { roofClear(0.6); hideCut(); }
     gen++; advance = null; scr = null; replay = null;
     $('#scene').style.visibility = 'hidden';
+    $('#msg').style.visibility = ''; $('.clock').style.visibility = '';   // BAD10 で隠した分を戻す（屋上などへ、章を通らずに入るとき）
     clearStage();
     $('#loading').hidden = true;
     const roof = loadRoof(), save = roof ? null : loadRun();
@@ -8471,7 +8514,7 @@
   }
   // エンドリスト：BAD1〜9、NORMAL1・2、GOOD、TRUE の順。見ていない結末は「？？？」（条件も名前も出さない）
   const END_LIST = [['BAD1', 'BAD 1', '終わらない放課後'], ['BAD2', 'BAD 2', '共倒れ'], ['BAD3', 'BAD 3', 'ふたりきりの放課後'], ['BAD4', 'BAD 4', '閉ざされた校舎'],
-    ['BAD5', 'BAD 5', '空席の教室'], ['BAD6', 'BAD 6', 'わすれものの重さ'], ['BAD7', 'BAD 7', '目をそらした夕焼け'], ['BAD8', 'BAD 8', 'こわれた心'], ['BAD9', 'BAD 9', 'ひとりきりの斜陽'],
+    ['BAD5', 'BAD 5', '空席の教室'], ['BAD6', 'BAD 6', 'わすれものの重さ'], ['BAD7', 'BAD 7', '目をそらした夕焼け'], ['BAD8', 'BAD 8', 'こわれた心'], ['BAD9', 'BAD 9', 'ひとりきりの斜陽'], ['BAD10', 'BAD 10', 'ふたり分の鞄'],
     ['NORMAL', 'NORMAL 1', '何人かの朝'], ['NORMAL2', 'NORMAL 2', 'それぞれの朝'], ['GOOD', 'GOOD', '送り出した屋上'], ['TRUE', 'TRUE', '6人の朝']];
   function showEnds() {
     const seen = END_LIST.filter(([k]) => P.endings[k]).length;
@@ -8596,7 +8639,7 @@
     const rc = JSON.parse(JSON.stringify((d.prog && d.prog.cur) || P.cur || { results: {} }));
     P.cur = { ...rc, nm: { ...(rc.nm || {}), rewind: true } };
     saveP(); clearRun(); clearRoof();
-    openOverlay('', 'void'); bell(); await sleep(2600); closeOverlay();
+    clearMsg(); openOverlay('', 'void'); bell(); await sleep(2600); closeOverlay();
     loadSlot({ ...d, rain: false, wind: false, prog: { ...d.prog, shelf: { ...P.shelf }, shelfRun: { ...P.shelfRun }, runNo: P.runNo, cur: JSON.parse(JSON.stringify(P.cur)) } });
   }
   /* ---------- アルバム（おまけ）：ストーリーの中で見た一枚絵と、わすれもの（姿を変える前と後を並べて）を、後から見返せる。
@@ -8776,7 +8819,7 @@
   }
 
   /* ---------- アチーブメント（おまけ）：取ったものは周回をまたいで残る。名前は管理人が付ける（未定の間は条件だけを出す） ---------- */
-  const ALL_ENDS = ['TRUE', 'GOOD', 'NORMAL', 'NORMAL2', 'BAD1', 'BAD2', 'BAD3', 'BAD4', 'BAD5', 'BAD6', 'BAD7', 'BAD8', 'BAD9'];
+  const ALL_ENDS = ['TRUE', 'GOOD', 'NORMAL', 'NORMAL2', 'BAD1', 'BAD2', 'BAD3', 'BAD4', 'BAD5', 'BAD6', 'BAD7', 'BAD8', 'BAD9', 'BAD10'];
   const FIVE = ['hina', 'sota', 'mio', 'kei', 'tsumugi'];
   /* [id, 名前（未定はnull）, 条件, 判定, 取る前に条件を見せるか]
      条件そのものがネタバレになるもの（わすれもの・NORMAL以上の結末など）は、取るまで「？？？」のまま。
