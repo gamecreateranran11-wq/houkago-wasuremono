@@ -3055,7 +3055,7 @@
     // endScene などは絶対URLで src を入れるので、'img/…' の形にそろえてから部屋を探す
     const bg = $('#bgImg'), sv = $('#bgClock'), src = (bg.getAttribute('src') || '').replace(/^.*?(?=img\/[^\/]+$)/, '');
     let chs = []; try { chs = Object.values(CHAPTERS); } catch (e) {}
-    const room = chs.find(ch => ch.bgClock && (src === `img/${ch.bg}.webp` || src === `img/${ch.bg}_unlit.webp` || src === `img/${ch.bg}_morning.webp` || src === `img/${ch.bg}_1830_dark.webp` || src === `img/${ch.bg}_1830_lit.webp`)), ck = room && room.bgClock;
+    const room = chs.find(ch => ch.bgClock && (src === `img/${ch.bg}.webp` || src === `img/${ch.bg}_unlit.webp` || src === `img/${ch.bg}_morning.webp` || src === `img/${ch.bg}_1050.webp` || src === `img/${ch.bg}_1110.webp` || src === `img/${ch.bg}_1830_dark.webp` || src === `img/${ch.bg}_1830_lit.webp`)), ck = room && room.bgClock;
     sv.style.display = ck ? '' : 'none';
     if (!ck) return;
     if (!(bg.complete && bg.naturalWidth)) { sv.style.display = 'none'; bg.addEventListener('load', syncBgClock, { once: true }); return; }   // 背景より先に針だけが出ないように
