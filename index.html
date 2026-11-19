@@ -4191,7 +4191,7 @@
     await say(['ペンを持つ手が少し震えた。', '（……まだ、書いていい名前だとは思えない）', '（それでも、書く）',
                '一画目が、重かった。……知らない場所へ足を踏み出すみたいに。']);
     // 名前を入れるのは、一画目を書くこの瞬間（決意の台詞を途中で切らないように）
-    { const nm = await askName(); if (nm) { P.myName = nm; saveP(); } await buildNamedNotebook(); }
+    { const nm = await askName(); if (nm) { P.myName = nm; P.myBlank = false; saveP(); } else if (!P.myName) { P.myBlank = true; saveP(); } await buildNamedNotebook(); }
     await say(['6行目に、名前を書いた。',
                ['（……やっと、気づけた）', '（……普通じゃなくても、自分の名前だ）', '（……大丈夫じゃなかった。それを、やっと言える）', '（……まだ分からない。でも、聞いていく）', '（……価値があるかなんて、まだ分からない）'][t],   // 2026-11-10 フェンスの前で自分に向けて選んだ言葉に、書いた後で答える（作者の指示）
                '（……待っていたんだ。ずっと、明日が来るのを）', '（待っているだけで、自分から歩き出したことは、なかった）',
@@ -4236,7 +4236,7 @@
                     awk: ['ミオとツムギは半歩ずれて並んでいた。', ['ミオ', '……当番の日なら、いるから']],
                     split: ['ミオとツムギは何も言わずに、別々の方向へ歩いていった。', '二人とも一度ずつ振り返った。……振り返る時は、少しずれていた。'] }[kind])]);
     // 作者の言葉「待ってろ。お前は俺が助ける。必ず。」（追い詰められていた過去の自分を、後から見返したときに生まれた言葉）は、屋上ではなく、時間がたったここで、あのフェンスの前の自分へ言う（2026-11-01）
-    await roofVoid(['……それが、いつだったのかは覚えていない。', P.myName ? '気づいた頃には、手帳の6つ目の丸い枠の、名前の隣に小さく顔が描き込まれていた。' : '気づいた頃には、手帳の6つ目の丸い枠に、顔が描き込まれていた。',
+    await roofVoid(['……それが、いつだったのかは覚えていない。', (P.myName || P.myBlank) ? '気づいた頃には、手帳の6つ目の丸い枠の、名前の隣に小さく顔が描き込まれていた。' : '気づいた頃には、手帳の6つ目の丸い枠に、顔が描き込まれていた。',
                     '（……あのフェンスの前の自分に、今なら言える）', '「……待たせて、ごめん。あなたのことは、自分が助ける。必ず」']);
     if (!P.saved) P.saved = {};
     P.saved.me = true; P.shelf.me = true; albumSync();
@@ -4282,15 +4282,22 @@
   const imgSrc = key => key === 'protag_notebook' ? nbSrc() : `img/${key}.webp`;
   async function buildNamedNotebook() {
     const name = (P.myName || '').trim();
-    if (!name) { NB_NAMED = null; return; }
+    // 2026-11-19 作者の決定（B）：名前を空のまま書いたときは、名前らしいけれど読めない走り書き（img/nb_scrawl.webp）を描く。書いたことは見せて、名前は決めない
+    const blank = !name && !!P.myBlank;
+    if (!name && !blank) { NB_NAMED = null; return; }
     try {
-      if (document.fonts && document.fonts.load) await Promise.race([document.fonts.load(`30px ${NB_FONT}`, name), new Promise(r => setTimeout(r, 4000))]);
+      if (!blank && document.fonts && document.fonts.load) await Promise.race([document.fonts.load(`30px ${NB_FONT}`, name), new Promise(r => setTimeout(r, 4000))]);
       const im = new Image(); im.src = 'img/protag_notebook.webp'; await (im.decode ? im.decode() : new Promise(r => { im.onload = r; }));
       const c = document.createElement('canvas'); c.width = 1536; c.height = 1024;
       const x = c.getContext('2d'); x.drawImage(im, 0, 0);
       // 名前は、右ページの点線の丸（中心 944,695。11/01 に一回り小さくして上へ寄せ、下に名前の余白を作った）の中ではなく、丸のすぐ下に書く（丸は顔の枠で、ヒナの「ここは、空けとくね」のとおり空けたまま。
       // 他の5人も、顔の横に名前を書いている）。罫線の傾き（右下がり約13°）に合わせて回す。右下の葉の落書きにかからない幅に収める
       x.translate(939, 744); x.rotate(13 * Math.PI / 180);
+      if (blank) {
+        const sc = new Image(); sc.src = 'img/nb_scrawl.webp'; await (sc.decode ? sc.decode() : new Promise(r => { sc.onload = r; }));
+        const w = 84, h = w * sc.naturalHeight / sc.naturalWidth; x.globalAlpha = .9; x.drawImage(sc, -w / 2, -h / 2, w, h);
+        NB_NAMED = c.toDataURL('image/png'); return;
+      }
       x.fillStyle = 'rgba(58, 63, 110, .88)'; x.textAlign = 'center'; x.textBaseline = 'middle';
       const size = Math.max(11, Math.min(21, Math.floor(82 / name.length)));
       x.font = `${size}px ${NB_FONT}`;
@@ -4318,7 +4325,7 @@
     return new Promise(res0 => {
       const res = v => res0(rec(v));
       openOverlay(`<p class="eyebrow">生徒手帳</p><h2>6行目に、自分の名前を書く</h2>
-        <p class="note">この子の名前を入れてください（8文字まで）。後から変えられません。空のまま進むと、名前は書かれますが、画面には出しません。</p>
+        <p class="note">この子の名前を入れてください（8文字まで）。後から変えられません。空のまま進むと、名前は書かれますが、読めない字で描かれます。</p>
         <input id="myName" class="name-in" type="text" maxlength="8" autocomplete="off" spellcheck="false" placeholder="この子の名前" aria-label="この子の名前">
         <p class="note" id="nmNg" hidden>その名前は使えません。他の名前にしてください。</p>
         <div class="row"><button type="button" class="btn primary" id="nmOk">書く</button></div>`);
@@ -7549,7 +7556,7 @@
     // 通信が遅くても、いつまでも待たせない
     return Promise.race([load(), wait(12000)]);
   })();
-  if (P.myName) FONTS_READY.then(buildNamedNotebook);   // 名前を書いた後の周回では、起動時に名前入りの手帳を用意しておく
+  if (P.myName || P.myBlank) FONTS_READY.then(buildNamedNotebook);   // 名前を書いた後の周回では、起動時に名前入りの手帳を用意しておく
 
   /* ---------- 章の切り替え ---------- */
 
