@@ -1286,7 +1286,7 @@
                       mio: 'angry crysmile despair down grief sad smile surprise stroke offer offer_sad nb nb_apology nb_grief nb_crysmile nb_skirt nb_surprise nb_down nb_plead nbleave nbleavewonder', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
   const STAND_NEAR = { crumple: 'crysmile', reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry', window: 'sad',
-                       blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', wethand: 'grief', serious: 'down', lookup: 'down', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', grip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise', sleeve: 'sad', wristhate: 'sad' };
+                       blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', wethand: 'grief', serious: 'down', lookup: 'down', plead: 'sad', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', grip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise', sleeve: 'sad', wristhate: 'sad' };
   // 座り絵が無い表情は、近い座り絵で代える（ミオの表紙を撫でる→撫でてうつむく。ヒナのむくれ顔は立って描いた後の一言だけで、
   // 座ってむくれる場面はないが、先読みで無い絵を探しに行かないように、うつむきにしておく）
   const SIT_NEAR = { hina: { pout: 'down', awaysmile: 'smile', surprisefront: 'surprise' }, mio: { stroke: 'strokedown' } };
@@ -5008,7 +5008,7 @@
     // 2026-11-10：椅子を背景の空いた椅子の位置・奥行きにそろえ、手前の作業台を椅子の上に重ねる（作者の指示）
     sit: { src: 'hina_sit_window', chair: 'hina_chair', style: 'left:2.34%;top:36.43%;height:22.95%', front: 'polygon(8.85% 49.51%, 26.04% 45.12%, 26.04% 55.86%, 11.78% 55.86%, 11.78% 100%, 9.96% 100%, 9.96% 51.56%, 8.85% 51.56%)' },
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
-    faces: { normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout', awaySmile: 'hina_awaysmile', grip: 'hina_grip', window: 'hina_window',
+    faces: { plead: 'hina_plead', normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout', awaySmile: 'hina_awaysmile', grip: 'hina_grip', window: 'hina_window',
              // スケッチブックの入った鞄を抱えてから、空を描き始めるまで
              bag: 'hina_bag', bagSad: 'hina_bag_sad', bagGrief: 'hina_bag_grief', bagSmile: 'hina_bag_smile', bagCrySmile: 'hina_bag_crysmile', bagDown: 'hina_bag_down', bagSmileFront: 'hina_bag_smilefront',
              sleeve: 'hina_sleeve', wristHate: 'hina_wristhate', surpriseFront: 'hina_surprisefront' },   // surpriseFront：立って、こちらを見て驚く（2026-11-17）   // 袖の中で手を握りこむ（悲しみ）／左手首を押さえたまま自分を嫌う顔
@@ -5373,8 +5373,8 @@
         R.cons++;
         await say([['ヒナ', '……ほんと？', 'surprise'],
                    ['ヒナ', '……そういうの、言われ慣れてないから、困る', 'down'],
-                   'ヒナは少しだけ笑って、それからすがるようにこちらを見た。',
-                   ['ヒナ', '……じゃあ、ずっとそう言っててよ。お母さんの声が、聞こえなくなるくらい', 'sad'],
+                   ['', 'ヒナは少しだけ笑って、それからすがるようにこちらを見た。', 'plead'],
+                   ['ヒナ', '……じゃあ、ずっとそう言っててよ。お母さんの声が、聞こえなくなるくらい', 'plead'],
                    'ヒナの肩からふっと力が抜けた。……けれど、袖の中の指はさっきよりきつく握り込まれていた。',
                    '（……その言葉に、うなずいていいのか分からなかった）']);
       } else if (a === 'oitsu') {
@@ -5755,7 +5755,7 @@
     // 2026-11-10：座り絵の椅子だけの絵を、ソウタが消えても残す（背景の椅子は消した）
     sit: { src: 'sota_sit', close: 'sota_sit_close', chair: 'sota_bench', style: 'left:54.2%;top:46.5%;height:29.5%' },
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
-    faces: { blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', wetHand: 'sota_wethand', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
+    faces: { plead: 'sota_plead', blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', wetHand: 'sota_wethand', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
     lost: 'ソウタのパートだけの楽譜',
     freeSpots: () => (R.items.has('secondo') || R.know.has('melody')) ? ['piano', 'char'] : ['stand', 'shelf', 'timpani', 'trash'].filter(k => !R.taken[k]),   // ほどけた後：切れ端の残っている場所、そろったらピアノ
     idleFree: '（ソウタが待っている。チャイムが鳴る前に）',
@@ -5928,7 +5928,7 @@
         await tick();
       },
       async bag() {
-        // ハルが中古屋で見つけて渡したCD。付箋をはがしていない＝ソウタはまだ聴いていない
+        // ハルが中古屋で見つけて7/8の昼休みに渡したCD。付箋をはがしていない＝ソウタはまだ聴いていない（その夜の言葉と事故のあと、自分を責めて「聴く資格がない」と思っている。2026-11-19 作者）
         showCut('mci_bag');
         if (!R.know.has('bagCd')) {
           R.know.add('bagCd');
@@ -6143,10 +6143,10 @@
       if (a === 'oitsu' && await hurt([['ソウタ', '……ハルの分まで？', 'surprise'], ['ソウタ', '俺が、あいつの代わりに生きてるってこと？', 'shadow'], ['ソウタ', '……無理だよ、そんなの', 'despair']])) return;
       if (a === 'nagu') {
         R.cons++;
-        await say([['ソウタ', '……俺のせいじゃない？', 'surprise'],
+        await say([['ソウタ', '……俺のせいじゃない？', 'surpriseUp'],
                    ['ソウタ', 'でも、言ったのは俺なんだよ', 'angryUp'],
                    ['', '言い返すように上がった顔は、すぐにまた伏せられた。', 'down'],
-                   ['ソウタ', '……それでもお前は、俺のせいじゃないって、ずっと言っててくれる？', 'down'],
+                   ['ソウタ', '……それでもお前は、俺のせいじゃないって、ずっと言っててくれる？', 'plead'],
                    'ソウタの肩が少しだけ下がった。……それなのに、ピアノの蓋に置いた手は、白くなるほど蓋を押さえていた。',
                    '（……うなずいてしまったら、何かを間違える気がした）']);
       } else if (a === 'oitsu') {
@@ -6395,7 +6395,7 @@
     sit: { src: 'mio_sit', close: 'mio_sit_close', chair: 'mio_chair', chairWhenGone: true, style: 'left:12.2%;top:42.0%;height:46.5%', front: 'polygon(0.00% 62.99%, 6.97% 62.99%, 6.97% 65.23%, 11.20% 65.43%, 11.46% 66.31%, 13.74% 67.19%, 13.87% 100.00%, 0.00% 100.00%)' },   // 手前の低い書架は、座り絵より前（2026-11-11）
     // 消えた後机に残る本（わすれものの絵と同じ本を、背景の机に合わせて置いた重ね絵）
     leftover: '', leftoverImg: 'l_left',
-    faces: { pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap', clench: 'mio_clench', clenchDown: 'mio_clenchdown', frown: 'mio_frown', look: 'mio_look' },   // clenchDown：本を握りしめて伏せ目／frown：眉をひそめてうつむく   // lap：本を膝の上に下ろして小さく決意した顔／clench：本を強く握りしめ、目をぎゅっとつむった悲痛な顔
+    faces: { plead: 'mio_plead', pale: 'mio_pale', normal: 'mio_bust', angry: 'mio_angry', surprise: 'mio_surprise', sad: 'mio_sad', down: 'mio_down', smile: 'mio_smile', grief: 'mio_grief', despair: 'mio_despair', reject: 'mio_reject', shadow: 'mio_despair', crySmile: 'mio_crysmile', bookHide: 'mio_bookhide', softSmile: 'mio_softsmile', stroke: 'mio_stroke', strokeDown: 'mio_strokedown', lap: 'mio_lap', clench: 'mio_clench', clenchDown: 'mio_clenchdown', frown: 'mio_frown', look: 'mio_look' },   // clenchDown：本を握りしめて伏せ目／frown：眉をひそめてうつむく   // lap：本を膝の上に下ろして小さく決意した顔／clench：本を強く握りしめ、目をぎゅっとつむった悲痛な顔
     lost: '返却期限の過ぎた一冊',
     freeSpots: () => ['counter', 'char'],   // ほどけた後：カウンターのペン
     // 時計のアップ絵（針は重ねて描く）。体育館は ci_clock_gym（cx:868, cy:448, s:0.86）、保健室は ci_clock_infirmary（cx:782, cy:430, s:1.01）を使う。背景 infirmary の壁の時計は bgClock: { cx: 829, cy: 202, rx: 49, ry: 48 }
@@ -6805,8 +6805,8 @@
         R.cons++;
         await say([['ミオ', '……仕方、なかった？', 'surprise'],
                    ['ミオ', '……そう言ってもらえたら、楽なのかな', 'frown'],
-                   'ミオは本を胸に抱き寄せて、すがるようにこちらを見た。',
-                   ['ミオ', '……ねえ。あなたは、私の味方でいてくれる？', 'sad'],
+                   ['', 'ミオは本を胸に抱き寄せて、すがるようにこちらを見た。', 'plead'],
+                   ['ミオ', '……ねえ。あなたは、私の味方でいてくれる？', 'plead'],
                    'ミオの口元がほんの少しゆるんだ。……本を抱く腕だけは、さっきより強く胸に押しつけられていた。',
                    '（……味方、という言葉がひどく重たく聞こえた）']);
       } else if (a === 'oitsu') {
@@ -7051,7 +7051,7 @@
     sit: { src: 'kei_sit', close: 'kei_sit_close', style: 'left:79.5%;top:45.1%;height:21.8%' },
     // 消えた後床に残るバッシュ（わすれものの絵と同じ靴を、ケイが座っていた床に置いた重ね絵）
     leftover: '', leftoverImg: 'g_left',
-    faces: { normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', softSmile: 'kei_softsmile', serious: 'kei_serious', breath: 'kei_breath', blank: 'kei_blank', teary: 'kei_teary', sadGrip: 'kei_sadgrip' },
+    faces: { plead: 'kei_plead', normal: 'kei_bust', smile: 'kei_smile', angry: 'kei_angry', surprise: 'kei_surprise', sad: 'kei_sad', down: 'kei_down', grief: 'kei_grief', despair: 'kei_despair', reject: 'kei_reject', shadow: 'kei_despair', crySmile: 'kei_crysmile', softSmile: 'kei_softsmile', serious: 'kei_serious', breath: 'kei_breath', blank: 'kei_blank', teary: 'kei_teary', sadGrip: 'kei_sadgrip' },
     lost: '片方だけのバッシュ',
     freeSpots: () => ['ball', 'char'],   // ほどけた後：床のボール
     clock: { img: 'ci_clock_gym', cx: 868, cy: 448, s: 0.86 },
@@ -7426,8 +7426,8 @@
         R.cons++;
         await say([['ケイ', '……大丈夫、か', 'surprise'],
                    ['ケイ', '……人に言われたの、初めてかも', 'sad'],
-                   'ケイは首のタオルの端を指でいじりながら、目だけでこちらをうかがった。',
-                   ['ケイ', '……なあ。あんたは、ここにいてくれる？', 'sad'],
+                   ['', 'ケイは首のタオルの端を指でいじりながら、目だけでこちらをうかがった。', 'plead'],
+                   ['ケイ', '……なあ。あんたは、ここにいてくれる？', 'plead'],
                    'ケイはほっとしたように息を吐いた。……テーピングの指だけが、膝の上でほどけないまま握られていた。',
                    '（……ずっと、とは約束できない。それでも、首を横に振ることもできなかった）']);
       } else if (a === 'oitsu') {
@@ -7779,7 +7779,7 @@
     // 手前のベッド（1）の角に座る。明かりを消すと、部屋の暗さ・色味に合わせた絵（dark）に替える
     sit: { src: 'tsumugi_sit', dark: 'tsumugi_sit_dark', close: 'tsumugi_sit_close', closeDark: 'tsumugi_sit_close_dark', style: 'left:78.19%;top:34.57%;height:55.37%' },
     leftover: '', leftoverImg: 'i_left', leftoverDark: 'i_left_dark',   // 消えた後、シーツの上に来室カード（細長い厚紙）。暗い部屋では暗い版
-    faces: { normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
+    faces: { plead: 'tsumugi_plead', normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
              grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile', crumple: 'tsumugi_crumple',
              angryCry: 'tsumugi_angrycry',  // 怒りと悔しさをにじませた涙
              mioNormal: 'mio_bust', mioSad: 'mio_sad', mioDown: 'mio_down', mioSurprise: 'mio_surprise', mioGrief: 'mio_grief', mioCrySmile: 'mio_crysmile', mioDespair: 'mio_despair', mioSoftSmile: 'mio_softsmile',
@@ -8174,8 +8174,8 @@
                                       ['ツムギ', 'だったら、ほんとに、いてもいなくても同じだ', 'despair'], ['ツムギ', '……もう、どこにも行かなくていいなら、楽だね', 'despair']])) return;
       if (a === 'nagu') {
         R.cons++;
-        await say([['ツムギ', '……ほんと？', 'surprise'], ['ツムギ', 'じゃあ、戻ってきたら、また、ここで話してくれる？', 'sad'],
-                   'ツムギはすがるようにこちらを見た。', 'ツムギの頬がふわりとゆるんだ。……カーディガンの袖を握る手だけが、小さく震えていた。',
+        await say([['ツムギ', '……ほんと？', 'surprise'], ['ツムギ', 'じゃあ、戻ってきたら、また、ここで話してくれる？', 'plead'],
+                   ['', 'ツムギはすがるようにこちらを見た。', 'plead'], 'ツムギの頬がふわりとゆるんだ。……カーディガンの袖を握る手だけが、小さく震えていた。',
                    '（……その約束にうなずいていいのか分からなかった）']);
       } else if (a === 'oitsu') {
         // 追い詰める答えを言い直して戻ったとき：言われた言葉を受けて話し出す（寄り添う答えの返事とは分ける）
