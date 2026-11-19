@@ -3307,9 +3307,14 @@
     busy = true; beginScript(key); prevLine = 'act|' + (key || ''); syncSave(); $('#btnWait').disabled = true; $('#btnHint').disabled = true;
     try {
       // この調べもので、その子について知るべきことがそろったら、そのまま対話に入る（途中でチャイムが鳴ったとき・対話がもう始まったときは除く）
-      const was = C && C.ready ? C.ready() : true, loop0 = R.loop, asked0 = askCount;
+      const was = C && C.ready ? C.ready() : true, loop0 = R.loop, asked0 = askCount, t0 = R.ticks;
       await fn();
-      if (!was && key !== 'hs:char' && !R.over && R.st === 'here' && R.loop === loop0 && askCount === asked0 && C.ready()) {
+      // 2026-11-19 作者の決定（Museの報告・案A）：その周回で調べた場所の結果を覚える（1＝新しく分かったことがあった／2＝もう新しいことはなかった）
+      if (key && key.startsWith('hs:') && key !== 'hs:char' && R.loop === loop0) { R.hsDone = R.hsDone || {}; R.hsDone[key.slice(3)] = R.ticks > t0 ? 1 : 2; }
+      // 2周目以降など、周回の初めから手がかりがそろっているとき：その周回で調べられる場所（2回目以降の手がかりも含む）を全部調べ終えた時点で、自動で会話に入る
+      const allDone = () => C.hotspots.map(h => h[0]).filter(id => id !== 'char' && (() => { const b = $(`#hsLayer .hs[data-id="${id}"]`); return b && b.style.display !== 'none'; })()).every(id => R.hsDone && R.hsDone[id] === 2);
+      const autoNew = !was && C.ready(), autoDone = was && C.ready && C.ready() && R.askedIn !== R.loop && allDone();
+      if ((autoNew || autoDone) && key !== 'hs:char' && !R.over && R.st === 'here' && R.loop === loop0 && askCount === asked0) {
         hideCut();
         await say([`（……${C.name}のことが、少し分かった気がする）`]);
         knewNow = true;
@@ -3474,7 +3479,7 @@
     setCG(true);
     await line(vanishing && !R.doom ? `${hm(chEnd())}。三度目のチャイムが鳴った。` : `${hm(chEnd())}。チャイムが鳴った。`, true, true);
     if (vanishing) R.st = 'vanished';
-    else { R.ticks = 0; R.taken = {}; R.stage = 0; R.drawerOpen = false; R.seen = new Set(); if (C.onLoopReset) C.onLoopReset(); }
+    else { R.ticks = 0; R.taken = {}; R.stage = 0; R.drawerOpen = false; R.seen = new Set(); R.hsDone = {}; if (C.onLoopReset) C.onLoopReset(); }
     const hadItems = R.items.size > 0;
     if (!vanishing) R.items = new Set();
     sitReset(); render(); hideCut(); setCG(false);   // 黙ったときの座り姿・ボールのない床を、チャイムで元に戻す（消える場面でも）
@@ -4582,7 +4587,7 @@
     infirmary: { 1: ['seiron', 'yori', 'oitsu'], 2: ['nagu', 'yori', 'oitsu', 'seiron'], 3: ['nagu', 'pity', 'key', 'seiron', 'oitsu'] }
   };
   async function ask(opts, stage) {
-    askCount++;
+    askCount++; if (R) R.askedIn = R.loop;   // この周回で会話が始まった印（2周目以降の自動開始を一度だけにする）
     const ord = (ASK_ORDER[C.id] || {})[stage];
     const pos = k => { const n = ord ? ord.indexOf(k) : -1; return n < 0 ? 99 : n; };
     const list = opts.filter(([, k]) => k !== 'nagu' || (R.loop >= 1 && stage >= 2))
