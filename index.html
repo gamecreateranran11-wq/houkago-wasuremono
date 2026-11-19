@@ -3572,7 +3572,9 @@
     else {
       await say(['扉に手をかけると、今度は、開いた。']);
       await roomLightOff();
-      await hallBg(`${C.hall}_unlit`);   // 消えた直後の廊下は、その部屋の明かりが消えている
+      // 2026-11-19 作者の指示：部屋から廊下へ出るときも明転で（絵は先に読みこんでおく）
+      { const pre = new Image(); pre.src = `img/${C.hall}_unlit.webp`; try { await pre.decode(); } catch (e) {} }
+      await whiteSwap(() => { hallBg(`${C.hall}_unlit`); });   // 消えた直後の廊下は、その部屋の明かりが消えている
       await say(['廊下に出た。', '振り返ると、扉は閉まっていた。', 'もう、この扉は開かない気がした。']);
     }
     if (w.before) await say(w.before());
@@ -4903,7 +4905,7 @@
     if (next && w) {
       const pre = w.savedBefore ? w.savedBefore() : (w.before ? w.before() : []);   // 見送った後は部屋の中からではなく、見送った場所から歩く
       if (pre.length) await say(pre);
-      if (w.hall) await hallBg(w.hall);
+      if (w.hall) { const p2 = new Image(); p2.src = `img/${w.hall}.webp`; try { await p2.decode(); } catch (e) {} await whiteSwap(() => { hallBg(w.hall); }); }   // 2026-11-19 作者の指示：見送った場所から廊下へも明転で
       const arr = w.arrive(false);
       if (arr.length) await say(arr);
       await darkToVoid();
@@ -7896,7 +7898,9 @@
                      '「……ずっと、ここに？」', ['ミオ', '……顔、洗ってきたの。泣いたの、ツムギに分かっちゃうから', 'mioDown'], ['ミオ', 'それからは、ずっとここ。……何回か、入ろうとはしたんだけど', 'mioSad'],   // 2026-11-17 作者の指示：ほどけてから30分あまりの間（裏設定：図書室を出て、まっすぐトイレへ。企画書01）
                      ['ミオ', '……先に、入って。私、もう少しだけ、ここにいる', 'mioSad'], guestHide(),
                      '扉を開けて、保健室に入った。']);
-          setTalk(false); bg.src = `img/${C.bg}.webp`; hs.style.visibility = '';
+          // 2026-11-19 作者の指示：廊下から保健室に入るときも明転で
+          { const pre = new Image(); pre.src = `img/${C.bg}.webp`; try { await pre.decode(); } catch (e) {} }
+          setTalk(false); await whiteSwap(() => { bg.src = `img/${C.bg}.webp`; hs.style.visibility = ''; });
           await say(['振り返ると、扉はもう内側からも外側からも開かなかった。']);
         } else {
           await say(['引き戸を開けて、中に入った。', '後ろで、戸の閉まる音がした。', '窓の外は南の空の夕焼け。時計は18:00を指している。', ...locked('保健室')]);
