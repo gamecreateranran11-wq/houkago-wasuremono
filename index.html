@@ -286,6 +286,9 @@
   #scene.room-dark #sitFig, #scene.room-dark #sitChair { filter: url(#fRoomDark); }
   #scene.room-dark #portrait, #scene.room-dark #portraitGlint, #scene.room-dark #guestFig, #scene.room-dark #guestGlint { filter: url(#fRoomDarkP); }   /* 2026-11-10：立ち絵・座り絵（消えた後に来るミオも）は見づらいので、部屋よりワントーン明るく（作者の指示） */
   #scene.room-dark #sitFig.pretoned { filter: none; }
+  /* 2026-11-19 作者の指示：保健室が暗いときも、立ち絵が出ている間は部屋の中の座り絵をもうワントーン暗くする */
+  #scene.sitdim.room-dark #sitFig { filter: url(#fRoomDark) brightness(.6) saturate(.8); }
+  #scene.sitdim.room-dark #sitFig.pretoned { filter: brightness(.6) saturate(.8); }
   .card-scroll { max-height: 46vh; overflow-y: auto; border-radius: 4px; scrollbar-width: none; }
   .card-scroll::-webkit-scrollbar { display: none; }
   .sc-wrap { position: relative; padding-right: 12px; }
@@ -8136,6 +8139,7 @@
                  ['', 'ツムギはカーディガンの前をかき合わせた。', 'wrap'],
                  ['ツムギ', 'ここ、冷房効いてるでしょ。……私、すぐ冷えちゃうから', 'wrap'],
                  ['ツムギ', 'でも、もうすぐここにも来なくなるんだ。来週から、入院。小さいころから、慣れっこだけどね', 'normal'],
+                 '「……慣れっこでも、心細いよね」',   // 2026-11-19 作者の指摘：「優しいね」の前に、主人公の気づかう一言がなかった
                  ['ツムギ', '……優しいね。でも、来週にはもう会わないもんね', 'normal'],   // 2026-11-17 作者の指示：警戒（どうせ途中で離れる）
                  ...(R.know.has('dadNote') ? [['ツムギ', '……椅子の付箋、見た？ 今日はこの後、お父さんと病院の説明を聞きに行くの', 'down'], ['ツムギ', 'だから、こんな時間までここにいていいんだ。……いつもは、帰らなきゃいけないんだけど', 'normal']] : []),
                  ['ツムギ', '先生にも、言われちゃった。『入院中は、もう保健室には来なくていいのよ』って。……優しい声だったな', 'down'],
