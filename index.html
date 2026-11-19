@@ -822,7 +822,8 @@
 
   /* ===== エンドロール（NORMAL以上の結末で、結末の名前を出す前に流す） ===== */
   .endroll { position: fixed; inset: 0; z-index: 40; background: #0b0a10; color: #e9e2d6; overflow: hidden; animation: rollfade 1.6s ease both; }
-  .endroll.out { opacity: 0; transition: opacity 1.4s ease; }
+  .endroll.out { animation: rollout 1.4s ease both; }   /* 2026-11-19 Museの報告：出るときの rollfade が残って、とばしても薄くならなかった */
+  @keyframes rollout { from { opacity: 1; } to { opacity: 0; } }
   @keyframes rollfade { from { opacity: 0; } to { opacity: 1; } }
   .roll-bg { position: absolute; inset: 0; }
   .roll-bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 2.6s ease; filter: brightness(.5) saturate(.85); }
@@ -3252,7 +3253,7 @@
   }
   if ($('#bgImg')) new MutationObserver(() => syncPiano()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src'] });
   // 2026-11-19 Muse の報告：校門の絵の代替テキストが、次の部屋に入っても残っていた。背景の絵が替わったら、その絵のための代替テキストでなければ場面の名前に戻す
-  if ($('#bgImg')) new MutationObserver(() => { const bg = $('#bgImg'); if (bg.dataset.altFor !== bg.getAttribute('src')) { delete bg.dataset.altFor; bg.alt = $('#scene').getAttribute('aria-label') || ''; } }).observe($('#bgImg'), { attributes: true, attributeFilter: ['src'] });
+  if ($('#bgImg')) new MutationObserver(() => { const bg = $('#bgImg'); if (bg.dataset.altFor !== bg.getAttribute('src')) { delete bg.dataset.altFor; const lb = $('#scene').getAttribute('aria-label') || ''; let nm = ''; try { const f = (bg.getAttribute('src') || '').replace(/^.*\//, ''), m = SCENE_NAME.find(([re]) => re.test(f)); nm = m ? m[1] : ''; } catch (e) {} bg.alt = nm && !lb.includes(nm) ? nm : lb; } }).observe($('#bgImg'), { attributes: true, attributeFilter: ['src'] });   // 2026-11-19 Museの報告：屋上で再読み込みすると前の場面の名前が残った。絵の名前から場所を決める（屋上・廊下・正門・保健室）
   function render() {
     syncPiano();
     // 1章は30分。調べるたびに MIN_PER_TICK 分進む
