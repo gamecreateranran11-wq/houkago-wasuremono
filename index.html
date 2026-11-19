@@ -5653,9 +5653,13 @@
         <div class="row"><button type="button" class="btn" id="kbCancel">やめる</button></div>`);
       const prog = () => card.querySelectorAll('#kbProg i').forEach((el, i) => el.classList.toggle('on', i < pos));
       const sleep = keepAudioAwake();
+      const kbMsg0 = duet ? 'ソウタが自分のパートを弾き始めた。ハルのパートを重ねよう。' : '楽譜のとおりに、左から順に弾いてみよう。';
+      let missT = 0, missShown = false;
+      const missClear = () => { clearTimeout(missT); if (missShown && !done) { missShown = false; const m = $('#kbMsg'); if (m) m.textContent = kbMsg0; } };
       const press = b => {
         const n = b.dataset.n;
         if (done) return;
+        missClear();
         pianoNote(FREQ[n], 0.22);
         b.classList.add('down'); setTimeout(() => b.classList.remove('down'), 160);
         if (n === MELODY[pos]) {
@@ -5676,7 +5680,10 @@
         } else {
           pos = 0; prog();
           $('#kbMsg').textContent = '……音が違う。最初から。'; nmMark('puz');
+          // 2026-11-19 作者の指示：「最初から」の表示は2秒で消す（その前に次の鍵盤を押したら、そこで消す）
+          clearTimeout(missT); missShown = true; missT = setTimeout(missClear, 2000);
           if (!R.know.has('doremi') && ++R.pianoMiss >= 3) {
+            missShown = false; clearTimeout(missT);   // ドレミが浮かぶ知らせは消さない
             R.know.add('doremi'); saveRun();
             $('#kbScore').innerHTML = fullScoreSVG(true);
             $('#kbMsg').textContent = '……音符の下に、鉛筆の字がにじむように浮かび上がってきた。ミ、ソ、ラ……。読めるか怪しいくらいのハルの字だ。';
@@ -5684,6 +5691,8 @@
           }
         }
       };
+      { const onTap = () => { if (!document.getElementById('kbMsg')) { card.removeEventListener('pointerdown', onTap, true); return; } missClear(); };
+        card.addEventListener('pointerdown', onTap, true); }   // 画面のどこかを押しても消す（鍵盤の音より先に消してから、押した鍵盤を判定する）。鍵盤を閉じたあとは外れる
       card.querySelectorAll('.wk, .bk').forEach(b => {
         b.addEventListener('pointerdown', e => { if (e.button > 0) return; e.preventDefault(); press(b); });
         b.addEventListener('click', e => { if (e.detail === 0) press(b); });  // キーボード操作（Enter/Space）
