@@ -522,7 +522,8 @@
   .rw { position: absolute; margin: 0; color: #d9d2c6; font-family: var(--serif); white-space: nowrap; transition: opacity 1s ease; }
   .rw.gone { opacity: 0; }
   .rw.short { font-size: 13px; opacity: .6; animation: rwfall linear forwards; }
-  .rw.crush { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 700; font-size: 15px; color: #7a1f24; opacity: .5; filter: blur(2.2px); letter-spacing: -.25em; text-shadow: 3px 1px 0 #7a1f24, -2px -1px 0 #7a1f24; animation: rwfall linear forwards; }
+  /* 2026-11-19 作者の指摘：前の崩した字は暗すぎて、降っていることすら分からなかった。読めないまま、言葉が降ってきたことだけは見えるように */
+  .rw.crush { font-family: 'Zen Kaku Gothic New', sans-serif; font-weight: 700; color: #a4373a; opacity: .85; filter: blur(1.6px); letter-spacing: -.32em; text-shadow: 3px 1px 0 rgba(164, 55, 58, .75), -2px -2px 0 rgba(164, 55, 58, .6), 1px 3px 0 rgba(164, 55, 58, .5); animation: rwfall linear forwards; }
   .rw.neg, .lw.neg, .rw-list .neg { color: #c04a4a; }
   .rw.sei, .lw.sei, .rw-list .sei { color: #7f93a6; }
   .rw.nag, .lw.nag, .rw-list .nag { color: #d8d0c2; }
@@ -3840,13 +3841,16 @@
     spk.hidden = true; txt.textContent = ''; more.hidden = true;   // 言葉の雨に切り替わるとき、前の文を消す
     // 短い言葉は、届いた言葉（他の人から言われた言葉）から切り出したものだけ。どれも否定。自分で自分に向けた言葉は、もう一人の自分の台詞に取っておく
     const shorts = ['きもい', 'バカ', '邪魔', '使えない', '気持ち悪い', '役立たず', '汚い', '臭い', 'いらない', '無理', 'できない', '手遅れ', '最低',
-                    '出て行け', '甘えるな', 'ヘラヘラ', '泣くな', '通用しない', 'みんな嫌ってる', '普通でしょ', '弱虫', '情けない', '惨め', 'のろま', '出来損ない', '帰れ', '帰って', '黙れよ', '早くして', '遅い'];
+                    '出て行け', '甘えるな', 'ヘラヘラ', '泣くな', '通用しない', 'みんな嫌ってる', '普通でしょ', '弱虫', '情けない', '惨め', 'のろま', '出来損ない', '失敗作', '八方美人', '帰れ', '帰って', '黙れよ', '早くして', '遅い'];
     // 同じ言葉が続かないように、全部を一巡するまで同じ言葉は出さない
     let bag = [];
     const nextShort = () => { if (!bag.length) bag = shorts.slice().sort(() => Math.random() - .5); return bag.pop(); };
-    const crushed = ['菌が移る'];   // ミオが中学のいじめで言われた言葉
-    const longs = [['そんなんじゃ、社会で通用しない', 'neg'], ['誰も、相手にしないよ', 'neg'], ['みんな本当は、汚いって思ってるよ', 'neg'], ['みんな、あなたのこと嫌ってるよ', 'neg'],
-                   ['殴られたいのか', 'neg'], ['なんでそんなことするの', 'sei'], ['やる気、あんの？', 'sei'], ['普通に考えれば分かるでしょ', 'sei'], ['ヘラヘラするな', 'neg'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
+    // 崩した字（読めない）：5人が浴びてきた、読ませられないほどの言葉（2026-11-19 作者の指示：もっと不適切な言葉も含まれていそうな感じに。長さをばらけさせる）
+    // ミオが中学で／ツムギがクラスのグループから受けたいじめの言葉と、ケイの顧問の怒鳴り声。読める字の言葉とは重ねない
+    const crushed = ['菌が移る', '死ね', '消えろ', 'うざ', 'ブス', 'ゴミ', 'クズ', '学校来んな', '近寄んなよ', 'お前がいると空気が腐るんだけど', '生きてて恥ずかしくないの？',
+                     'ぶっ殺すぞ', 'カスが', '脳みそ入ってんのか', '親の顔が見てみてえわ', '二度とコートに立つな'];   // ケイの顧問（2026-11-19 作者の指摘：前の言葉は読めない字としては弱かった）
+    const longs = [['そんなんじゃ、社会で通用しない', 'neg'], ['誰も、相手にしないよ', 'neg'], ['いてもいなくても同じ', 'neg'],   /* 3章でミオが黒板に書き、ツムギが受けた言葉（2026-11-19 作者の指示：読める字で） */ ['みんな本当は、汚いって思ってるよ', 'neg'], ['みんな、あなたのこと嫌ってるよ', 'neg'],
+                   ['殴られたいのか', 'neg'], ['やる気がないなら辞めろ', 'neg'], ['ナメてんのか', 'neg'], ['何回言わせんだよ、おい', 'neg'],   /* ケイの顧問（2026-11-19 作者の指示。「やる気がないなら辞めろ」は部誌の赤ペンの言葉に合わせた） */ ['なんでそんなことするの', 'sei'], ['普通に考えれば分かるでしょ', 'sei'], ['ヘラヘラするな', 'neg'], ['あなたには、無理', 'neg'], ['出て行け', 'neg'],
                    ['もう手遅れだ', 'neg'], ['最低の人間だね', 'neg'], ['あなたは、人間じゃない', 'neg'], ['お前なんか、いらない', 'neg'], ['お前のせいだ', 'neg'],
                    ['心配してほしいだけでしょ', 'neg'], ['みんなは、できるのに', 'sei'], ['真面目にやってる？', 'sei'], ['お姉ちゃんは、できたのに', 'sei'], ['ハルくんの分まで、生きなきゃね', 'nag'], ['頼まれてくれるよね？', 'sei'], ['お前の事なんて、どうでもいい', 'neg'], ['そういうの、めんどくさい', 'neg'], ['お前には言われたくない', 'neg'], ['あなたなら、できるよ', 'nag'], ['頑張って', 'nag'], ['笑ってれば、大丈夫', 'nag'], ['あなたは、強い子だから', 'nag']];
     // 自分が章の対話で選んだ言葉も、言われてきた言葉に混ざって降ってくる（初めの3つより後ろに）
@@ -3859,6 +3863,7 @@
     const drop = (t, cls) => {
       const e = document.createElement('span'); e.className = 'rw ' + cls + (cls === 'short' ? ' neg ' + rainFont() : ''); e.textContent = t;
       if (cls === 'short') { e.style.fontSize = (11 + Math.random() * 6) + 'px'; e.style.rotate = (Math.random() * 10 - 5).toFixed(1) + 'deg'; }
+      if (cls === 'crush') { e.style.fontSize = (14 + Math.random() * 10) + 'px'; e.style.rotate = (Math.random() * 16 - 8).toFixed(1) + 'deg'; }
       e.style.left = (4 + Math.random() * 80) + '%'; e.style.top = (-8 + Math.random() * 30) + '%';
       const r = Math.random();
       if (cls === 'short') e.classList.add(r < .5 ? 'm-fall' : r < .8 ? 'm-sway' : 'm-vanish');
@@ -3867,7 +3872,7 @@
     };
     if (reduce) box.innerHTML = `<div class="rw-list">${longs.map(([l, k]) => `<p class="${k}">「${l}」</p>`).join('')}</div>`;
     else {
-      const rainT = setInterval(() => { drop(nextShort(), 'short'); if (Math.random() < .06) drop(crushed[Math.floor(Math.random() * crushed.length)], 'crush'); }, 170);
+      const rainT = setInterval(() => { drop(nextShort(), 'short'); if (Math.random() < .3) drop(crushed[Math.floor(Math.random() * crushed.length)], 'crush'); }, 170);   // 崩した字は1秒に2つくらい
       const pick = a => a[Math.floor(Math.random() * a.length)];
       for (const [l, k] of longs) {
         const how = pick(['in-fade', 'in-blur', 'in-drop', 'in-slide', 'in-zoom', 'in-type']);
