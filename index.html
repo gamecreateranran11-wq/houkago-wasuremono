@@ -1411,7 +1411,11 @@
     if (!advance) { if (hurry.size && ov.hidden && !e.target.closest('button, .hs, .chip')) [...hurry].forEach(f => f()); return; }
     if (e.target.closest('.choice, .bar-actions') || !ov.hidden) return;
     e.preventDefault(); e.stopPropagation();
+    // 2026-11-19 Muse の報告（調べる場所の1回目のクリックが効かず、2回目で動く）：調べものの最後の行で止まっているとき（holdHs）に
+    // 調べる場所を押したら、行を閉じてから、そのままその場所を調べる
+    const hs = holdHs && e.target.closest('.hs');
     advance();
+    if (hs) setTimeout(() => { if (!busy) hs.click(); }, 0);
   }, true);
   document.addEventListener('keydown', e => {
     if ((e.key === 'Enter' || e.key === ' ') && advance && !(document.activeElement && document.activeElement.closest('button, .hs'))) {
@@ -3247,6 +3251,8 @@
     el.classList.toggle('on', on);
   }
   if ($('#bgImg')) new MutationObserver(() => syncPiano()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src'] });
+  // 2026-11-19 Muse の報告：校門の絵の代替テキストが、次の部屋に入っても残っていた。背景の絵が替わったら、その絵のための代替テキストでなければ場面の名前に戻す
+  if ($('#bgImg')) new MutationObserver(() => { const bg = $('#bgImg'); if (bg.dataset.altFor !== bg.getAttribute('src')) { delete bg.dataset.altFor; bg.alt = $('#scene').getAttribute('aria-label') || ''; } }).observe($('#bgImg'), { attributes: true, attributeFilter: ['src'] });
   function render() {
     syncPiano();
     // 1章は30分。調べるたびに MIN_PER_TICK 分進む
@@ -3295,6 +3301,7 @@
   function syncSave() { const b = $('#btnSave'); if (b) b.disabled = !!replay || !C || !R || (R.over && !onRoof()); }
   // key：どのストーリーかを表す名前（会話の途中セーブから再開するときに、同じストーリーを呼び直すのに使う）
   let knewNow = false;  // 調べものから、そのまま対話に入ったところ（「もう知っている」を重ねない）
+  let holdHs = false;   // 調べものの最後の行で止まっている間（調べる場所を押したら、そのまま調べる）
   async function act(fn, key) {
     if (busy || !R || R.over) return;
     busy = true; beginScript(key); prevLine = 'act|' + (key || ''); syncSave(); $('#btnWait').disabled = true; $('#btnHint').disabled = true;
@@ -3311,7 +3318,8 @@
       // 2026-11-19 作者の指示（Museのテストプレイ）：既読スキップがONだと、調べ直したときの既読の返事が一瞬で流れて、何も起きなかったように見えた。
       // 最後の1行が既読で流れたときは、その行を出したままタップを待つ（既読の会話の早送りはそのまま）
       if (lastSkipped && R && !R.over && !replay) {
-        await new Promise(res => { more.hidden = false; advance = () => { advance = null; more.hidden = true; lastClicked = true; res(); }; });
+        holdHs = true;
+        await new Promise(res => { more.hidden = false; advance = () => { advance = null; holdHs = false; more.hidden = true; lastClicked = true; res(); }; });
       }
     } finally { scr = null; replay = null; busy = false; render(); if (!R.over) idle(); veilOff(); }
   }
@@ -4872,7 +4880,7 @@
     try { const pre = new Image(); pre.src = `img/${img}.webp`; await pre.decode(); } catch (e) {}
     await whiteSwap(() => {
       guest = null; guestRender();
-      const bg = $('#bgImg'); bg.src = `img/${img}.webp`; bg.alt = alt || '';
+      const bg = $('#bgImg'); bg.src = `img/${img}.webp`; bg.alt = alt || ''; bg.dataset.altFor = bg.getAttribute('src');
       $('#sitFig').classList.add('gone'); $('#leftover').style.display = 'none'; $('#hsLayer').innerHTML = '';
     });
     await say([...lines, stop, ...(look !== undefined ? (look ? [look] : []) : [litLeft() ? '振り返ると、他の教室にはまだ明かりがついていた。' : '振り返ると、他の教室の明かりは、もうどれも消えていた。'])]);
