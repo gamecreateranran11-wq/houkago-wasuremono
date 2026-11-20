@@ -4930,7 +4930,9 @@
     async window() {
       // 窓の絵と1回目の文は、章ごとに差し替えられる（windowImg・windowImg2・window1）。ない章は美術室の窓の絵
       const first = !R.know.has('window'), second = !first && C.window2 && !R.know.has('window2');
-      showCut((!first && C.windowImg2) || C.windowImg || 'ci_window');
+      // 2026-11-20 作者の指摘：音楽室は3回目以降（「窓の外の空は、少しも動かない」）も2回目の絵（メトロノーム）が出て、空が見えなかった。
+      // 2回目の絵が窓ではない物の章（windowImg2Once）は、2回目だけその絵にする。体育館の2回目の絵（ハヤトのいる窓）は、3回目以降もそのまま
+      showCut(((second || (!first && !C.windowImg2Once)) && C.windowImg2) || C.windowImg || 'ci_window');
       if (first) {
         await say([...(C.window1 || ['窓の外は、ずっと同じ空。校庭には誰もいない。']), ...(C.windowNote ? C.windowNote() : []), ...windowLine()]);
         R.know.add('window'); await tick();
@@ -5802,7 +5804,7 @@
   }
 
   const MUSIC = {
-    windowImg2: 'mci_metronome',
+    windowImg2: 'mci_metronome', windowImg2Once: true,   // 2回目の絵は窓ではなくメトロノームなので、3回目以降は窓の絵に戻す
     // 1章の画板の裏（ヒナの空の配合）を見ていれば、16時と17時のあいだの空に気づく
     windowNote: () => knewArt('recipe') ? ['（……美術室の画板の裏の字を思い出した。「16時の空：セルリアン＋白」「17時：ここにオレンジを一滴」）', '今の空は、ちょうどその間の色をしていた。'] : [],
     window2: ['窓際の低い棚に、メトロノームが置いてある。', '重りは、楽譜の指定よりずっと速い目盛りまで下げたままだった。', '……最後にこれを動かした誰かは、この速さで弾くつもりだったらしい。'],   // 2026-11-19 作者の指示：メトロノームに直接書きこむのは非常識なので、鉛筆の印「ここまでいける」はやめた
