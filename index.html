@@ -1302,7 +1302,7 @@
   const STAND_SET = { hina: 'angry despair down grief sad smile surprise surprisefront pout awaysmile', sota: 'angry crysmile despair down grief sad smile surprise',
                       mio: 'angry crysmile despair down grief sad smile surprise stroke offer offer_sad nb nb_apology nb_grief nb_crysmile nb_skirt nb_surprise nb_down nb_plead nbleave nbleavewonder', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
-  const STAND_NEAR = { deny: 'sad', denycry: 'grief', hollow: 'despair', crumple: 'crysmile', reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry', window: 'sad',
+  const STAND_NEAR = { clutch: 'surprise', deny: 'sad', denycry: 'grief', hollow: 'despair', crumple: 'crysmile', reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry', window: 'sad',
                        blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', wethand: 'grief', serious: 'down', lookup: 'down', plead: 'sad', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', grip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise', sleeve: 'sad', wristhate: 'sad' };
   // 座り絵が無い表情は、近い座り絵で代える（ミオの表紙を撫でる→撫でてうつむく。ヒナのむくれ顔は立って描いた後の一言だけで、
   // 座ってむくれる場面はないが、先読みで無い絵を探しに行かないように、うつむきにしておく）
@@ -7891,7 +7891,7 @@
     // 手前のベッド（1）の角に座る。明かりを消すと、部屋の暗さ・色味に合わせた絵（dark）に替える
     sit: { src: 'tsumugi_sit', dark: 'tsumugi_sit_dark', close: 'tsumugi_sit_close', closeDark: 'tsumugi_sit_close_dark', style: 'left:78.19%;top:34.57%;height:55.37%' },
     leftover: '', leftoverImg: 'i_left', leftoverDark: 'i_left_dark',   // 消えた後、シーツの上に来室カード（細長い厚紙）。暗い部屋では暗い版
-    faces: { plead: 'tsumugi_plead', normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
+    faces: { plead: 'tsumugi_plead', normal: 'tsumugi_bust', smile: 'tsumugi_bust', wrap: 'tsumugi_wrap', clutch: 'tsumugi_clutch', angry: 'tsumugi_angry', surprise: 'tsumugi_surprise', sad: 'tsumugi_sad', down: 'tsumugi_down',
              grief: 'tsumugi_grief', despair: 'tsumugi_despair', shadow: 'tsumugi_despair', reject: 'tsumugi_angry', crySmile: 'tsumugi_crysmile', crumple: 'tsumugi_crumple',
              angryCry: 'tsumugi_angrycry',  // 怒りと悔しさをにじませた涙
              mioNormal: 'mio_bust', mioSad: 'mio_sad', mioDown: 'mio_down', mioSurprise: 'mio_surprise', mioGrief: 'mio_grief', mioCrySmile: 'mio_crysmile', mioDespair: 'mio_despair', mioSoftSmile: 'mio_softsmile',
@@ -8403,7 +8403,7 @@
     } else {
       await say(['「……ほんとに、怒ってない？」', 'ツムギが初めてこちらを見た。……笑顔が、止まった。', ['ツムギ', '……分かんない', 'down'],
                  ['ツムギ', 'でも、あの字を見たとき。……ミオの字だって、すぐ分かって', 'down'], ['ツムギ', '……痛かった', 'sad'],
-                 'ツムギは自分で言ったことに驚いたように、口を押さえた。', ['ミオ', '……うん', 'mioNbSadDown']]);   // 2026-11-09：ここではまだ泣いた顔を使わない（作者の指示）。自分を責める俯き（涙なし）
+                 ['', 'ツムギは、自分の声に驚いたように目をまたたかせて、カーディガンの胸元をそっと握った。', 'clutch'],   /* 2026-11-20 作者の指摘：口を押さえると失言したように見える。自分の痛みに初めて気づいた驚き */ ['ミオ', '……うん', 'mioNbSadDown']]);   // 2026-11-09：ここではまだ泣いた顔を使わない（作者の指示）。自分を責める俯き（涙なし）
     }
     // 2段目：ミオが扉へ向かう
     // 2026-11-09：ここも、まだ泣いた顔にしない（作者の指示）。スカートを握って涙をこらえる顔
