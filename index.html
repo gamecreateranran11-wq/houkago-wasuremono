@@ -4790,12 +4790,14 @@
     if (!(sf.getAttribute('src') || '').endsWith(def)) sf.src = def;
     const bg = $('#bgImg'), bs = bg.getAttribute('src') || ''; if (bs.endsWith('img/gym_noball.webp') || bs.endsWith('img/m_room_lid.webp')) bg.src = `img/${C.bg}.webp`;
   }
-  async function closeHeart(after) {
+  // mine：その場ですでに閉ざす様子を書いたとき（今日はもう話せない、など）。章の決まった閉ざし方の文を重ねず、座り姿と「沈黙のまま〜」だけ使う（2026-11-20）
+  async function closeHeart(after, mine) {
     // 心を閉ざしたら、その場でチャイムの時間まで飛ばす
     burn(); R.lastEnd = 'shut';
     // 2026-11-17 作者の指示：2段目で慰めた周回（R.cons）に心を閉ざすときは、失望の閉ざし方（closeCons）。流れ・結果は同じ
     const cl = R.cons && C.closeCons ? C.closeCons : C.closeLines;
-    await say(typeof cl === 'function' ? cl() : cl);
+    const arr = typeof cl === 'function' ? cl() : cl;
+    await say(mine ? [...(typeof arr[0] === 'function' && !mine.some(x => typeof x === 'function') ? [arr[0]] : []), ...mine, arr[arr.length - 1]] : arr);
     if (after) await after();
     R.ticks = CHIME_AT - 1; await tick();
   }
@@ -4835,8 +4837,8 @@
     const k = opts[await choose(opts.map(o => o[0]))][1];
     if (k === 'excuse') { nmMark('miss'); await say([[C.name, (C.key === 'sota' || C.key === 'kei' ? '……つもりじゃなくても、言っただろ' : '……つもりじゃなくても、言ったでしょ'), 'angry']]); await closeHeart(); return true; }
     if (k === 'again') { nmMark('miss'); await say([[C.name, '……そんなに謝られたら、許さなきゃいけないみたいじゃん', 'angry']]); await closeHeart(); return true; }
-    await say([...h.ok, ...h.close]);   // 少しだけゆるむが、今日はもう話せない
-    await closeHeart();
+    await say(h.ok);   // 少しだけゆるむが、今日はもう話せない
+    await closeHeart(null, h.close);
     return true;
   }
   async function doom(lines) {
@@ -7518,7 +7520,8 @@
       // 顧問の反応を想像して苦しむ（笑ってごまかそうとする・体が先に反応する・まず一年生のことを考える）。告白の過呼吸と重ねないよう、息が浅くなる・指が震えるまで
       if (a === 'seiron') { await say([['ケイ', '……顧問に？', 'surprise'], ['ケイ', 'はは。言ったら、たぶん……', 'smile'], 'ケイは笑おうとして、途中で息が浅くなった。',
                                        ['ケイ', 'ボール、床に叩きつけて。『誰に向かって口きいてんだ』って', 'sad'], ['ケイ', 'それで次の日、あいつらのダッシュが増えるんだ', 'down'],
-                                       'テーピングの指が、膝の上で小さく震えていた。', ['ケイ', '……ごめん。考えただけで、これだ', 'smile'], 'ケイは笑った顔のまま、それきり口を閉ざした。']); return closeHeart(); }   // 2026-11-10：先生への相談を不正解に見せない（作者の指示）
+                                       'テーピングの指が、膝の上で小さく震えていた。', ['ケイ', '……ごめん。考えただけで、これだ', 'smile']]);
+                            return closeHeart(null, [sitClose(), 'ケイは笑った顔のまま、それきり口を閉ざした。']); }   // 2026-11-20 作者の指示：座り絵も、笑ったままこちらを見ない姿（kei_sit_close）に   // 2026-11-10：先生への相談を不正解に見せない（作者の指示）
       if (a === 'oitsu' && await hurt([['ケイ', '……だよな', 'despair'], ['ケイ', '守ってるつもりだったの、俺だけだったんだ', 'shadow'], ['ケイ', '俺がいなくても、あいつらは……', 'despair'], ['ケイ', '……もう、守らなくていいなら。楽になってもいいよな', 'despair']])) return;
       if (a === 'nagu') {
         R.cons++;
