@@ -294,6 +294,9 @@
   #scene.bad-dark #stage { filter: brightness(.45) saturate(.7); }
   .clock { transition: opacity 1.2s ease; }
   .clock.fadeout { opacity: 0; }   /* 時刻とチャイムの表示もフェードで消す */
+  /* 2026-11-20 作者の指摘：BAD2で日付が進んだ後も持ち物が残っていた。その放課後の持ち物なので、時刻と一緒にフェードで消す（場所は空けたまま、下がずれないように） */
+  .inv { transition: opacity 1.2s ease; }
+  .inv.fadeout { opacity: 0; pointer-events: none; }
   .card-scroll { max-height: 46vh; overflow-y: auto; border-radius: 4px; scrollbar-width: none; }
   .card-scroll::-webkit-scrollbar { display: none; }
   .sc-wrap { position: relative; padding-right: 12px; }
@@ -4539,7 +4542,7 @@
   }
   // BAD1 終わらない放課後：一度も心に触れないまま時間切れ、または「力不足」。その章の初めから、謎解きを飛ばして再開できる
   // END1〜3：チャイムの時刻を過ぎた／時刻が分からなくなった所から、時刻とチャイムの表示を消し、背景と座り絵を暗くする（2026-11-19 作者の指示）
-  function badDark() { $('.clock').classList.add('fadeout'); $('#scene').classList.add('bad-dark'); }   // どちらもフェード（背景2秒・表示1.2秒）
+  function badDark() { $('.clock').classList.add('fadeout'); $('#inv').classList.add('fadeout'); $('#scene').classList.add('bad-dark'); }   // どちらもフェード（背景2秒・表示1.2秒）
   async function bad1() {
     bgm('endless');  // BAD1 専用の曲『終わらない放課後』
     hideCut(); setTalk(false);
@@ -8560,7 +8563,7 @@
   function clearStage() {
     const scene = $('#scene');
     scene.classList.add('reset');
-    scene.classList.remove('cut', 'talk', 'cg', 'story', 'room-dark', 'bad-dark'); $('.clock').classList.remove('fadeout');
+    scene.classList.remove('cut', 'talk', 'cg', 'story', 'room-dark', 'bad-dark'); $('.clock').classList.remove('fadeout'); $('#inv').classList.remove('fadeout');
     const ci = $('#cutin'); ci.classList.remove('show'); ci.innerHTML = '';
     $('#getItem').hidden = true;
     $('#sitFig').classList.remove('gone');
