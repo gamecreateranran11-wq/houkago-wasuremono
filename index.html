@@ -1298,7 +1298,7 @@
   const STAND_SET = { hina: 'angry despair down grief sad smile surprise surprisefront pout awaysmile', sota: 'angry crysmile despair down grief sad smile surprise',
                       mio: 'angry crysmile despair down grief sad smile surprise stroke offer offer_sad nb nb_apology nb_grief nb_crysmile nb_skirt nb_surprise nb_down nb_plead nbleave nbleavewonder', kei: 'angry crysmile despair down grief sad smile surprise',
                       tsumugi: 'angry crysmile despair down grief sad surprise' };
-  const STAND_NEAR = { crumple: 'crysmile', reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry', window: 'sad',
+  const STAND_NEAR = { deny: 'sad', denycry: 'grief', hollow: 'despair', crumple: 'crysmile', reject: 'angry', shadow: 'despair', blank: 'down', pale: 'sad', breath: 'sad', teary: 'sad', angrysad: 'angry', window: 'sad',
                        blame: 'angry', stroke: 'despair', strokedown: 'stroke', wrap: 'down', softsmile: 'smile', angrycry: 'grief', wrist: 'sad', chest: 'sad', chest_cry: 'grief', crysmile: 'grief', wethand: 'grief', serious: 'down', lookup: 'down', plead: 'sad', surpriseup: 'surprise', angryup: 'angry', sadgrip: 'sad', grip: 'sad', confused: 'sad', pout: 'down', bookhide: 'down', nbleave: 'down', nbleavewonder: 'surprise', sleeve: 'sad', wristhate: 'sad' };
   // 座り絵が無い表情は、近い座り絵で代える（ミオの表紙を撫でる→撫でてうつむく。ヒナのむくれ顔は立って描いた後の一言だけで、
   // 座ってむくれる場面はないが、先読みで無い絵を探しに行かないように、うつむきにしておく）
@@ -3120,7 +3120,7 @@
     new MutationObserver(syncSitFront).observe($('#sitFig'), { attributes: true, attributeFilter: ['src', 'style', 'class'] });
   }
   // 涙のきらめき：表情の絵（#portrait）に涙の光の絵があれば、同じ位置に重ねて、表示・非表示も合わせる
-  const GLINT = new Set(['hina_p_grief', 'hina_p_sad', 'hina_s_angrycry', 'hina_s_chest_cry', 'hina_s_grief', 'kei_p_crysmile', 'kei_p_grief', 'kei_s_crysmile', 'kei_s_teary', 'mio_f_nb_crysmile_inf', 'mio_f_nb_grief_inf', 'mio_p_crysmile', 'mio_p_grief', 'mio_p_nb_crysmile', 'mio_p_nb_grief', 'mio_s_crysmile', 'mio_s_grief', 'sota_p_crysmile', 'sota_p_grief', 'sota_s_crysmile', 'sota_s_grief', 'sota_s_wethand', 'hina_s_bag_grief', 'hina_s_bag_crysmile', 'tsumugi_s_crumple', 'tsumugi_p_crysmile', 'tsumugi_p_grief', 'tsumugi_s_angrycry', 'tsumugi_s_crysmile', 'tsumugi_s_grief']);
+  const GLINT = new Set(['hina_s_denycry', 'hina_s_hollow', 'hina_p_grief', 'hina_p_sad', 'hina_s_angrycry', 'hina_s_chest_cry', 'hina_s_grief', 'kei_p_crysmile', 'kei_p_grief', 'kei_s_crysmile', 'kei_s_teary', 'mio_f_nb_crysmile_inf', 'mio_f_nb_grief_inf', 'mio_p_crysmile', 'mio_p_grief', 'mio_p_nb_crysmile', 'mio_p_nb_grief', 'mio_s_crysmile', 'mio_s_grief', 'sota_p_crysmile', 'sota_p_grief', 'sota_s_crysmile', 'sota_s_grief', 'sota_s_wethand', 'hina_s_bag_grief', 'hina_s_bag_crysmile', 'tsumugi_s_crumple', 'tsumugi_p_crysmile', 'tsumugi_p_grief', 'tsumugi_s_angrycry', 'tsumugi_s_crysmile', 'tsumugi_s_grief']);
   // 表情の絵の名前から涙の光の絵を探す（保健室のミオ _inf は、光の絵がなければ _inf なしの名前で）
   const glintOf = name => !name ? null : GLINT.has(name) ? name : GLINT.has(name.replace(/_inf$/, '')) ? name.replace(/_inf$/, '') : null;
   function syncGlintPair(fig, gl, base) {
@@ -4800,32 +4800,40 @@
      言い直すと「ためらいの段」が挟まる。言い訳や重ねた謝罪では心を閉ざし、受け止める・黙って待つで、話の続きに戻れる。
      戻り値 true：この会話は終わった（消える道か、心を閉ざした） */
   const HESITATE = {
-    art: { lines: [['ヒナ', '……さっきの、まだ痛いんだけど', 'sad'], ['ヒナ', '……で？', 'angry']], consLines: [['ヒナ', '……また、そうやって', 'angry'], ['ヒナ', 'どっちが本当なの', 'angry']],
-           ok: ['ヒナはしばらく窓の外を見ていた。', ['', 'それから袖を握っていた手を、ほんの少しだけゆるめた。', 'down']] },
+    art: { lines: [['ヒナ', '……謝られても、さっきの、消えないよ', 'sad']], consLines: [['ヒナ', '……また、そうやって', 'angry'], ['ヒナ', 'どっちが本当なの', 'angry']],
+           ok: ['ヒナはしばらく窓の外を見ていた。', ['', 'それから袖を握っていた手を、ほんの少しだけゆるめた。', 'down']],
+           close: [['ヒナ', '……今日は、もう話したくない', 'down'], 'ヒナはそれきり、何も言わなかった。'] },
     music: { lines: [['ソウタ', '……今日会ったばっかりで、よくそういうこと言えるな', 'angry']], consLines: [['ソウタ', '……さっきから、言うことがころころ変わるな', 'angry']],
-             ok: ['ソウタは蓋の上の自分の手を、しばらく見ていた。', ['', '……それから、小さく息を吐いた。', 'down']] },
+             ok: ['ソウタは蓋の上の自分の手を、しばらく見ていた。', ['', '……それから、小さく息を吐いた。', 'down']],
+             close: [['ソウタ', '……悪い。今日は、もう無理だ', 'down'], 'ソウタはそれきり、顔を上げなかった。'] },
     library: { lines: [['ミオ', '……さっきの言葉、多分ずっと残ると思う', 'sad']], consLines: [['ミオ', '……どっちを信じたらいいのか、分かんないよ', 'sad']],
-               ok: ['ミオは胸に抱えた本の角を、指でなぞっていた。', ['', '……それから、少しだけ顔を上げた。', 'down']] },
-    gym: { lines: [['ケイ', '……はは。きっついな、今の', 'reject'], ['ケイ', '……で、まだ何か言う？', 'reject']], consLines: [['ケイ', '……はは。今度はそっちか', 'reject'], ['ケイ', '……で、どれが本音？', 'reject']],
-           ok: ['ケイはテーピングの指を、ゆっくり握ったり開いたりしていた。', ['', '……それから、笑顔をやめてこっちを見た。', 'down']] },
+               ok: ['ミオは胸に抱えた本の角を、指でなぞっていた。', ['', '……それから、少しだけ顔を上げた。', 'down']],
+               close: [['ミオ', '……ごめんなさい。今日は、もう……', 'down'], 'ミオは本を胸に抱えたまま、それきり口を閉ざした。'] },
+    gym: { lines: [['ケイ', '……いいよ。謝んなくて', 'reject'], ['ケイ', '言わせたの、俺のほうだし', 'down']], consLines: [['ケイ', '……はは。今度はそっちか', 'reject'], ['ケイ', '……で、どれが本音？', 'reject']],
+           ok: ['ケイはテーピングの指を、ゆっくり握ったり開いたりしていた。', ['', '……それから、笑顔をやめてこっちを見た。', 'down']],
+           close: [['ケイ', '……悪い。今日は、ここまでにしてくれ', 'down'], 'ケイは笑おうとして、笑えなかった。'] },
     infirmary: { lines: [['ツムギ', '……いいよ、べつに。慣れてるから', 'smile']], consLines: [['ツムギ', '……いいよ。どっちでも。慣れてるから', 'smile']],
-                 ok: ['ツムギは笑ったまま、カーディガンの袖を握りしめた。', ['', '……その笑顔が少しだけ、ほどけた。', 'down']] },
+                 ok: ['ツムギは笑ったまま、カーディガンの袖を握りしめた。', ['', '……その笑顔が少しだけ、ほどけた。', 'down']],
+                 close: [['ツムギ', '……ちょっと、疲れちゃった', 'smile'], 'ツムギはカーテンのほうへ顔を向けた。'] },
   };
-  async function hurt(lines, cutAt = 2) {   // cutAt：言い直しの選択肢を出す前に見せる行数
+  // 2026-11-20 作者と決定：追い詰める答えは、その子の返しを最後まで止めずに見せてから選択肢を出す（前は2行目で割り込み、間違いを先に知らせていた）。
+  // mode 'strike'：直前の言葉に正面から逆らう答え（2-3・3-2・4-3）。言い直せずに消える。
+  // mode 'close'（ほか）：最後まで聞いてから言い直せるが、本筋には戻らず心を閉ざす（謝っても、同じ放課後のうちには戻れない）
+  async function hurt(lines, mode = 'close', pre = []) {   // pre：謝ったあと、その子の反応の前に入れる地の文（姿勢を戻すときなど）
     burn();
-    if (R.repaired) { await doom(lines); return true; }   // 二度目は、言い直せない
-    const cut = Math.min(cutAt, lines.length);
-    await say(lines.slice(0, cut));
-    if (await choose(['（……何も言えない）', '「……ごめん。今のは、違った」']) === 0) { await doom(lines.slice(cut)); return true; }
+    await say(lines);
+    if (mode === 'strike' || R.repaired) { await doom([]); return true; }
+    if (await choose(['（……何も言えない）', '「……ごめん。今のは、違った」']) === 0) { await doom([]); return true; }
     R.repaired = true;
     const h = HESITATE[C.id];
-    await say(R.cons && h.consLines ? h.consLines : h.lines);   // 2026-11-17 作者の指示：慰めた後に追い詰めて言い直すと、信じきれない返事
+    await say([...pre, ...(R.cons && h.consLines ? h.consLines : h.lines)]);   // 2026-11-17 作者の指示：慰めた後に追い詰めて言い直すと、信じきれない返事
     const opts = [['「……うん。傷つける言い方だった」', 'ok'], ['「そういうつもりじゃ、なかったんだ」', 'excuse'], ['（何も言わずに、待つ）', 'ok'], ['「ごめん。本当に、ごめん」', 'again']];
     const k = opts[await choose(opts.map(o => o[0]))][1];
     if (k === 'excuse') { nmMark('miss'); await say([[C.name, (C.key === 'sota' || C.key === 'kei' ? '……つもりじゃなくても、言っただろ' : '……つもりじゃなくても、言ったでしょ'), 'angry']]); await closeHeart(); return true; }
     if (k === 'again') { nmMark('miss'); await say([[C.name, '……そんなに謝られたら、許さなきゃいけないみたいじゃん', 'angry']]); await closeHeart(); return true; }
-    await say(h.ok);
-    return false;
+    await say([...h.ok, ...h.close]);   // 少しだけゆるむが、今日はもう話せない
+    await closeHeart();
+    return true;
   }
   async function doom(lines) {
     // 2026-11-10：消えるときの曲は、この後のチャイムが鳴ってから（vanish()）流す（作者の指示）
@@ -5052,7 +5060,8 @@
     faces: { plead: 'hina_plead', normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout', awaySmile: 'hina_awaysmile', grip: 'hina_grip', window: 'hina_window',
              // スケッチブックの入った鞄を抱えてから、空を描き始めるまで
              bag: 'hina_bag', bagSad: 'hina_bag_sad', bagGrief: 'hina_bag_grief', bagSmile: 'hina_bag_smile', bagCrySmile: 'hina_bag_crysmile', bagDown: 'hina_bag_down', bagSmileFront: 'hina_bag_smilefront',
-             sleeve: 'hina_sleeve', wristHate: 'hina_wristhate', surpriseFront: 'hina_surprisefront' },   // surpriseFront：立って、こちらを見て驚く（2026-11-17）   // 袖の中で手を握りこむ（悲しみ）／左手首を押さえたまま自分を嫌う顔
+             sleeve: 'hina_sleeve', wristHate: 'hina_wristhate', surpriseFront: 'hina_surprisefront',
+             deny: 'hina_deny', denyCry: 'hina_denycry', hollow: 'hina_hollow' },   // 2026-11-20 母の答えで崩れる3枚（足を下ろして裾を握る→泣く→両腕がだらんと下がる）   // surpriseFront：立って、こちらを見て驚く（2026-11-17）   // 袖の中で手を握りこむ（悲しみ）／左手首を押さえたまま自分を嫌う顔
     lost: '顔のないスケッチブック',
     freeSpots: () => R.items.has('blue') ? ['char'] : ['sink'],   // ほどけた後に調べられる場所
     idleFree: '（ヒナが待っている。チャイムが鳴る前に）',
@@ -5414,14 +5423,16 @@
                      ['ヒナさんは失敗作なんかじゃないよ。……ヒナさんのことは、ちゃんと見てるから', 'nagu'], momWrong ? ['それは、お母さんが間違ってるよ', 'oitsu'] : ['今年の県展で描いて、お母さんに認めてもらおうよ。ヒナさんなら描けるよ', 'oitsu']], 2);
       if (a === 'seiron') { await say([['ヒナ', '分かってる。……分かってるよ、そんなの', 'angry'], ['ヒナ', '分かってても、比べられるの。私が比べなくたって、お母さんが比べるの', 'angry'], 'ヒナの声が震えた。', ['ヒナ', '……分かってるなら楽になれるって、思ってるんでしょ', 'sad'], 'ヒナは膝を抱えて、顔を伏せた。', '正しい言葉ほど、今のヒナには痛いのかもしれない。']); return closeHeart(); }
       // 2026-11-20 作者の指示：タップ数を1章のほかの返しに近づける（8行）。かばう→黙って揺れる→疑いが口から出る→打ち消そうとして崩れる→絶望。言い直しの選択肢は、黙って揺れる地の文の後
+      // 2026-11-20 作者の指示：表情とポーズを段階ごとに変える（前は shadow と despair が同じ絵で、崩れる途中から最後の顔だった）。黙ったところで曲を止め、無音のまま崩れる
       if (a === 'oitsu' && momWrong && await hurt([['ヒナ', '……間違ってないよ', 'surprise'],
           ['ヒナ', 'お母さんの言うとおりにして、お姉ちゃんはできたんだから', 'angry'],
-          ['ヒナ', 'できないのは、私のほう', 'sad'],
-          '言い終えて、ヒナは黙った。袖の中の指が、ほどけかけて、また握られる。',
-          ['ヒナ', '……だって、お母さんが間違ってたら', 'sad'],
-          ['ヒナ', 'ちがう。間違ってない。……間違って、ない', 'shadow'],
-          ['ヒナ', '『よくできたね』って言われたくて、頑張ってきたのに', 'despair'],
-          ['ヒナ', '……全部、意味なかったの？', 'despair']], 4)) return;
+          ['ヒナ', 'できないのは、私のほう', 'down'],
+          () => bgm(null),
+          ['', '言い終えて、ヒナは黙った。袖の中の指が、ほどけかけて、また握られる。', 'grip'],
+          ['ヒナ', '……だって、お母さんが間違ってたら', 'confused'],
+          ['ヒナ', 'ちがう。間違ってない。……間違って、ない', 'deny'],
+          ['ヒナ', '『よくできたね』って言われたくて、頑張ってきたのに', 'denyCry'],
+          ['ヒナ', '……全部、意味なかったの？', 'hollow']], 'close', [['', 'ヒナはゆっくり足を椅子の上に戻して、膝を抱え直した。', 'sleeve']])) return;   // 2026-11-20 作者の指示：足を下ろした絵から、膝を抱えた絵へ戻るのを文でつなぐ
       if (a === 'oitsu' && !momWrong && await hurt([['ヒナ', '……また、それ', 'surprise'], ['ヒナ', 'お姉ちゃんも、先生も、みんなそう。『次はもっと頑張れば』『結果で見返せば』って', 'sad'], 'ヒナは袖の中で指先を握りしめた。そのままゆっくりうつむいていく。', ['ヒナ', '……結局、みんな同じなんだ', 'shadow'], ['ヒナ', '結果を出さないと、私はいちゃいけないんだ', 'despair']])) return;
       if (a === 'nagu') {
         R.cons++;
@@ -5434,6 +5445,7 @@
       } else if (a === 'oitsu') {
         // 追い詰める答えを言い直して戻ったとき：言われた言葉を受けて話し出す（寄り添う答えの返事とは分ける）
         // 「お母さんが間違ってる」を言い直したとき：考えかけたことに自分で蓋をする（ヒナの癖。色鉛筆のリボンをほどかない・鏡を見ない）。かばう行は重なるので飛ばす
+        if (momWrong) bgm('core', 2.2);   // 黙ったところで止めた曲を戻す
         if (momWrong) await say([['ヒナ', '……そういうの、考えないようにしてるの', 'down'],
                                  ['ヒナ', '……お母さん、いつも言うの。『環境は全部用意したでしょ。サクラは、同じ部屋の、同じ机で、ちゃんとやったのよ』って', 'sad'], ...HINA_MOM.slice(2)]);
         else await say([['ヒナ', '……結果で見返せたら、とっくにやってるよ', 'down'], ...HINA_MOM]);
@@ -6243,7 +6255,7 @@
       if (a === 'oitsu') { if (await hurt([...(R.cons ? [['ソウタ', '……ずっと言ってくれるんじゃなかったのかよ', 'angry']] : []), ['ソウタ', '……じゃあ、どうしろって言うんだよ', 'angrySad'],   // 2026-11-17 作者の指示：2段目で慰めた後（R.cons）に突き放すと「言ったのに」。怒りは態度が変わったことへ向け、手を離すこと自体は責めない
                                 ['', 'ソウタの声が途中でかすれた。握りしめていた手から、ゆっくり力が抜けていく。', 'down'],
                                 ['', 'ソウタはピアノ椅子の空いた左側に目をやった。', 'down'],
-                                ['ソウタ', '弾いたって、隣にあいつはいないのに', 'despair']])) return; a = await ask(opts.filter(o => o[1] !== 'oitsu'), 3); }
+                                ['ソウタ', '弾いたって、隣にあいつはいないのに', 'despair']], 'strike')) return; a = await ask(opts.filter(o => o[1] !== 'oitsu'), 3); }
       const missing = hasKey('sota') ? [] : ['（何か、あと一つ足りない気がする。ハルが最後に残した何かが）'];
       if (a === 'nagu' && R.cons >= 1) {
         await say([['ソウタ', '……許してくれてる、か', 'down'],
@@ -6875,7 +6887,7 @@
                      ['ミオさんは悪くないよ。仕方なかったんだから', 'nagu'], ['ツムギさん、今もきっと教室に戻れなくて苦しんでるよ', 'oitsu']], 2);
       if (a === 'seiron') { await say([['ミオ', '……分かってる。分かってるの', 'angry'], ['ミオ', '謝って済むなら、とっくにそうしてる', 'angry'], 'ミオは本をきつく抱きしめた。',
                                        '（……今からでも、間に合う。この子が一番言われたくなかったのは、それだったのかもしれない。間に合わなかったらと、ずっと考えていたはずだから）']); return closeHeart(); }
-      if (a === 'oitsu' && await hurt([['ミオ', '……うん。知ってる', 'despair'], ['ミオ', '戻れないし、戻っちゃいけないんだよ。私のいる教室になんか', 'shadow'], ['ミオ', '私、最低だよね', 'despair'], ['ミオ', '……いてもいなくても同じなのは、私のほうだったね', 'despair']])) return;
+      if (a === 'oitsu' && await hurt([['ミオ', '……うん。知ってる', 'despair'], ['ミオ', '戻れないし、戻っちゃいけないんだよ。私のいる教室になんか', 'shadow'], ['ミオ', '私、最低だよね', 'despair'], ['ミオ', '……いてもいなくても同じなのは、私のほうだったね', 'despair']], 'strike')) return;
       if (a === 'nagu') {
         R.cons++;
         await say([['ミオ', '……仕方、なかった？', 'surprise'],
@@ -7528,7 +7540,7 @@
       if (a === 'oitsu') { if (await hurt([...(R.cons ? [['ケイ', '……あんたまで、それ言うんだ', 'shadow']] : []), ['ケイ', '……うん。そのつもりだった', 'shadow'],   // 2026-11-17 作者の指示：2段目で慰めた後（R.cons）に突き放すと「言ったのに」。怒りは態度が変わったことへ向け、手を離すこと自体は責めない。ケイは笑って引く
                                 ['ケイ', '土曜の試合で俺が倒れれば、顧問も少しは懲りるだろ', 'despair'],
                                 ['ケイ', 'そしたら、あいつらは怒鳴られずに済む', 'despair'],
-                                ['ケイ', '……最後まで、あいつらの前に立っていたかったな', 'despair']])) return; a = await ask(opts.filter(o => o[1] !== 'oitsu'), 3); }
+                                ['ケイ', '……最後まで、あいつらの前に立っていたかったな', 'despair']], 'strike')) return; a = await ask(opts.filter(o => o[1] !== 'oitsu'), 3); }
       const missing = hasKey('kei') ? [] : ['（何か、あと一つ足りない気がする。この人が受け取れずにいる何かが）'];
       if (a === 'nagu' && R.cons >= 1) {
         await say([['ケイ', '……そっか。大丈夫か', 'smile'],
