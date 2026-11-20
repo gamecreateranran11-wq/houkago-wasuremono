@@ -107,14 +107,14 @@
   .scene .bg { inset: 0; width: 100%; height: 100%; object-fit: cover; transition: filter .5s ease, opacity .7s ease; }
   .scene.talk .bg, .scene.talk .sit { filter: brightness(.55) saturate(.8); }
   .scene .bg-clock { position: absolute; pointer-events: none; }
-  .sit { position: absolute; width: auto; transition: filter .5s ease, opacity .5s ease; pointer-events: none; }
+  .sit { position: absolute; width: auto; transition: filter .5s ease, opacity .7s ease; pointer-events: none; }   /* 2026-11-21 作者の指摘：背景（.7s）とずれないよう、出入りの速さをそろえる */
   /* 2026-11-18 作者の指示（テストプレイで「立ち絵と部屋の中の同じ人物が2人いるように見える」）：話している間だけ、部屋の中の座り絵を少し薄暗くする。話していないときは戻す */
   /* 透かすと幽霊のように見えるので、透明にはせず暗さだけ。2026-11-18 作者の指摘（暗いまま戻らないことがある）：会話の印（talk）ではなく、立ち絵が出ているあいだだけ暗くする（sitdim） */
   #scene.sitdim:not(.room-dark) #sitFig { filter: brightness(.36) saturate(.6); }
   /* 2026-11-20 作者の指示（Museの報告：ツムギの後ろのベッドに黒髪の女の子の影が見える）：明るい保健室では、黒くするほどかえって目立つので、暗くせず彩度だけ下げて背景になじませる */
   #scene.sitdim.sitsoft:not(.room-dark) #sitFig { filter: brightness(.85) saturate(.3); }   /* 2026-11-20 作者の指示：明度と彩度をワントーンずつ落とす */
   /* 2026-11-18 作者の指示：音楽室のピアノは、鍵盤の蓋を開けている間だけ、蓋の開いた透過素材（m_piano_open）を背景に重ねる */
-  .piano-open { opacity: 0; transition: opacity .4s ease; pointer-events: none; }
+  .piano-open { opacity: 0; transition: opacity .7s ease; pointer-events: none; }
   .piano-open.on { opacity: 1; }
   /* 2026-11-17 作者の指示：背景がフェードで切り替わるとき、背景に合わせた椅子・わすれもの・窓の明かりも同じ動きで出入りする（背景の .bg と同じ .7s） */
   #sitChair { transition: filter .5s ease, opacity .7s ease; }
@@ -122,7 +122,7 @@
   .sit.gone { display: none; }
   .scene .sit-front { pointer-events: none; }
   /* 2026-11-20 作者の指示：椅子と座り絵の影（切り抜きを床へ映した全面の透過素材。美術室・音楽室） */
-  .scene .sit-shadow { pointer-events: none; transition: opacity .5s ease; mix-blend-mode: multiply; } /* 2026-11-20 影は掛け算の地図（白＝影なし）。チャッピーが描いた影から取り出したもの */
+  .scene .sit-shadow { pointer-events: none; transition: opacity .7s ease; mix-blend-mode: multiply; } /* 2026-11-20 影は掛け算の地図（白＝影なし）。チャッピーが描いた影から取り出したもの */
   .scene .chime-cg { inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .9s ease; pointer-events: none; z-index: 2; }
   .scene.cg .chime-cg { opacity: 1; }
   .scene.cg .hs { visibility: hidden; }
@@ -3131,6 +3131,7 @@
     const fr = $('#sitFront'), bg = $('#bgImg'), sf = $('#sitFig'), chEl = $('#sitChair');
     if (!fr || !bg || !sf || !chEl) return;   // 後日談のページ（この部分のコードを取り込む）には座り姿がない
     const lo = $('#leftover'); if (lo) lo.style.opacity = bg.style.opacity || '';   // わすれものも、背景と同じ濃さで出入りする
+    sf.style.opacity = bg.style.opacity === '0' ? '0' : '';   // 2026-11-21 作者の指摘：背景の座り姿も、背景と同時に消えて同時に出る（消えた子の .gone は CSS のまま）
     const hit = sitRoomOfBg();
     const sit = hit && hit.ch.sit;
     // 2026-11-16 作者の指摘：背景の絵の読み込みとずれて、椅子だけ先に出たり消えたりしていた。
@@ -3305,17 +3306,17 @@
     const m = src.match(/^img\/artroom(_unlit|_1830_lit|_1830_dark)?\.webp$/);
     const on = !!(m && C && C.id === 'art' && R && R.taken && R.taken.trash);
     if (on) { const want = `img/a_trash_taken${m[1] || ''}.webp`; if (el.getAttribute('src') !== want) el.src = want; }
-    el.classList.toggle('on', on);
+    el.classList.toggle('on', on); el.style.opacity = $('#bgImg').style.opacity === '0' ? '0' : '';   // 背景と一緒に消えて、一緒に出る
   }
-  if ($('#bgImg')) new MutationObserver(() => syncTrash()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src'] });
+  if ($('#bgImg')) new MutationObserver(() => syncTrash()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src', 'style'] });
   function syncPiano() {
     syncTrash();
     const el = $('#pianoOpen'); if (!el) return;
     const on = !!(C && C.id === 'music' && R && R.seen && R.seen.has('lid') && ($('#bgImg').getAttribute('src') || '').endsWith('img/m_room.webp'));
     if (on && !el.getAttribute('src')) el.src = 'img/m_piano_open.webp';
-    el.classList.toggle('on', on);
+    el.classList.toggle('on', on); el.style.opacity = $('#bgImg').style.opacity === '0' ? '0' : '';   // 背景と一緒に消えて、一緒に出る
   }
-  if ($('#bgImg')) new MutationObserver(() => syncPiano()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src'] });
+  if ($('#bgImg')) new MutationObserver(() => syncPiano()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src', 'style'] });
   // 2026-11-19 Muse の報告：校門の絵の代替テキストが、次の部屋に入っても残っていた。背景の絵が替わったら、その絵のための代替テキストでなければ場面の名前に戻す
   if ($('#bgImg')) new MutationObserver(() => { const bg = $('#bgImg'); if (bg.dataset.altFor !== bg.getAttribute('src')) { delete bg.dataset.altFor; const lb = $('#scene').getAttribute('aria-label') || ''; let nm = ''; try { const f = (bg.getAttribute('src') || '').replace(/^.*\//, ''), m = SCENE_NAME.find(([re]) => re.test(f)); nm = m ? m[1] : ''; } catch (e) {} bg.alt = nm && !lb.includes(nm) ? nm : lb; } }).observe($('#bgImg'), { attributes: true, attributeFilter: ['src'] });   // 2026-11-19 Museの報告：屋上で再読み込みすると前の場面の名前が残った。絵の名前から場所を決める（屋上・廊下・正門・保健室）
   function render() {
