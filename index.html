@@ -8903,7 +8903,9 @@
   // この周回で手に入れたわすれもの（棚には残るが、この周回のうちは心に届く言葉の手がかりにならない。思い返しで前の章に戻っても同じ）
   const notYet = k => k !== 'me' && !!P.shelf[k] && !P.saved[k] && (P.shelfRun[k] || 0) >= (P.runNo || 1);
   // 2026-11-20 作者の指示：1周目をクリアしたあと（思い返しが使えるようになってから）だけ出す。新しい放課後になって、わすれものが使えるようになったら消える
-  const newRunOk = () => (P.runNo || 1) > 1 && ORDER.some(id => notYet(CHAPTERS[id].key));   // この放課後で手に入れて、まだ使えないわすれものがある
+  //   1周目をクリアしたかは周回の番号では見ない（思い返し・ロードで番号が1に戻るため。Museの報告）。終えた周回の記録か、屋上の結末を見たことで決める
+  const clearedOnce = () => !!P.lastRun || Object.keys(P.endings || {}).some(k => P.endings[k] && !/^END[123]$/.test(k));
+  const newRunOk = () => clearedOnce() && ORDER.some(id => notYet(CHAPTERS[id].key));   // この放課後で手に入れて、まだ使えないわすれものがある
   const NOT_YET_NOTE = 'この放課後で手に入れたわすれものです。「放課後を思い返す」で前の章に戻っても、この放課後のうちは使えません。次の放課後から、心に届く言葉の手がかりになります（タイトルの「新しい放課後を始める」からも始められます）。';
   function recallSrc() {
     const live = Object.keys(P.cur.results).length || loadRun() || loadRoof();
