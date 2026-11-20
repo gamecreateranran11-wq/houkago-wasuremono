@@ -118,6 +118,8 @@
   #leftover, [data-hi-light] { transition: opacity .7s ease; }
   .sit.gone { display: none; }
   .scene .sit-front { pointer-events: none; }
+  /* 2026-11-20 作者の指示：椅子と座り絵の影（切り抜きを床へ映した全面の透過素材。美術室・音楽室） */
+  .scene .sit-shadow { pointer-events: none; transition: opacity .5s ease; mix-blend-mode: multiply; } /* 2026-11-20 影は掛け算の地図（白＝影なし）。チャッピーが描いた影から取り出したもの */
   .scene .chime-cg { inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .9s ease; pointer-events: none; z-index: 2; }
   .scene.cg .chime-cg { opacity: 1; }
   .scene.cg .hs { visibility: hidden; }
@@ -967,6 +969,8 @@
         <img id="pianoOpen" class="bg piano-open" src="" alt="" aria-hidden="true">
         <svg id="bgClock" class="bg bg-clock" viewBox="0 0 1536 1024" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display:none"></svg>
         <canvas id="bgRain" aria-hidden="true"></canvas>
+        <img id="trashTaken" class="bg piano-open" src="" alt="" aria-hidden="true">
+        <img id="sitShadow" class="bg sit-shadow" src="" alt="" aria-hidden="true" style="display:none">
         <img id="sitChair" class="sit" src="" alt="" aria-hidden="true" style="display:none">
         <img id="sitFig" class="sit" src="" alt="">
         <img id="sitFront" class="bg sit-front" src="" alt="" aria-hidden="true" style="display:none">
@@ -3100,6 +3104,7 @@
     }
     return null;
   }
+  const SIT_SHADOW = new Set(['hina_sit', 'hina_sit_knees', 'hina_sit_window', 'hina_sit_wrist', 'hina_chair', 'sota_sit', 'sota_sit_close', 'sota_sit_lid', 'sota_bench']);
   function syncSitFront() {
     const fr = $('#sitFront'), bg = $('#bgImg'), sf = $('#sitFig'), chEl = $('#sitChair');
     if (!fr || !bg || !sf || !chEl) return;   // 後日談のページ（この部分のコードを取り込む）には座り姿がない
@@ -3122,6 +3127,14 @@
       if (!(chEl.complete && chEl.naturalWidth)) { chEl.style.visibility = 'hidden'; chEl.addEventListener('load', () => syncSitFront(), { once: true }); }
     } else chEl.style.display = 'none';
     const figOn = !sf.classList.contains('gone') && !!sf.getAttribute('src') && C && hit && hit.ch === C;
+    // 2026-11-20 影：座り絵が出ていればそのポーズの影、いなければ椅子だけの影（SIT_SHADOW にある絵だけ）
+    { const shEl = $('#sitShadow');
+      if (shEl) {
+        const fb = figOn ? (sf.getAttribute('src') || '').replace(/^.*\//, '').replace(/\.webp$/, '') : '';
+        const base = fb && SIT_SHADOW.has(fb) ? fb : (sit && sit.chair && SIT_SHADOW.has(sit.chair) && !(sit.chairWhenGone && figOn) ? sit.chair : '');
+        if (base && hit) { const want = `img/${base}_sh${hit.v}.webp`; if (shEl.getAttribute('src') !== want) shEl.setAttribute('src', want); shEl.style.opacity = bg.style.opacity || ''; shEl.style.display = ''; }
+        else shEl.style.display = 'none';
+      } }
     // chairWhenGone：椅子だけの絵と座り絵の椅子の形が少しちがうので、その子が座っている間は椅子だけの絵を出さない（いなくなってから出す。2026-11-11 ミオ）
     if (sit && sit.chair && sit.chairWhenGone && figOn) chEl.style.display = 'none';
     const clip = sit && sit.front, on = !!clip && !!bg.getAttribute('src') && ((sit && sit.chair) || figOn);
@@ -3263,7 +3276,17 @@
   })();
 
   /* ---------- render ---------- */
+  function syncTrash() {
+    const el = $('#trashTaken'); if (!el) return;
+    const src = ($('#bgImg').getAttribute('src') || '').replace(/^.*?(?=img\/[^\/]+$)/, '');
+    const m = src.match(/^img\/artroom(_unlit|_1830_lit|_1830_dark)?\.webp$/);
+    const on = !!(m && C && C.id === 'art' && R && R.taken && R.taken.trash);
+    if (on) { const want = `img/a_trash_taken${m[1] || ''}.webp`; if (el.getAttribute('src') !== want) el.src = want; }
+    el.classList.toggle('on', on);
+  }
+  if ($('#bgImg')) new MutationObserver(() => syncTrash()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src'] });
   function syncPiano() {
+    syncTrash();
     const el = $('#pianoOpen'); if (!el) return;
     const on = !!(C && C.id === 'music' && R && R.seen && R.seen.has('lid') && ($('#bgImg').getAttribute('src') || '').endsWith('img/m_room.webp'));
     if (on && !el.getAttribute('src')) el.src = 'img/m_piano_open.webp';
@@ -5072,9 +5095,9 @@
     clock2If: () => R.st === 'here' && !R.standing,
     // 核心の曲は「破ったのは、お母さん」（選択の後5文目）から始める
     coreAt: 5,
-    id: 'art', key: 'hina', windowImg: 'ci_window_art', memory: ['（……思い出した。校門で生徒手帳を差し出したこと。ヒナは少し驚いて、それからさらさらと名前を書いてくれた）', '（もう一つ。美術室の前の廊下で、窓ごしに一人で描いている背中を見ていたことがある。……声は、かけなかった）'], name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom', bgClock: { cx: 755, cy: 163, rx: 34, ry: 35 },
+    id: 'art', key: 'hina', windowImg: 'ci_window_art', memory: ['（……思い出した。校門で生徒手帳を差し出したこと。ヒナは少し驚いて、それからさらさらと名前を書いてくれた）', '（もう一つ。美術室の前の廊下で、窓ごしに一人で描いている背中を見ていたことがある。……声は、かけなかった）'], name: 'ヒナ', who: 'この子', startMin: 0, room: '美術室', hall: 'hall_art', label: '第一章「美術室」', bg: 'artroom', bgClock: { cx: 786.5, cy: 218.5, rx: 30, ry: 30 },
     // 2026-11-10：椅子を背景の空いた椅子の位置・奥行きにそろえ、手前の作業台を椅子の上に重ねる（作者の指示）
-    sit: { src: 'hina_sit_window', chair: 'hina_chair', style: 'left:2.34%;top:36.43%;height:22.95%', front: 'polygon(8.85% 49.51%, 26.04% 45.12%, 26.04% 55.86%, 11.78% 55.86%, 11.78% 100%, 9.96% 100%, 9.96% 51.56%, 8.85% 51.56%)' },
+    sit: { src: 'hina_sit_window', chair: 'hina_chair', style: 'left:2.8%;top:38.28%;height:21.88%' },   // 2026-11-20 美術室を幅9mに描き直したので、窓ぎわの椅子の位置へ（手前の家具は無いので front なし）
     leftover: 'left:5.5%;top:47.3%;width:4.2%;height:1.4%;transform:rotate(4deg)', leftoverImg: 'h_left',
     faces: { plead: 'hina_plead', normal: 'hina_bust', angry: 'hina_angry', surprise: 'hina_surprise', sad: 'hina_sad', down: 'hina_down', smile: 'hina_smile', grief: 'hina_grief', despair: 'hina_despair', reject: 'hina_reject', shadow: 'hina_despair', angryCry: 'hina_angrycry', wrist: 'hina_wrist', chest: 'hina_chest', chestCry: 'hina_chest_cry', confused: 'hina_confused', pout: 'hina_pout', awaySmile: 'hina_awaysmile', grip: 'hina_grip', window: 'hina_window',
              // スケッチブックの入った鞄を抱えてから、空を描き始めるまで
@@ -5139,16 +5162,17 @@
       return [sitPose(p === 'wrist' ? 'hina_sit_wrist' : p === 'knees' ? 'hina_sit_knees' : p === 'window' ? 'hina_sit_window' : 'hina_sit'), p === 'wrist' ? 'ヒナは手首を隠したまま、もう何も言わなかった。' : p === 'knees' ? 'ヒナは膝に顔をうずめたまま、もう何も言わなかった。'
             : p === 'window' ? 'ヒナは、もう何も言わなかった。'   /* 2026-11-20 作者の指摘：直前の「窓のほうへ顔をそむけた」と重なるので、向きは言わない */ : 'ヒナはうつむいたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。']; },
     hotspots: [
-      ['sink', '流し', 'left:83.3%;top:37.5%;width:16.7%;height:45.8%'],
-      ['shelf', '画材棚', 'left:75.8%;top:14.2%;width:13.3%;height:28%'],
-      ['easel', 'イーゼル', 'left:57.7%;top:46%;width:17%;height:54%'],
+      // 2026-11-20 美術室を幅9mに描き直したので、範囲を新しい絵に合わせた
+      ['sink', '流し', 'left:92%;top:48%;width:8%;height:30%'],
+      ['shelf', '画材棚', 'left:86%;top:18%;width:11%;height:31%'],
+      ['easel', 'イーゼル', 'left:63%;top:51%;width:22%;height:49%'],
       // ゴミ箱は小さいので、イーゼル・画材棚と離して、少し大きめに（スマホで押し間違えないように。重なったときはゴミ箱が上）
-      ['trash', 'ゴミ箱', 'left:76.6%;top:44.5%;width:6.4%;height:16%'],
-      ['notice', '掲示板', 'left:63.8%;top:19.7%;width:10.4%;height:17.3%'],
-      ['board', '黒板', 'left:29.0%;top:19.7%;width:34.2%;height:17.8%'],
-      ['clock', '時計', 'left:46.5%;top:11.8%;width:5.2%;height:7.8%'],
-      ['window', '窓', 'left:0;top:0;width:20%;height:34%'],
-      ['char', 'ヒナ', 'left:0.5%;top:35%;width:15%;height:23%'],
+      ['trash', 'ゴミ箱', 'left:83.8%;top:50.5%;width:8.5%;height:17.5%'],
+      ['notice', '掲示板', 'left:68%;top:25%;width:13%;height:14%'],
+      ['board', '黒板', 'left:28%;top:25%;width:40%;height:17%'],
+      ['clock', '時計', 'left:48.7%;top:17.5%;width:5%;height:7.5%'],
+      ['window', '窓', 'left:0;top:0;width:17%;height:45%'],
+      ['char', 'ヒナ', 'left:2.6%;top:38%;width:9.5%;height:22.5%'],
     ],
     async intro(rem) {
       if (!rem) {
@@ -5231,7 +5255,7 @@
           await say(['丸めた紙の間に絵の切れ端が混じっていた。', '空の一部みたいだ。']);
           R.taken.trash = true; await gotItem('pieceA'); await tick();
         } else if (!R.know.has('entryForm')) {
-          R.know.add('entryForm');
+          R.know.add('entryForm'); showCut('ci_trash_taken');
           await say(['ゴミ箱の底に、くしゃくしゃの紙が一枚張りついていた。', '美術部の入部届の書き損じだ。「入部の理由」の欄に、何度も書き直した跡がある。',
                      '「姉が美術部だったので」……線で消してある。', 'その下に、小さな字で。「絵を描いている間だけは、一人でも平気だから」']);
           await tick();
@@ -5309,6 +5333,7 @@
           await say(['イーゼルの布をめくる。', '画板の紙は破り取られて、マスキングテープの下に絵の端が一片だけ残っていた。', 'テープをそっとはがして手に取る。近くで見ると、右下の隅に、小さくサインのような文字が書いてある。']);
           R.taken.cloth = true; await gotItem('pieceC'); await tick();
         } else if (!R.know.has('recipe')) {
+          showCut('ci_easel_taken');
           // 2回目：画板の裏の、ヒナの色の配合メモ（比べられる苦しさだけでは説明できない、描くことそのものの楽しさ）
           R.know.add('recipe');
           await say(['紙を破り取られた画板だけが残っている。', '画板の裏に、鉛筆の小さな字がびっしり書き込まれていた。',
@@ -5848,9 +5873,9 @@
     clock2If: () => R.st === 'here' && !R.standing,
     id: 'music', key: 'sota', memory: ['（……丸めた楽譜を脇に挟んで、ソウタは手帳に名前を書いてくれた。一画ずつ、丁寧に）'],
     // 心に触れたときの記憶のかけら（2つ目）。連弾の後の心の声と同じ記憶
-    touchMemory: '（火曜の放課後。階段に座って、少し開いた扉のすき間から二人の音を聴いていた。……二人とも、こっちには気づかなかった）', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room', bgClock: { cx: 756, cy: 245, rx: 36, ry: 37 },
+    touchMemory: '（火曜の放課後。階段に座って、少し開いた扉のすき間から二人の音を聴いていた。……二人とも、こっちには気づかなかった）', name: 'ソウタ', who: 'この人', startMin: 30, room: '音楽室', hall: 'hall_music', label: '第二章「音楽室」', bg: 'm_room', bgClock: { cx: 755.5, cy: 331.5, rx: 33, ry: 33 },
     // 2026-11-10：座り絵の椅子だけの絵を、ソウタが消えても残す（背景の椅子は消した）
-    sit: { src: 'sota_sit', close: 'sota_sit_close', chair: 'sota_bench', style: 'left:54.2%;top:46.5%;height:29.5%' },
+    sit: { src: 'sota_sit', close: 'sota_sit_close', chair: 'sota_bench', style: 'left:51.3%;top:49.41%;height:29.5%' },   // 2026-11-20 音楽室を広げたので、新しいピアノの鍵盤の前へ
     leftover: 'left:54.8%;top:61.6%;width:7.5%;height:1.8%;transform:rotate(-2deg)', leftoverImg: 'm_left',
     faces: { plead: 'sota_plead', blank: 'sota_blank', normal: 'sota_bust', angry: 'sota_angry', surprise: 'sota_surprise', sad: 'sota_sad', down: 'sota_down', smile: 'sota_smile', grief: 'sota_grief', despair: 'sota_despair', shadow: 'sota_despair', blame: 'sota_blame', angrySad: 'sota_angrysad', softSmile: 'sota_softsmile', crySmile: 'sota_crysmile', wetHand: 'sota_wethand', lookUp: 'sota_lookup', surpriseUp: 'sota_surpriseup', angryUp: 'sota_angryup' },
     lost: 'ソウタのパートだけの楽譜',
@@ -5909,18 +5934,19 @@
     closeLines: () => { const open = R.seen.has('lid'); R.seen.delete('lid'); syncPiano();
       return [sitPose('sota_sit_lid'), open ? 'ソウタは開いたままだった鍵盤の蓋をそっと閉じて、その上に額をつけた。もう何も言わなかった。' : 'ソウタは閉じた鍵盤の蓋に額をつけたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが17:00へ近づいていった。']; },
     hotspots: [
-      ['window', '窓', 'left:0;top:0;width:18%;height:52%'],
-      ['board', '黒板', 'left:32.8%;top:28.7%;width:33.9%;height:19%'],
-      ['clock', '時計', 'left:46.7%;top:20%;width:5%;height:7.5%'],
-      ['reserve', '使用予約表', 'left:67.9%;top:31.3%;width:6.9%;height:7.6%'],
-      ['stand', '譜面台', 'left:38.3%;top:49%;width:8.3%;height:28.5%'],
-      ['phone', 'ピアノの上', 'left:66.8%;top:46.7%;width:10%;height:6.3%'],
-      ['piano', 'ピアノ', 'left:66.7%;top:53%;width:15%;height:23.7%'],
-      ['char', 'ソウタ', 'left:53.8%;top:47%;width:12.8%;height:30%'],
-      ['bag', '鞄', 'left:47.4%;top:60.5%;width:6.7%;height:14.5%'],
-      ['timpani', 'ティンパニ', 'left:77.2%;top:45%;width:12%;height:17.5%'],
-      ['shelf', '楽譜棚', 'left:90.6%;top:23.3%;width:9.4%;height:38.3%'],
-      ['trash', 'ゴミ箱', 'left:92.8%;top:62.5%;width:7.2%;height:14.2%'],
+      // 2026-11-20 音楽室を広げて描き直したので、範囲を新しい絵に合わせた
+      ['window', '窓', 'left:0;top:12%;width:22%;height:45%'],
+      ['board', '黒板', 'left:34.5%;top:36%;width:30%;height:15%'],
+      ['clock', '時計', 'left:46.8%;top:28.8%;width:4.8%;height:7.3%'],
+      ['reserve', '使用予約表', 'left:65.8%;top:37.8%;width:5.8%;height:7%'],
+      ['stand', '譜面台', 'left:38.5%;top:52%;width:8%;height:24%'],
+      ['phone', 'ピアノの上', 'left:63%;top:51%;width:14%;height:5%'],
+      ['piano', 'ピアノ', 'left:63%;top:55%;width:15%;height:21%'],
+      ['char', 'ソウタ', 'left:51.3%;top:49.4%;width:12%;height:29.5%'],
+      ['bag', '鞄', 'left:47%;top:61.8%;width:6%;height:12%'],
+      ['timpani', 'ティンパニ', 'left:76%;top:47%;width:9%;height:14%'],
+      ['shelf', '楽譜棚', 'left:91.5%;top:31%;width:8.5%;height:37%'],
+      ['trash', 'ゴミ箱', 'left:93.8%;top:62.5%;width:6.2%;height:14.7%'],
     ],
     async intro(rem) {
       if (!rem) {
