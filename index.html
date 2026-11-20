@@ -3070,12 +3070,23 @@
     sv.style.opacity = bg.style.opacity;
     // 遊んでいる章の部屋ならその章の時刻、他の部屋なら画面の時計と同じ時刻
     const [hh, mm] = (bgClockOverride || $('#clock').textContent || '16:00').split(':').map(Number);
-    const min = (room === C && !bgClockOverride) ? chStart() + (R.st === 'unraveled' ? SPAN + 1 : R.ticks * MIN_PER_TICK) : (hh - 16) * 60 + mm;
-    const hAng = (16 * 30 + min * 0.5) % 360, mAng = (min * 6) % 360;
+    // bgClockExtra：時刻の欄は変えずに、壁の時計だけ進める分（ミオが固まっている間など、文で「長い針が進む」場面）
+    const min = (room === C && !bgClockOverride) ? chStart() + (R.st === 'unraveled' ? SPAN + 1 : R.ticks * MIN_PER_TICK) + bgClockExtra : (hh - 16) * 60 + mm;
     const hand = (deg, len, tail, w) => `<polygon transform="rotate(${deg})" points="${-w / 2},${tail} ${-w / 5},${-len} ${w / 5},${-len} ${w / 2},${tail}"/>`;
-    sv.innerHTML = `<g transform="translate(${ck.cx} ${ck.cy}) scale(${ck.rx / 100} ${ck.ry / 100})" fill="#1e1a18" opacity=".9">
-      ${hand(hAng, 42, 8, 9)}${hand(mAng, 66, 10, 5.5)}<circle r="6"/></g>`;
+    const draw = m => { const hAng = (16 * 30 + m * 0.5) % 360, mAng = (m * 6) % 360;
+      sv.innerHTML = `<g transform="translate(${ck.cx} ${ck.cy}) scale(${ck.rx / 100} ${ck.ry / 100})" fill="#1e1a18" opacity=".9">
+      ${hand(hAng, 42, 8, 9)}${hand(mAng, 66, 10, 5.5)}<circle r="6"/></g>`; };
+    // 2026-11-20 作者の指示：同じ部屋で時間が進んだときは、針を回さず、前の針から今の針へフェードで切り替える（部屋が替わったとき・早送り中は、そのまま合わせる）
+    const key = room.bg + '|' + (bgClockOverride || '');
+    clearTimeout(bgClockAnim);
+    if (bgClockShown === null || bgClockKey !== key || reduce || replay || min === bgClockShown) { bgClockShown = min; bgClockKey = key; draw(min); return; }
+    const old = sv.innerHTML; draw(min); const neu = sv.innerHTML; bgClockShown = min;
+    sv.innerHTML = `<g class="bgc-old" style="transition:opacity .7s ease">${old}</g><g class="bgc-new" style="opacity:0;transition:opacity .7s ease">${neu}</g>`;
+    requestAnimationFrame(() => requestAnimationFrame(() => { const o = sv.querySelector('.bgc-old'), n = sv.querySelector('.bgc-new'); if (o) o.style.opacity = '0'; if (n) n.style.opacity = '1'; }));
+    bgClockAnim = setTimeout(() => { if (bgClockShown === min) draw(min); }, 800);
   }
+  let bgClockExtra = 0, bgClockShown = null, bgClockKey = '', bgClockAnim = 0;
+  const bgClockNudge = m => () => { bgClockExtra += m; syncBgClock(); };   // 文の流れの中で、壁の時計の長い針だけ m 分進める
   new MutationObserver(() => syncBgClock()).observe($('#bgImg'), { attributes: true, attributeFilter: ['src', 'style'] });
   // 座り絵の椅子（2026-11-10）：子が消えても・立っても椅子は残す。映っている背景の部屋で決める（BAD5 で別の部屋を映すときも）。
   // 明かりの差分（消灯・18:30）には、椅子の周りの背景の色の比で焼いた版を使う
@@ -3467,7 +3478,7 @@
     }
     // チャイムが鳴っている間は、左上の時計もチャイムの時刻（章の終わり）を指す
     keepMem();
-    R.loop++; R.ticks = CHIME_AT; R.cons = 0; R.repaired = false; bgm(null); bell(); flash(); render(); nmMark('chime');
+    bgClockExtra = 0; R.loop++; R.ticks = CHIME_AT; R.cons = 0; R.repaired = false; bgm(null); bell(); flash(); render(); nmMark('chime');
     const last = R.loop >= 3 && R.st !== 'unraveled';
     // 一度も心に触れていなければ、どの章でもBAD1（ミオを閉め出した周回のツムギも同じ。容態の急変は、心に触れていたときだけ）
     if (last && !R.doom && R.touched && C.lastOverride && C.lastOverride()) {
@@ -4854,7 +4865,7 @@
     // チャイムが鳴るまでは、扉を叩く音のない差分。文の中に曲を始める合図（関数）があるときは、それまで無音（1章：「……そっか」から。2026-11-11 作者の指示）
     bgm(lines.some(l => typeof l === 'function') ? null : 'shutIn');
     await say(lines);
-    nmMark('chime'); R.loop++; R.ticks = CHIME_AT; bgm(null); bell(); flash(); render();
+    nmMark('chime'); bgClockExtra = 0; R.loop++; R.ticks = CHIME_AT; bgm(null); bell(); flash(); render();
     setCG(true);
     await line(`${hm(chEnd())}。チャイムが鳴った。`, true, true);
     // チャイムの絵を出している間に廊下の背景へ差し替え、読み込みが済んでから絵を消す（美術室が一瞬映らないように）
@@ -5124,7 +5135,7 @@
     closeCons: () => { R.pose = null; return [sitPose('hina_sit_wrist'), 'ヒナは袖を引っ張って手首を隠したまま、それきり一度もこちらを見なかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。']; },   // 慰めた後に突き放したとき（失望）
     closeLines: () => { const p = R.pose; R.pose = null;
       return [sitPose(p === 'wrist' ? 'hina_sit_wrist' : p === 'knees' ? 'hina_sit_knees' : p === 'window' ? 'hina_sit_window' : 'hina_sit'), p === 'wrist' ? 'ヒナは手首を隠したまま、もう何も言わなかった。' : p === 'knees' ? 'ヒナは膝に顔をうずめたまま、もう何も言わなかった。'
-            : p === 'window' ? 'ヒナは窓の外へ顔を向けたまま、もう何も言わなかった。' : 'ヒナはうつむいたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。']; },
+            : p === 'window' ? 'ヒナは、もう何も言わなかった。'   /* 2026-11-20 作者の指摘：直前の「窓のほうへ顔をそむけた」と重なるので、向きは言わない */ : 'ヒナはうつむいたまま、もう何も言わなかった。', '沈黙のまま、時計の針だけが16:30へ近づいていった。']; },
     hotspots: [
       ['sink', '流し', 'left:83.3%;top:37.5%;width:16.7%;height:45.8%'],
       ['shelf', '画材棚', 'left:75.8%;top:14.2%;width:13.3%;height:28%'],
@@ -6956,7 +6967,7 @@
       if (a === 'seiron') {
         await say([...(R.cons ? [['ミオ', '……味方でいてくれるって、思っちゃった', 'frown'], ['ミオ', 'ばかみたい。私なんかに、味方がいるわけないのに', 'down']] : []), () => bgm(null),
                    // 2026-11-18 作者の指示：「〜べき」と言われて、向き合おうとした頭が止まる（作者の経験から）。黒板の件と中学のいじめの記憶が一度に押し寄せ、受け止めきれずに止まる。
-                   //   企画書02「解離の解釈」の範囲（病名のつく重い解離は扱わない）に収めるので、長さは数分（長い針が三目盛りほど）。
+                   //   企画書02「解離の解釈」の範囲（病名のつく重い解離は扱わない）に収めるので、長さは数分（長い針が二目盛り。2026-11-20 壁の時計の針と合わせた）。
                    //   すぐ固まるとは限らず、少し考えているうちに止まる。固まっている間も頭の中は動いていることがあるので、会話がかみ合わなくなる形にはしない。
                    //   固まったあとは体の動きも鈍い。もう一度考えようとすると、また止まる。言いたいことが口から出てこない（理由はうまく説明できない）
                    ['', 'ミオは「謝る」と、口の中で小さくくり返した。', 'frown'],
@@ -6964,12 +6975,12 @@
                    ['', '……そのまま、止まった。', 'frown'],
                    ['', 'しおりの端に触れていた指も、こちらを見ていた目も、動かない。', 'frown'],
                    '……返事を待った。',
-                   '壁の時計の長い針が、ひと目盛り、またひと目盛りと進んでいく。',
+                   bgClockNudge(1), '壁の時計の長い針が、ひと目盛り進んだ。',   // 2026-11-20 作者の指示：文に合わせて壁の時計の針も進める。27分に話しかけて30分を指さないよう、合わせて2分
                    // 2026-11-18 作者の指示：固まっている間は、声をかけられても動けず、喋れないので反応できない
                    '「……ミオさん？」',
                    //   まばたきなど体が勝手にする動きは止まらない（自分では止めることも動かすこともできない）
                    ['', '返事はなかった。まばたきだけが、ときどき、思い出したように落ちる。', 'frown'],
-                   '長い針が、もうひと目盛り進んだ。',
+                   bgClockNudge(1), '……また、ひと目盛り。',   // 2026-11-20 作者の指摘：前の「長い針が、ひと目盛り進んだ」と重なるので短く
                    //   硬直は一度に解けることも、少しずつ解けることもある。どこから動くかも決まっていない（指先・足先のことも）。今回のミオは少しずつ解けて、口元だけが先に動いた
                    ['', 'やがて、体は止まったまま、唇だけがかすかに動いた。', 'frown'],
                    ['ミオ', '……分かってる。……分かってる、けど', 'down'],
@@ -8589,7 +8600,7 @@
   function clearStage() {
     const scene = $('#scene');
     scene.classList.add('reset');
-    scene.classList.remove('cut', 'talk', 'cg', 'story', 'room-dark', 'bad-dark'); $('.clock').classList.remove('fadeout'); $('#inv').classList.remove('fadeout');
+    bgClockExtra = 0; scene.classList.remove('cut', 'talk', 'cg', 'story', 'room-dark', 'bad-dark'); $('.clock').classList.remove('fadeout'); $('#inv').classList.remove('fadeout');
     const ci = $('#cutin'); ci.classList.remove('show'); ci.innerHTML = '';
     $('#getItem').hidden = true;
     $('#sitFig').classList.remove('gone');
