@@ -109,7 +109,7 @@
   /* 透かすと幽霊のように見えるので、透明にはせず暗さだけ。2026-11-18 作者の指摘（暗いまま戻らないことがある）：会話の印（talk）ではなく、立ち絵が出ているあいだだけ暗くする（sitdim） */
   #scene.sitdim:not(.room-dark) #sitFig { filter: brightness(.36) saturate(.6); }
   /* 2026-11-20 作者の指示（Museの報告：ツムギの後ろのベッドに黒髪の女の子の影が見える）：明るい保健室では、黒くするほどかえって目立つので、暗くせず彩度だけ下げて背景になじませる */
-  #scene.sitdim.sitsoft:not(.room-dark) #sitFig { filter: saturate(.45); }
+  #scene.sitdim.sitsoft:not(.room-dark) #sitFig { filter: brightness(.85) saturate(.3); }   /* 2026-11-20 作者の指示：明度と彩度をワントーンずつ落とす */
   /* 2026-11-18 作者の指示：音楽室のピアノは、鍵盤の蓋を開けている間だけ、蓋の開いた透過素材（m_piano_open）を背景に重ねる */
   .piano-open { opacity: 0; transition: opacity .4s ease; pointer-events: none; }
   .piano-open.on { opacity: 1; }
@@ -3565,6 +3565,8 @@
     clearTimeout(slow); $('#loading').hidden = true;
     bg.src = pre.src;
     $('#sitFig').classList.add('gone'); $('#leftover').style.display = 'none'; $('#hsLayer').innerHTML = '';
+    // 2026-11-20 作者の指示：教室を出たら、その教室で手に入れた持ち物（空の絵・ハルのパートの楽譜なども）は持っていかない
+    if (R && R.items) { R.items.clear(); $('#inv').innerHTML = ''; }
     $('#scene').classList.remove('room-dark');   // 廊下は部屋の暗さを引き継がない
     try { await bg.decode(); } catch (e) {}
   }
@@ -6623,7 +6625,8 @@
             R.taken.key = true;
             await say(['並べ方はもう覚えている。背のラベルの順に、本を入れ替えていく。',
                        '……すき間が、『ひとりぶんの椅子』のあるはずの場所に戻った。奥の棚板のフックに閉架書庫の鍵が掛かっている。']);
-            await gotItem('stackKey'); await tick(); return;
+            if (!R.know.has('diary')) await gotItem('stackKey');   // 書庫の中はもう見たので、鍵は掛けたままにしておく
+            await tick(); return;
           }
           if (!R.know.has('notebook')) {
             // 2回目：あの本があるはずのすき間に、ミオのノート。空想に耽る癖で書いた『ひとりぶんの椅子』の、逆の結末の続き
@@ -6680,7 +6683,8 @@
                    '……穴の奥に、鍵。図書委員にだけ分かる、鍵のありかの覚え書きだ。本が正しい順に並んでいないと読めないようになっている。',
                    'すき間に手を差し込むと、奥の棚板の裏に小さなフック。古い鍵が一本掛かっていた。札に「閉架書庫」。',
                    '誰かがこのすき間を見なくて済むように周りの本を詰めて隠していたのかもしれない。']);
-        await gotItem('stackKey'); await tick();
+        if (!R.know.has('diary')) await gotItem('stackKey');
+        await tick();
       },
       async notice() {
         showCut('lci_notice');
@@ -6701,7 +6705,7 @@
           if (!ok) return;
           if (!R.know.has('acrostic')) {
             await say(['赤い丸の中に透けた字を、右の列から順に上から拾っていく。', '……つ、む、ぎ、へ。……ご、め、ん、ね。', '……「ツムギへ　ごめんね」。']);
-            R.know.add('acrostic'); R.seen.add('acrostic'); await tick();
+            R.know.add('acrostic'); R.seen.add('acrostic'); R.items.delete('draft'); render(); await tick();   // 2026-11-20：謎を解いたら下書きはもう持たない
           } else await say(['「ツムギへ　ごめんね」。貼り出された紹介文の中に、ずっと隠れていた言葉。']);
           return;
         }
@@ -6713,7 +6717,7 @@
         if (!R.taken.trash) {
           showCut('lci_trash');
           await say(['ゴミ箱にくしゃくしゃの紙が一枚。', '広げると、図書だよりの下書きだった。']);
-          R.taken.trash = true; await gotItem('draft'); await tick();
+          R.taken.trash = true; if (!R.know.has('acrostic')) await gotItem('draft'); else await say(['……隠れていた言葉は、もう読み取ってある。紙は、元のゴミ箱に戻した。']);   // 隠れた言葉を読み取ったあとは、もう持っていかない await tick();
         } else if (!R.know.has('overdue')) {
           R.know.add('overdue');
           await say(['ゴミ箱の底にもう一枚、小さく丸めた紙が残っていた。', '図書委員が印刷する「返却のお願い」の紙だ。',
@@ -6766,7 +6770,9 @@
                    '書かれていた言葉は、ページの余白に誰かの細い字で小さく写してあった。',
                    '「いてもいなくても同じ」',
                    'ページの間に図書室の貸出カードが一枚、しおりのように挟まっている。借りた人は「水野ミオ」。']);
-        R.know.add('diary'); R.seen.add('diary'); await tick();
+        R.know.add('diary'); R.seen.add('diary'); R.items.delete('stackKey'); render();
+        await say(['鍵は抜いて、913の棚の奥のフックに戻した。']);   // 2026-11-20：使ったら持たない（扉の横の貼り紙「鍵は使い終わったら、いつもの棚の奥へ」）
+        await tick();
       },
       async desk() {
         // 2回目からは、机の写真の後にお母さんのメッセージが届いた画面（lci_phone2）
@@ -7300,7 +7306,7 @@
           await tick(); return;
         }
         await say(['最後に、「ケイ」のマグネットをスモールフォワードの位置に置いた。', '並べ終えたボードを、少し離れて眺めた。']);
-        R.know.add('lineup'); R.seen.add('lineup');
+        R.know.add('lineup'); R.seen.add('lineup'); R.items.delete('logbook'); render();   // 2026-11-20：謎を解いたら部誌はもう持たない
         await say(['……ケイが本当に組みたかったのは、この並びなんだ。', 'けがをしたハヤトはベンチで休ませる。試合の最後まで走り続ける場所には、自分が入る。',
                    '後輩のことはこんなに考えているのに。……自分の場所だけは一番きついところだった。']);
         await tick();
@@ -7312,7 +7318,7 @@
                      '「土曜のスタメン　ポイントガード：ケイ　シューティングガード：ハヤト　スモールフォワード：シュン　パワーフォワード：ミナト　センター：ダイチ　ベンチ：ユウマ」',
                      'その横に部誌が開いたまま置いてあった。']);
           R.know.add('logbook'); await gotItem('logbook'); await tick();
-        } else if (!R.items.has('logbook') && !R.taken.desk) {
+        } else if (!R.items.has('logbook') && !R.taken.desk && !R.know.has('lineup')) {
           // チャイムで時間が戻ると持ち物は消える。部誌を読んだことがあれば、もう一度手に取る
           R.taken.desk = true;
           await say(['顧問の机の上に、部誌が開いたまま置いてある。……もう一度手に取った。']);
@@ -7825,7 +7831,7 @@
     if (v === '') { await say(['来室カードと当番表を見比べた。……まだ、何も選んでいない。']); return; }
     if (v !== ROSTER_ANSWER) { nmMark('puz'); await say(['来室カードと当番表を見比べた。……どこか、合わない気がする。']); return; }
     if (R.know.has('match')) { await say(['17:00まで残っていた日は、どれも「水野」が当番に入った日だ。……曜日が変わった6/19も。']); return; }
-    R.know.add('match'); R.seen.add('match');
+    R.know.add('match'); R.seen.add('match'); R.items.delete('card'); R.items.delete('roster'); render();   // 2026-11-20：見比べ終えたら、来室カードと当番表はもう持たない
     await say(['来室カードの17:00の日を、当番表で一つずつ探していく。', '6/13、6/17、6/19、6/20、7/4、7/8。……どの日のマスにも「水野」の名前がある。',
                '6/19は木曜。ミオが他の委員の代わりに入った日だ。……その日も、ツムギは17:00まで残っていた。',
                '図書室が閉まるのは、17:00。……ツムギは曜日で決めていたんじゃない。ミオが当番の日だけ、帰りを遅らせていたんだ。']);
@@ -8067,7 +8073,8 @@
           R.taken.drawer = true;
           await say(['つまみの動かし方は覚えている。左、上、上、右。']); lockClick();
           await say(['引き出しの中に、ツムギの来室カード。予約票の控えと、先生のメモ。']);
-          await gotItem('card'); await tick(); return;
+          if (!R.know.has('match')) await gotItem('card');   // 当番表と見比べ終えたあとは、引き出しに戻したまま
+          await tick(); return;
         }
         if (R.taken.drawer) {
           if (!R.know.has('hospital')) {
@@ -8124,14 +8131,15 @@
         if (R.taken.key && !R.taken.cabinet) {
           R.taken.cabinet = true;
           if (R.know.has('roster')) {
-            await say(['床頭台の扉を鍵で開けた。図書委員会の当番表を、もう一度取り出す。']);
+            await say([R.know.has('match') ? '床頭台の扉を鍵で開けた。中の当番表は、もう来室カードと見比べてある。' : '床頭台の扉を鍵で開けた。図書委員会の当番表を、もう一度取り出す。']);
           } else {
             R.know.add('roster');
             await say(['「2」のベッドの床頭台。扉の鍵穴に、救急箱の鍵を差し込んだ。……開いた。',
                        '中にクリアファイルが一冊。図書委員会から届いた、6〜7月の当番表だった。', '二年の欄。曜日ごとに当番の名前が並んでいる。',
                        '……ツムギは委員のままなんだ。']);
           }
-          await gotItem('roster'); await tick(); return;
+          if (!R.know.has('match')) await gotItem('roster');
+          await tick(); return;
         }
         if (R.taken.cabinet) {
           if (!R.know.has('bag')) {
