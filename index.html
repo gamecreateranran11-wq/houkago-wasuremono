@@ -8735,6 +8735,7 @@
         ${(save || roof || allDone()) ? '' : `<button type="button" class="btn primary" id="tGo">${nextCh().room}へ向かう<span class="sub">${nextCh().label}　${hm(nextCh().startMin || 0)}から</span></button>`}
         ${SLOTS.some(n => readSlot(n)) ? '<button type="button" class="btn" id="tLoad">ロード</button>' : ''}
         ${Object.keys(P.shelf || {}).some(k => P.shelf[k]) ? '<button type="button" class="btn" id="tShelf">わすれもの棚</button>' : ''}
+        ${newRunOk() ? '<button type="button" class="btn" id="tNewRun">新しい放課後を始める<span class="sub">わすれものを持って、美術室から</span></button>' : ''}
         ${(P.runNo || 1) > 1 && recallSrc() ? '<button type="button" class="btn" id="tRecall">放課後を思い返す<span class="sub">好きな章から、やり直せます</span></button>' : ''}
         ${!roof && loadRoofStart() ? '<button type="button" class="btn" id="tRoofBack">屋上に戻る<span class="sub">最後に着いた屋上の初めから</span></button>' : ''}
         ${extrasAny() ? '<button type="button" class="btn" id="tExtra">おまけ</button>' : ''}
@@ -8771,6 +8772,15 @@
     };
     if ($('#tShelf')) $('#tShelf').onclick = showShelf;
     if ($('#tRecall')) $('#tRecall').onclick = showRecall;
+    // 2026-11-20 作者の指示（Museのテストプレイ）：思い返しや章のやり直しを続けると、この放課後で手に入れたわすれものがいつまでも使えない。タイトルから新しい放課後を始められるようにする
+    if ($('#tNewRun')) $('#tNewRun').onclick = async () => {
+      const held = ORDER.map(id => CHAPTERS[id]).filter(c => notYet(c.key)).map(c => `${c.name}の「${c.lost}」`);
+      const v = await uiWait(`<p class="eyebrow">新しい放課後を始める</p><h2>美術室から、新しい放課後を始めますか？</h2>
+        <p>今の放課後は、ここで終わりにします。${(loadRun() || loadRoof()) ? '今の放課後の続きは消えます。' : ''}</p>
+        <p>${held.join('・')}を、次の放課後で使えるようになります。</p><p class="note">調べたこと・話したことは、覚えています。</p>`, '', ['始める', 'やめる']);
+      closeOverlay();
+      if (v === 0) { finishRun(true); startRun(ORDER[0]); } else showTitle();
+    };
     if ($('#tRoofBack')) $('#tRoofBack').onclick = askRoofBack;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
     if ($('#tExtra')) $('#tExtra').onclick = showExtras;
     $('#tSet').onclick = showSettings;
@@ -8892,7 +8902,8 @@
   const RES_LABEL = { saved: 'ほどけた', vanished: '消えた', shut: '閉ざされた扉', died: '灯が消えた' };
   // この周回で手に入れたわすれもの（棚には残るが、この周回のうちは心に届く言葉の手がかりにならない。思い返しで前の章に戻っても同じ）
   const notYet = k => k !== 'me' && !!P.shelf[k] && !P.saved[k] && (P.shelfRun[k] || 0) >= (P.runNo || 1);
-  const NOT_YET_NOTE = 'この放課後で手に入れたわすれものです。「放課後を思い返す」で前の章に戻っても、この放課後のうちは使えません。次の放課後から、心に届く言葉の手がかりになります。';
+  const newRunOk = () => ORDER.some(id => notYet(CHAPTERS[id].key));   // この放課後で手に入れて、まだ使えないわすれものがある
+  const NOT_YET_NOTE = 'この放課後で手に入れたわすれものです。「放課後を思い返す」で前の章に戻っても、この放課後のうちは使えません。次の放課後から、心に届く言葉の手がかりになります（タイトルの「新しい放課後を始める」からも始められます）。';
   function recallSrc() {
     const live = Object.keys(P.cur.results).length || loadRun() || loadRoof();
     if (live) return { live: true, runNo: P.runNo || 1, cur: P.cur };
@@ -8923,7 +8934,7 @@
     const v = await overlayWait(`<p class="eyebrow">放課後を思い返す</p><h2>${roof ? '屋上' : ch.label}から、思い返しますか？</h2>
       ${later.length ? `<p>${later.join('・')}の結果は、なかったことになります。</p>` : ''}
       ${src.live && (loadRun() || loadRoof()) ? '<p>今の放課後の続きは消えます。</p>' : ''}
-      ${heldNow.length ? `<p>この放課後で手に入れたわすれもの（${heldNow.join('・')}）は、わすれもの棚に残りますが、戻っても、この放課後のうちは使えません。次の放課後から使えます。</p>` : '<p class="note">この放課後で手に入れたわすれものは、戻っても、この放課後のうちは使えません。</p>'}
+      ${heldNow.length ? `<p>この放課後で手に入れたわすれもの（${heldNow.join('・')}）は、わすれもの棚に残りますが、戻っても、この放課後のうちは使えません。次の放課後から使えます。使うには、タイトルの「新しい放課後を始める」から始めてください。</p>` : '<p class="note">この放課後で手に入れたわすれものは、戻っても、この放課後のうちは使えません。</p>'}
       <p class="note">調べたこと・話したことは、覚えています。</p>`, '', ['思い返す', 'やめる']);
     if (v !== 0) return showRecall();
     const keys = ORDER.map(id => CHAPTERS[id].key), nm = { ...(src.cur.nm || {}), rewind: true };
