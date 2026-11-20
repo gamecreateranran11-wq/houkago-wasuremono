@@ -108,6 +108,8 @@
   /* 2026-11-18 作者の指示（テストプレイで「立ち絵と部屋の中の同じ人物が2人いるように見える」）：話している間だけ、部屋の中の座り絵を少し薄暗くする。話していないときは戻す */
   /* 透かすと幽霊のように見えるので、透明にはせず暗さだけ。2026-11-18 作者の指摘（暗いまま戻らないことがある）：会話の印（talk）ではなく、立ち絵が出ているあいだだけ暗くする（sitdim） */
   #scene.sitdim:not(.room-dark) #sitFig { filter: brightness(.36) saturate(.6); }
+  /* 2026-11-20 作者の指示（Museの報告：ツムギの後ろのベッドに黒髪の女の子の影が見える）：明るい保健室では、黒くするほどかえって目立つので、暗くせず彩度だけ下げて背景になじませる */
+  #scene.sitdim.sitsoft:not(.room-dark) #sitFig { filter: saturate(.45); }
   /* 2026-11-18 作者の指示：音楽室のピアノは、鍵盤の蓋を開けている間だけ、蓋の開いた透過素材（m_piano_open）を背景に重ねる */
   .piano-open { opacity: 0; transition: opacity .4s ease; pointer-events: none; }
   .piano-open.on { opacity: 1; }
@@ -188,8 +190,10 @@
   .msg.lifted { z-index: 6; box-shadow: 0 -8px 18px rgba(40, 30, 20, .22); }
   .choice { text-align: left; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 10px 14px; line-height: 1.6; cursor: pointer; }
   .choice:hover { border-color: var(--akane); }
-  .choice.burnt { opacity: .55; }
-  .choices .choice.picked { color: #8a6f8f; }
+  /* 2026-11-20 作者の指示：前の放課後で選んだことがある（この放課後ではまだ選んでいない）選択肢は、色だけ変えて、大きさ・太さは元の選択肢と同じ。
+     この放課後で選んだ選択肢は、別の色の細い字（読める濃さ） */
+  .choices .choice.picked { color: #3d7088; font-size: inherit; font-weight: 400; }   /* 2026-11-20 作者の指示：紫は黒と見分けにくいので縹に。色覚に頼らず明るさで見分けられるよう、黒（L*15）＞縹（L*45）＞灰（L*62）の順に濃さを離す */
+  .choices .choice.pickedNow { color: #9b968e; font-family: 'Zen Kurenaido', var(--hand); font-weight: 400; letter-spacing: .02em; }   /* 2026-11-20 作者の指示：ふつうの選択肢と見分けやすいよう灰色に */
   .choices .choice.picked:hover { color: var(--blue); }
   .choices.roof .choice.picked { color: #8d88a3; }
   .choices.roof .choice { color: #4a5a72; letter-spacing: .02em; }
@@ -1348,7 +1352,7 @@
   }
   let talkHold = false;
   // 部屋の中の座り絵を暗くするのは、立ち絵（#portrait）が出ているあいだだけ。立ち絵が消えたら、どの流れで消えても必ず戻す
-  if ($('#portrait')) new MutationObserver(() => { $('#scene').classList.toggle('sitdim', $('#portrait').classList.contains('show')); }).observe($('#portrait'), { attributes: true, attributeFilter: ['class'] });
+  if ($('#portrait')) new MutationObserver(() => { $('#scene').classList.toggle('sitdim', $('#portrait').classList.contains('show')); $('#scene').classList.toggle('sitsoft', !!(C && C.id === 'infirmary')); }).observe($('#portrait'), { attributes: true, attributeFilter: ['class'] });
   function setTalk(on, f) {
     const faces = C ? C.faces : {};
     const pt = $('#portrait'), wasShown = pt.classList.contains('show');
@@ -1428,7 +1432,7 @@
     }
   });
   // 一度選んだことがある選択肢（周回をまたいで残す。プレイデータのリセットで消える）
-  function markPicked(o) { if (typeof o !== 'string') return; P.picked = P.picked || {}; if (!P.picked[o]) { P.picked[o] = 1; saveP(); } }
+  function markPicked(o) { if (typeof o !== 'string') return; if (R) { R.chosen = Array.isArray(R.chosen) ? R.chosen : []; if (!R.chosen.includes(o)) R.chosen.push(o); } P.picked = P.picked || {}; if (!P.picked[o]) { P.picked[o] = 1; saveP(); } }
   function choose(opts) {
     const r = replayed(); if (r) { chs.innerHTML = ''; addLog({ choice: opts[r.v] }); if (R) R.lastPick = opts[r.v]; markPicked(opts[r.v]); return Promise.resolve(r.v); }
     return new Promise(res0 => {
@@ -1439,12 +1443,11 @@
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'choice'; b.textContent = o;
         // 2026-11-10 主人公の後悔：この章で前に心を閉ざされた・傷つけた言葉は薄く残す。選ぼうとすると一度だけ手が止まる（作者の指示）
-        const burnt = R && Array.isArray(R.failed) && R.failed.includes(o);
-        if (burnt) { b.classList.add('burnt'); b.dataset.armed = ''; }
-        if (P.picked && P.picked[o]) b.classList.add('picked');   // 2026-11-10 一度選んだことがある選択肢は色を変える（作者の指示）
+        // 2026-11-20 作者の決定：心を閉ざされた選択肢を薄くする表示と「（さっきは、これで……）」はやめた（判定を見せる表示で、子どもたちの話のノイズになる）
+        if (R && Array.isArray(R.chosen) && R.chosen.includes(o)) b.classList.add('pickedNow');   // この放課後（この章）で選んだ選択肢
+        else if (P.picked && P.picked[o]) b.classList.add('picked');   // 2026-11-10 一度選んだことがある選択肢は色を変える（作者の指示）
         b.onclick = ev => {
           ev.stopPropagation();
-          if (burnt && !b.dataset.armed) { b.dataset.armed = '1'; const t = document.createElement('span'); t.className = 'sting'; t.textContent = '（さっきは、これで……）'; b.appendChild(t); return; }
           chs.innerHTML = ''; addLog({ choice: o }); res(i);
         };
         chs.appendChild(b);
@@ -3534,7 +3537,7 @@
            arrive: () => P.cur.results.mio === 'saved' ? [] : ['一階の廊下は、明かりが消えていた。', '少し先の扉の窓だけが、白く光っている。札に「保健室」とある。', '下校の時刻は、とうに過ぎているのに。', '引き戸に手をかけた。'] },
     // 第5章の後は次の教室がない。18:30のチャイムの中で、放課後の終わりへ続ける
     infirmary: { arrive: shut => [
-      ...(shut ? (shutLit() ? ['廊下の窓の向こうに、消えていない明かりが見えた。', `数えると、${shutLit()}つ。`] : ['廊下の窓の向こうの特別教室棟は、どの窓も暗かった。'])
+      ...(shut ? (shutLit() ? ['廊下の窓の向こう、特別教室棟に、消えていない明かりが見えた。', `数えると、${shutLit()}つ。`] : ['廊下の窓の向こうの特別教室棟は、どの窓も暗かった。'])
                : [...(P.cur.results.mio === 'saved' ? [] : [`窓の向こうで、図書室の明かりは${P.cur.results.mio === 'shut' ? 'ついたままだった' : '消えていた'}。`])]),
       'チャイムが鳴り続けている。', '最終下校の時刻だ。', '（……そういえば、自分の教室はどこだったんだろう）'] },
   };
@@ -6008,12 +6011,14 @@
       async bag() {
         // ハルが中古屋で見つけて7/8の昼休みに渡したCD。付箋をはがしていない＝ソウタはまだ聴いていない（その夜の言葉と事故のあと、自分を責めて「聴く資格がない」と思っている。2026-11-19 作者）
         showCut('mci_bag');
-        if (!R.know.has('bagCd')) {
-          R.know.add('bagCd');
+        // 2026-11-20 作者の指示（Museの報告：2周目以降は付箋の中身が読めなかった）：その周回で1回目に調べたときは、付箋の字まで読める。時間が進むのは初めて知ったときだけ
+        const cdNew = !R.know.has('bagCd');
+        if (cdNew || !R.cdRead) {
+          R.know.add('bagCd'); R.cdRead = true;
           await say(['ピアノ椅子のそばの床に、ソウタの鞄が置いてある。開いた口から、CDのケースが一枚のぞいていた。',
                      'ジャズのピアノの古いアルバムだ。ケースに付箋。右上がりの字で「中古屋で発掘した。だまされたと思って聴け。感想はリハで」。',
                      '……付箋は、ケースの口をふさいだまま、一度もはがされていない。']);
-          await tick();
+          if (cdNew) await tick();
         } else await say(['鞄の口から、CDのケースがのぞいている。付箋は、貼られたままだ。']);
       },
       // 黒板の右の壁の使用予約表（2026-11-19 作者の指示：前は時計の2回目。調べる場所にして、時間も進める。2回目は7/8の欄）
@@ -9428,7 +9433,10 @@
       const b = card.querySelector(`[data-k="${k}"]`);
       if (b) b.onclick = async () => {
         const it = ch.shelfItem(!!P.saved[k]);
-        await overlayWait(`<p class="eyebrow">${ch.name}のわすれもの</p><h2>${it.title}</h2>${it.body}${notYet(k) ? `<p class="note">${NOT_YET_NOTE}</p>` : ''}`, '', ['戻る']);
+        // 2026-11-20 作者の指示（Museの報告）：来室カードは、棚からも空欄を明かりにかざして読み返せる
+        const lightUp = k === 'tsumugi' && !P.saved[k];
+        const v = await uiWait(`<p class="eyebrow">${ch.name}のわすれもの</p><h2>${it.title}</h2>${it.body}${notYet(k) ? `<p class="note">${NOT_YET_NOTE}</p>` : ''}`, '', lightUp ? ['空欄を、明かりにかざす', '戻る'] : ['戻る']);
+        if (lightUp && v === 0) await uiWait(`<p class="eyebrow">わすれもの</p><h2>空欄の行</h2><p>「来室理由」の欄に、消しゴムで消した跡がある。……うっすらと、読める。</p><p class="quote">「図書室へ」</p>`, '', ['戻る']);
         showShelf();
       };
     });
@@ -9464,7 +9472,14 @@
   $('#btnLog').onclick = e => { e.stopPropagation(); showLog(); };
   // ヒント：進み具合に合わせて1つだけ出す（時間は進まない）
   $('#btnHint').onclick = () => act(hintScript, 'hint');
-  $('#btnWait').onclick = () => act(waitScript, 'wait');
+  // 2026-11-20 作者の指示（Museの報告：既読スキップ中に、意図せずチャイムまで進んだ）：押したら選んだ印を外し（Enter・Space で文を送ると、残った印でまた押されてしまう）、一度確かめる
+  $('#btnWait').onclick = async () => {
+    $('#btnWait').blur();
+    if (busy || !R || R.over) return;
+    const v = await uiWait('<p class="eyebrow">チャイムを待つ</p><p class="note">残りの時間を飛ばして、チャイムまで待ちますか？</p>', '', ['チャイムまで待つ', 'やめる']);
+    closeOverlay();
+    if (v === 0) act(waitScript, 'wait');
+  };
   // 音量バー：BGMはすぐに反映、効果音は試しに1音鳴らす。メニューとタイトル画面のバーは同じ設定を共有する
   function wireVol(bEl, sEl) {
     bEl.value = Math.round(P.bgmVol * 100); sEl.value = Math.round(P.seVol * 100);
