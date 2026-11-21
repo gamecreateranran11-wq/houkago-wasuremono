@@ -592,6 +592,11 @@
   .roof-fx.ripple i { position: absolute; width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid rgba(220, 240, 248, .8); animation: rip 2.2s ease-out both; }
   @keyframes rip { from { transform: scale(.2); opacity: 1; } to { transform: scale(14); opacity: 0; } }
   #bgRain { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; display: none; }
+  /* 2026-11-21 作者の指示：過去の回想の背景は彩度を落とし、ベージュの幕をかけたように色あせさせる */
+  /* 作者の決定（A）：記憶のかけらの画面と同じ処理。ぼかして色を落とし、記憶のかけらの白っぽい色を3割重ねる（ぼかした縁が透けないよう少しだけ拡大） */
+  #scene.recall #bgImg { filter: blur(2px) saturate(.55) brightness(1.08); transform: scale(1.02); }
+  #stage::after { content: ""; position: absolute; inset: 0; background: rgba(249, 243, 237, .3); opacity: 0; pointer-events: none; transition: opacity .7s ease; }
+  #scene.recall #stage::after { opacity: 1; }
   #scene.roof-dark #bgImg { filter: brightness(.35) saturate(.6); transition: filter 1.2s ease; }
   #scene.roof-wind #bgImg { filter: brightness(.5) saturate(.5) hue-rotate(-10deg); transition: filter 1.2s ease; }
   #scene.tint-warm #bgImg { filter: brightness(1.08) saturate(1.1) sepia(.15); transition: filter 1.6s ease; }
@@ -1127,7 +1132,7 @@
       return d;
     } catch (e) { return null; }
   }
-  function clearRoof() { try { localStorage.removeItem(ROOF_KEY); } catch (e) {} }
+  function clearRoof() { $('#scene').classList.remove('recall'); try { localStorage.removeItem(ROOF_KEY); } catch (e) {} }
 
   /* 手動セーブ：3つのファイル。放課後の途中経過と、そのときの進み具合（わすれもの棚・開放した章・閉ざされた扉）をまとめて記録する。
      実績（朝を迎えた記録・見たエンディング・周回数）と既読はファイルに含めず、ロードしても変わらない */
@@ -4097,7 +4102,7 @@
       if (done.length === 1) await say(['……なぞると、思い出すことがあった。']);
       $('#cutin').classList.add('fade-slow'); hideCut();   // 手帳も、背景・椅子と同じ .7s で消える
       const c = CHAPTERS[id], m = c && (c.touchMemory || (c.memory && c.memory[1])), sm = SMALL[id];
-      await endScene(IMG[id]);
+      await endScene(IMG[id], true);
       if (m) await say([m.replace('（もう一つ。', '（')]);
       // 章の心の声をくり返すのは、最初になぞった1人だけ（2026-11-11 作者の指示：つながりはもう読めているので、答え合わせとして並べ直さない。4・5章の言いかけて途切れる余韻も残す）
       if (done.length === 1) await say([sm[0], '……あの子の話を聞きながら、そう思って流した。']);
@@ -4541,19 +4546,19 @@
   // エンディングの場面に切り替える。人物や調べる場所を消し、背景をフェードアウト→フェードインで差し替える
   // 2026-11-19：結末・屋上の場面では、場面の名前（読み上げ）も絵の場所に合わせる（前は最後の章の「放課後の保健室」のままだった）
   const SCENE_NAME = [[/^rooftop|^chime_sky/, '屋上'], [/^stairs/, '屋上へ続く階段'], [/^true_gate|_gate/, '正門'], [/^infirmary/, '保健室'], [/^hall_/, '廊下']];
-  async function endScene(img) {
+  async function endScene(img, recall = false) {   // recall：過去の回想の背景（彩度を落とし、色あせたベージュに寄せる。2026-11-21 作者の指示）
     { const m = SCENE_NAME.find(([re]) => re.test(img)); if (m) $('#scene').setAttribute('aria-label', m[1]); }
     closeOverlay(); hideCut(); setTalk(false); setCG(false); $('#scene').style.visibility = ''; clearMsg();
     guest = null; guestRender();   // その場にいた子（ミオなど）の立ち絵も消す
     $('#sitFig').classList.add('gone'); $('#hsLayer').innerHTML = '';
     const bg = $('#bgImg'), lo = $('#leftover');
-    if ((bg.getAttribute('src') || '').replace(/^.*?(?=img\/[^\/]+$)/, '') === `img/${img}.webp`) { lo.style.display = 'none'; return; }
-    if (replay) { lo.style.display = 'none'; bg.src = `img/${img}.webp`; bg.style.opacity = '1'; return; }   // 早送り中はすぐ切り替える
+    if ((bg.getAttribute('src') || '').replace(/^.*?(?=img\/[^\/]+$)/, '') === `img/${img}.webp`) { lo.style.display = 'none'; $('#scene').classList.toggle('recall', recall); return; }
+    if (replay) { lo.style.display = 'none'; bg.src = `img/${img}.webp`; bg.style.opacity = '1'; $('#scene').classList.toggle('recall', recall); return; }   // 早送り中はすぐ切り替える
     const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
     const pre = new Image(); pre.src = `img/${img}.webp`;
     const slow = setTimeout(() => { $('#loading').hidden = false; }, 1100);   // 2026-11-18：絵の読み込みが遅いときは、空白のままにせず「読み込み中」を出す
     bg.style.opacity = '0'; await Promise.all([fxWait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);   // 椅子・わすれものも、背景と一緒に消えていく
-    lo.style.display = 'none'; bg.src = pre.src; try { await bg.decode(); } catch (e) {}
+    lo.style.display = 'none'; $('#scene').classList.toggle('recall', recall); bg.src = pre.src; try { await bg.decode(); } catch (e) {}   // 背景が消えている間に、回想の色に切り替える
     clearTimeout(slow); $('#loading').hidden = true;
     bg.style.opacity = '1'; await fxWait(750);
   }
