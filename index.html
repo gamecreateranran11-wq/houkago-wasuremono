@@ -4651,7 +4651,8 @@
     hideCut(); setTalk(false);
     // 2026-11-18：共倒れ（BAD2）では、その子は部屋を出ない（前の身代わりでは出ていった）
     { const L = typeof lines === 'function' ? lines() : lines;   // 1行目の「チャイムが鳴った。」のあとから、時刻が分からなくなる
-      await say([L[0], () => badDark(), ...L.slice(1)]); }
+      if (L.length) await say([L[0], () => badDark(), ...L.slice(1)]);
+      else badDark(); }   // 2026-11-21 作者の指摘：文がないとき（5章の共倒れは黒い画面のあと）に、空のメッセージ欄でタップ待ちにならないよう、そのまま結末の札へ
     keepMem();
     R.over = true; clearRun(); P.endings[tag] = true; saveP(); render(); idle();
     tel('bad', { c: C.id, tag, loops: R.loop });
@@ -8622,7 +8623,7 @@
                ['ミオ', '正門まで、これ運ぶから', null]]);
     bell(); R.ticks = CHIME_AT; render();   // 時計も18:30に
     await say(['18:30のチャイムが鳴った。',
-               () => { $('#sitFig').classList.add('gone'); setTalk(false); },   // 2026-11-21 作者の指示：二人が保健室を出るときに、ツムギの座り絵と背景の座り姿を片付ける
+               () => { $('#sitFig').classList.add('gone'); talkHold = false; setTalk(false); },   /* 三人の場面の「絵を出したままにする」（talkHold）を外してから消す */   // 2026-11-21 作者の指示：二人が保健室を出るときに、ツムギの座り絵と背景の座り姿を片付ける
                'ミオは二人分の鞄を肩にかけて、ツムギの歩幅に合わせて扉を出ていった。',
                '廊下を、二つの足音が同じ速さで遠ざかっていく。']);
     showCut('ci_card_blank');
