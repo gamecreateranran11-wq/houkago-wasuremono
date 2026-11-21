@@ -1202,6 +1202,8 @@
   const hasKey = who => !!P.shelf[who] && (P.shelfRun[who] || 0) < P.runNo;
   // 手がかり集めを飛ばせるか：わすれものを持っている周回か、BAD1からのやり直し
   const remembered = who => hasKey(who) || !!(R && R.skipPuzzle);
+  // 2026-11-21 作者の決定：謎の答えを知っている周回（その子のわすれものを持っている・前の周回で解いた・謎解きを飛ばして章の初めから）は、謎解きを自動で解いて手がかりをすぐ渡す
+  const KNOWN = flag => !!R && (R.know.has(flag) || hasKey(C.key) || !!R.skipPuzzle);
 
   let R;
   let C;  // 今遊んでいる章
@@ -5362,11 +5364,13 @@
           await say(['開いた引き出し。空の絆創膏の箱と、長袖のカーディガン。', 'その下に、リボンをほどいていない色鉛筆の箱と、四つ折りの退部届。']); return;
         }
         showCut(R.taken.scrap ? 'ci_shelf_empty' : 'ci_shelf');
-        if (!combined('painting') && !R.know.has('painting')) {
+        const dialKnown = KNOWN('drawer');
+        if (!dialKnown && !combined('painting') && !R.know.has('painting')) {
           await say(['3桁のダイヤル錠。番号の手がかりがまだ見つからない。']);
           return;
         }
-        const code = await dial();
+        if (dialKnown) await say(['3桁のダイヤル錠。番号は覚えている。7、1、4。']);
+        const code = dialKnown ? '714' : await dial();
         if (code === null) return;
         if (code === '714') {
           R.drawerOpen = true; R.seen.add('drawer');
@@ -5732,7 +5736,7 @@
     });
   }
   async function combineScore() {
-    const ok = await arrangeFrags();
+    const ok = KNOWN('melody') ? true : await arrangeFrags();   // 前に並べたことがあれば、そのままつながる
     if (!ok) return;
     ['frag1', 'frag2', 'frag3', 'frag4'].forEach(p => R.items.delete(p));
     R.items.add('secondo'); R.know.add('melody'); render();
@@ -5781,6 +5785,11 @@
     const end = t0 + SOLO_RH.length * S16;
     ['C2', 'C3', 'G3', 'C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'].forEach((n, k) => pianoNote(noteF(n), k < 2 ? 0.2 : k === 2 ? 0.14 : 0.07, end + k * 0.045));
     return (end + 2.2) * 1000;
+  }
+  // 答えを知っている周回：ハルのパートを自動で弾く（音だけ鳴らす）
+  async function autoMelody() {
+    if (!replay) { try { MELODY.forEach((n, i) => pianoNote(noteF(n), 0.18, 0.15 + i * 0.42)); } catch (e) {} await sleep(0.15 * 1000 + MELODY.length * 420 + 600); }
+    return true;
   }
   // 鍵盤：ハルのパートを弾く。duet のときはソウタのパートも重ねて鳴らす
   function keyboard(duet) {
@@ -6090,7 +6099,7 @@
         await line(lidOpen ? (R.items.has('secondo') ? 'ソウタの隣で、開いたままの鍵盤に指をのせた。' : '旋律は覚えている。ソウタの隣で、開いたままの鍵盤に指をのせた。')
                            : (R.items.has('secondo') ? 'ソウタの隣からそっと鍵盤の蓋を開けた。' : '旋律は覚えている。ソウタの隣からそっと鍵盤の蓋を開けた。'), true, true);
         R.seen.add('lid'); syncPiano();
-        const ok = await keyboard(false);
+        const ok = KNOWN('played') ? await autoMelody() : await keyboard(false);   // 前に弾けたことがあれば、指が覚えている
         if (!ok) { R.seen.delete('lid'); syncPiano(); await say(['……蓋をそっと閉じた。']); return; }
         R.know.add('played'); R.seen.add('played');
         if (R.know.has('doremi') && !R.seen.has('doremiThanks')) {
@@ -6757,8 +6766,9 @@
         if (R.over || R.loop !== lp) return;
         const c = await choose(['本を並べ直す', 'やめる']);
         if (c !== 0) return;
-        const v = EASY() ? { go: true, b: SHELF_ANSWER.slice() } : await sortShelf();
-        if (EASY()) await say(['背のラベルを見ながら、本を請求記号の順に並べ直した。']);
+        const shelfAuto = EASY() || KNOWN('sorted');
+        const v = shelfAuto ? { go: true, b: SHELF_ANSWER.slice() } : await sortShelf();
+        if (shelfAuto) await say(['背のラベルを見ながら、本を請求記号の順に並べ直した。']);
         R.taken.shelf = v.b;
         if (!v.go) return;
         if (v.b.join() !== SHELF_ANSWER.join()) {
@@ -7382,9 +7392,10 @@
         if (R.over || R.loop !== lp) return;
         const c = await choose(['マグネットを動かす', 'やめる']);
         if (c !== 0) return;
-        if (EASY() && !(R.know.has('logbook') && R.know.has('bag'))) { await say(['（部員のことがまだよく分からない。顧問の机の部誌と、ケイの荷物を見てから並べよう）']); return; }
-        const v = EASY() ? { go: true, b: { ...LINEUP_ANSWER } } : await lineupBoard();
-        if (EASY()) await say(['部誌の部員名簿と荷物のメモを思い出しながら、マグネットを動かした。', 'けがをしたハヤトはベンチ。アシストの多いユウマがポイントガード。外から決めたミナトがシューティングガード。背の高いダイチがセンター。足の速いシュンは、速攻で先頭を走るパワーフォワード。']);
+        const boardKnown = KNOWN('lineup');
+        if (EASY() && !boardKnown && !(R.know.has('logbook') && R.know.has('bag'))) { await say(['（部員のことがまだよく分からない。顧問の机の部誌と、ケイの荷物を見てから並べよう）']); return; }
+        const v = (EASY() || boardKnown) ? { go: true, b: { ...LINEUP_ANSWER } } : await lineupBoard();
+        if (EASY() || boardKnown) await say(['部誌の部員名簿と荷物のメモを思い出しながら、マグネットを動かした。', 'けがをしたハヤトはベンチ。アシストの多いユウマがポイントガード。外から決めたミナトがシューティングガード。背の高いダイチがセンター。足の速いシュンは、速攻で先頭を走るパワーフォワード。']);
         R.taken.board = v.b;
         if (!v.go) return;
         const ok = Object.keys(LINEUP_ANSWER).every(k => v.b[k] === LINEUP_ANSWER[k]);
@@ -8180,11 +8191,13 @@
         } else await say(['先生の机の引き出し。上下左右にしか動かない錠。シールには「C」の形の輪。']);
         if (R.over) return;
         // 1章のダイヤル錠と同じく、手がかり（視力検査表）を見るまでは、つまみを動かせない
-        if (!R.know.has('chart')) { await say(['どの向きに、どんな順で動かせばいいのか。……手がかりがまだ見つからない。']); return; }
+        const dirKnown = KNOWN('drawer');
+        if (!dirKnown && !R.know.has('chart')) { await say(['どの向きに、どんな順で動かせばいいのか。……手がかりがまだ見つからない。']); return; }
         const c = await choose(['つまみを動かす', 'やめる']);
         if (c !== 0) return;
-        const v = EASY() ? DIR_ANSWER : await dirLock();
-        if (EASY()) await say(['視力検査表の赤ペンの線を引いた段のとおりに、つまみを動かした。左、上、上、右。']);
+        const v = (EASY() || dirKnown) ? DIR_ANSWER : await dirLock();
+        if (dirKnown) await say(['つまみの順は覚えている。左、上、上、右。']);
+        else if (EASY()) await say(['視力検査表の赤ペンの線を引いた段のとおりに、つまみを動かした。左、上、上、右。']);
         if (v === null) return;
         if (v !== DIR_ANSWER) { nmMark('puz'); await say(['ガチ。……錠は開かない。']); await tick(); return; }
         lockClick();
@@ -9274,9 +9287,12 @@
   P.ach = P.ach || {};
   // この仕組みより前に条件を満たしていた分は、黙って記録しておく（ノーミスのTRUEは後から判定できないので除く）
   ACH.forEach(([id, , , test]) => { if (id !== 'perfect' && !P.ach[id] && test()) P.ach[id] = Date.now(); }); saveP();
+  if (P.ach.perfect && !P.achX) { P.achX = true; saveP(); }   // 2026-11-21：隠しの一行の条件を「ノーミスのTRUE」と同じにしたので、もう取っている人にも一覧で見せる
   const achAny = () => Object.keys(P.ach).length > 0;
   /* ノーミスの記録：この周回（P.cur）でチャイム・ヒント・選択ミス・謎解きミス・わすれもので謎解きを飛ばしたか・難しさを「やさしい」にしていたか。
-     わすれもので飛ばすのはノーミスのままでよい。飛ばさず、ずっと「普通」のまま、ノーミスでTRUEまで来たときだけ、隠しの演出（P.achX）を出す */
+     わすれもので飛ばすのはノーミスのままでよい。ノーミスでTRUEまで来たら、隠しの一行（P.achX）も出す。
+     2026-11-21 作者の決定：前は「わすれもので謎を飛ばさない・ずっと『普通』」も条件だったが、思い返しの記憶で謎が解けた状態になる決まりとぶつかり、
+     ややこしいのでやめた（物語が中心で、謎解きはおまけ）。条件は「ノーミスのTRUE」と同じ */
   function nmMark(k) { if (!P.cur) return; const n = P.cur.nm = P.cur.nm || {}; if (!n[k]) { n[k] = true; saveP(); } }
   // エンディングを見たときに呼ぶ（P.cur を消す前）。新しく取ったアチーブメントを返す
   function achGain(tag) {
@@ -9286,7 +9302,7 @@
       if (P.ach[id]) return;
       if (id === 'perfect' ? (tag === 'TRUE' && clean) : test()) { P.ach[id] = Date.now(); got.push(id); }
     });
-    if (tag === 'TRUE' && clean && !n.skip && !n.easy && P.diff !== 'easy' && !P.achX) { P.achX = true; got.push('X'); }
+    if (tag === 'TRUE' && clean && !P.achX) { P.achX = true; got.push('X'); }
     // 条件を見せる状態に一度でもなったら、アチーブメント画面を開く前でも記録しておく（後でわすれものを置いていっても消さない）
     if (perfectShown()) P.achShown = { ...(P.achShown || {}), perfect: true };
     saveP();
@@ -9301,7 +9317,7 @@
       : `<p class="note ach-note">アチーブメント「${achName(ACH.find(a => a[0] === id))}」</p>`).join('');
   }
   // 隠し：わすれものに頼らず、ノーミスでTRUEまで来た人へ（文は仮）
-  const ACH_X_MSG = '……わすれものに頼らず、一度も迷わずに、ここまで来た人へ。あなたの放課後は、最初から、誰かの朝のためにあった。';
+  const ACH_X_MSG = '……思い返しに頼らず、一度も迷わずに、ここまで来た人へ。あなたの放課後は、最初から、誰かの朝のためにあった。';
   function showAch() {
     const got = ACH.filter(a => P.ach[a[0]]).length;
     if (perfectShown() && !(P.achShown && P.achShown.perfect)) { P.achShown = { ...(P.achShown || {}), perfect: true }; saveP(); }
