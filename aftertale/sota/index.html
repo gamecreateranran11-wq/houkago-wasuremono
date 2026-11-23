@@ -923,7 +923,8 @@
   #clock { transition: opacity 5.5s ease; }
   #clock.fin { opacity: 0; }
   .end-card { opacity: 0; transition: opacity 2.5s ease; background: rgba(12, 9, 16, .82); }   /* 2026-11-23：明るい配色でも読めるよう、地を暗く・字を明るく */
-  .end-card p { font-size: 15px; color: #f1e9da; }
+  .end-card p { font-family: var(--serif); font-weight: 800; font-size: clamp(18px, 2.8vw, 22px); letter-spacing: .08em; color: #fff8ec; text-shadow: 0 1px 6px rgba(0, 0, 0, .8); }   /* 2026-11-23：手書き体の細字だと淡く見えるので、太い明朝で大きく */
+  .end-card button { font-size: 16px; font-weight: 600; padding: 9px 22px; }
   .end-card.show { opacity: 1; }
   .end-card button { color: #f4ecdd; background: rgba(40, 32, 50, .9); border: 1px solid var(--line); border-radius: 4px; padding: 8px 16px; cursor: pointer; }
   .ov { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(8, 6, 12, .7); padding: 16px; }
