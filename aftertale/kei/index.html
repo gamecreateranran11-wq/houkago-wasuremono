@@ -952,7 +952,7 @@
     </div>
   </header>
   <div class="scene-wrap">
-    <div id="scene" class="scene" role="group" aria-label="職員室前の廊下（15時）">
+    <div id="scene" class="scene" role="group" aria-label="職員室前の廊下">
       <div class="stage"><img id="bgImg" class="bg" src="img/kei_hall_staff.webp" alt=""><svg id="bgClock" class="bg bg-clock" aria-hidden="true" style="display:none"></svg></div>
       <div id="keiFig" class="kei-fig" aria-hidden="true"><img id="keiBase" alt=""><img id="keiFace" alt="" hidden><img id="keiGlint" class="glint" alt=""></div>
       <button id="start" class="start" type="button"><span class="in"><h1>背中を預ける者は</h1><p>放課後のわすれもの　後日談　ケイ編（試遊版）</p><span class="tap">タップしてはじめる</span></span></button>
@@ -2508,6 +2508,23 @@
   // 深く頭を下げる：立ち絵をフェードで消す
   const frameOut = () => () => new Promise(r => { fig.classList.add('out'); setTimeout(r, reduce ? 0 : 600); });
   const hide = () => () => { fig.classList.remove('show'); };
+  // 暗転して場面を替える（2026-11-23 作者の指示：階段前から職員室の教頭へ戻るところ）。画面と文章の欄をゆっくり暗くし、暗いまま少し置いて、次の場面をゆっくり明るくする
+  const darkTo = src => () => new Promise(r => {
+    const im = $('#bgImg'), msg = $('#msg');
+    if (reduce) { im.src = `img/${src}.webp`; setSceneLabel(src); r(); return; }
+    const els = [im, msg];
+    im.style.transition = 'opacity 1.6s ease'; msg.style.transition = 'opacity 1.2s ease';
+    els.forEach(el => el.style.opacity = 0);
+    setTimeout(() => {
+      im.src = `img/${src}.webp`; setSceneLabel(src);
+      setTimeout(() => {
+        im.decode().catch(() => {}).then(() => {
+          im.style.opacity = 1;
+          setTimeout(() => { msg.style.opacity = 1; setTimeout(() => { els.forEach(el => { el.style.transition = ''; el.style.opacity = ''; }); r(); }, 1200); }, 1600);
+        });
+      }, 1200);
+    }, 1700);
+  });
   const music = (n, f) => () => bgm(n, f);
   const bgSet = (src, fade = true) => () => new Promise(r => {
     const im = $('#bgImg');
@@ -2515,7 +2532,7 @@
     im.style.opacity = 0;
     setTimeout(() => { im.src = `img/${src}.webp`; setSceneLabel(src); im.decode().catch(() => {}).then(() => { im.style.opacity = 1; setTimeout(r, 700); }); }, 700);
   });
-  const SCENE_LABEL = { kei_hall_staff: '職員室前の廊下（15時）', kei_staffroom: '職員室（15時）', kei_stairs1f: '階段前（15時）' };
+  const SCENE_LABEL = { kei_hall_staff: '職員室前の廊下', kei_staffroom: '職員室', kei_stairs1f: '階段前' };
   const setSceneLabel = src => { const l = SCENE_LABEL[src]; if (l) $('#scene').setAttribute('aria-label', l); };
   const STORY = [
     music('tension', 2),
@@ -2591,9 +2608,10 @@
     "ケイが深く頭を下げると、後輩たちもすぐに続いた。",
     music('unravelDim', 2.5),
     bgSet('kei_stairs1f'),
+    () => { $('#clock').textContent = '15:30'; },   // 2026-11-23 作者の指示：階段前は30分進める
     "部員たちは職員室を後にした。そのまま階段前でケイを囲んで、談笑し始めた。",
     S('relax'),
-    ["ケイ", "みんな、今日はありがとな。昨夜『集合時間を夕方に変更させてくれ』って連絡したのも、我ながら無茶だと思ってたのに……わざわざ集まってくれて"],
+    ["ケイ", "みんな、今日はありがとな。昨夜『集合時間を午後に変更させてくれ』って連絡したのも、我ながら無茶だと思ってたのに……わざわざ集まってくれて"],
     S('yuma.smile'),
     ["ユウマ", "いいんですよ。朝だって夜だって、いつでも飛んで行くつもりで準備してたんですから"],
     S('hayato.wry'),
@@ -2623,7 +2641,7 @@
     ["ケイ", "(『守ってあげられない』なんて、思わなくても……こんなに逞しかったんだな)", "think"],
     "その時、職員室に、肩を強張らせた二人の人影が入っていったことに、ケイたちは気づかなかった。",
     hide(),
-    bgSet('kei_staffroom'),
+    darkTo('kei_staffroom'),
     ["教頭", "部長と後輩か……彼ら、自分より互いを守ることばかり話していたな。私には眩しいくらいの信頼関係だ"],
     ["教頭", "しかし……これは、どうしたものかな。あの校長が、首を縦に振るかどうか……"],
     ["教頭", "……ん？また来客か。今度は……"],
