@@ -1,5 +1,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* 2026-11-23：前の版の sw.js は、どのページを開いても本編のページを返していた。後日談の試遊版（aftertale/…）のアドレスで本編が開いてしまったら、
+   古い仕組みを外して、本来のページを開き直す（1回だけ） */
+(function () {
+  if (!/\/aftertale\//.test(location.pathname) || !('serviceWorker' in navigator)) return;
+  var k = 'houkagoSwFix';
+  try { if (sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch (e) {}
+  document.documentElement.style.visibility = 'hidden';
+  navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })
+    .catch(function () {}).then(function () { location.reload(); });
+})();
+</script>
 <title>放課後のわすれもの</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

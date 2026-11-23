@@ -921,7 +921,8 @@
   #msg.fin { opacity: 0; }
   #clock { transition: opacity 5.5s ease; }
   #clock.fin { opacity: 0; }
-  .end-card { opacity: 0; transition: opacity 2.5s ease; background: rgba(12, 9, 16, .35); }
+  .end-card { opacity: 0; transition: opacity 2.5s ease; background: rgba(12, 9, 16, .82); }   /* 2026-11-23：明るい配色でも読めるよう、地を暗く・字を明るく */
+  .end-card p { font-size: 15px; color: #f1e9da; }
   .end-card.show { opacity: 1; }
   .end-card button { color: #f4ecdd; background: rgba(40, 32, 50, .9); border: 1px solid var(--line); border-radius: 4px; padding: 8px 16px; cursor: pointer; }
   .ov { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(8, 6, 12, .7); padding: 16px; }
@@ -1878,6 +1879,7 @@
   const fileKey = name => (FILE_BGM[name] && FILE_BGM[name].same) || name;
   // 通信量を減らす（2026-11-13 作者の指示）：第五章より後でしか流れない曲（屋上『深淵からの声』・TRUE『黎明に肩を並べて』・決別『分かたれる道』・TRUEのエンドロール『Last Bell in July』）は、
   // はじめに取り寄せず、第五章に入ったときに取り寄せる。BAD1『終わらない放課後』はどの章でもなりうるので、はじめから取り寄せる
+  const STORY_BGM = ['tension', 'core', 'unravelDim'];   // 後日談の試遊版で流れる曲
   const LATE_BGM = new Set(['roofCore', 'unravelTrue', 'farewell', 'lastBell']);
   const fetchLateBgm = () => { if (P.bgmLazy) return; try { LATE_BGM.forEach(fetchFileBgm); } catch (e) {} };   // 通信を節約する設定のときは、流れるときに取り寄せる
   function fetchFileBgm(name) {
@@ -1908,7 +1910,7 @@
     if (master && master.gain.value < MASTER_GAIN * 0.99) unmute();
     if (name && !P.heard[name]) { P.heard[name] = true; saveP(); }
     let a; try { a = audio(); } catch (e) { return; }
-    try { loadFileBgm('explore').then(() => loadFileBgm('musicbox')).catch(() => {}); if (!P.bgmLazy) Object.keys(FILE_BGM).filter(k => !LATE_BGM.has(fileKey(k))).forEach(fetchFileBgm); } catch (e) {}   // 探索の曲はタイトルのうちにほどいておく（始めてすぐ鳴るように）。何度も流れる『ひとかけらの希望』も続けてほどく。他の曲は中身だけ取り寄せておく
+    try { if (!P.bgmLazy) STORY_BGM.forEach(fetchFileBgm);   /* 後日談（2026-11-23）：この話で流れる曲だけ取り寄せる（初回の通信を軽く） */ } catch (e) {}   // 探索の曲はタイトルのうちにほどいておく（始めてすぐ鳴るように）。何度も流れる『ひとかけらの希望』も続けてほどく。他の曲は中身だけ取り寄せておく
     if (bgmPos && bgmPos.stop == null) bgmPos.stop = a.currentTime;
     const resumeAt = resume && name && bgmPos && bgmPos.key === fileKey(name) && bgmPos.stop != null ? bgmPos.off + (bgmPos.stop - bgmPos.t0) : null;
     if (bgmGain) { const g = bgmGain, src = bgmSrc; g.gain.setTargetAtTime(0, a.currentTime, 0.4); setTimeout(() => { try { g.disconnect(); if (src) src.stop(); } catch (e) {} }, 2500); }
@@ -2509,10 +2511,12 @@
   const music = (n, f) => () => bgm(n, f);
   const bgSet = (src, fade = true) => () => new Promise(r => {
     const im = $('#bgImg');
-    if (!fade || reduce) { im.src = `img/${src}.webp`; r(); return; }
+    if (!fade || reduce) { im.src = `img/${src}.webp`; setSceneLabel(src); r(); return; }
     im.style.opacity = 0;
-    setTimeout(() => { im.src = `img/${src}.webp`; im.decode().catch(() => {}).then(() => { im.style.opacity = 1; setTimeout(r, 700); }); }, 700);
+    setTimeout(() => { im.src = `img/${src}.webp`; setSceneLabel(src); im.decode().catch(() => {}).then(() => { im.style.opacity = 1; setTimeout(r, 700); }); }, 700);
   });
+  const SCENE_LABEL = { kei_hall_staff: '職員室前の廊下（15時）', kei_staffroom: '職員室（15時）', kei_stairs1f: '階段前（15時）' };
+  const setSceneLabel = src => { const l = SCENE_LABEL[src]; if (l) $('#scene').setAttribute('aria-label', l); };
   const STORY = [
     music('tension', 2),
     "終業式後、職員室前。",
@@ -2691,6 +2695,15 @@
   };
   $('#ovClose').onclick = e => { e.stopPropagation(); ov.hidden = true; };
 
+  /* 2026-11-23：通信が不安定で絵の読み込みに失敗したときは、少し待って取り寄せ直す（最大3回）。初回アクセスで立ち絵が出ない不具合への対策 */
+  document.addEventListener('error', e => {
+    const im = e.target; if (!(im instanceof HTMLImageElement)) return;
+    const src = im.getAttribute('src'); if (!src) return;
+    const n = +(im.dataset.retry || 0); if (n >= 3) return;
+    im.dataset.retry = n + 1;
+    setTimeout(() => { if (im.getAttribute('src') === src) im.src = src.split('?')[0] + '?r=' + (n + 1); }, 800 * (n + 1));
+  }, true);
+  document.addEventListener('load', e => { const im = e.target; if (im instanceof HTMLImageElement) delete im.dataset.retry; }, true);
   /* ---------- はじめる ---------- */
   // スマホは、画面に触れた操作の中でないと音を鳴らせないので、最初のタップで始める
   const startCard = $('#start');
