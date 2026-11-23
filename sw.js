@@ -58,7 +58,8 @@ self.addEventListener('fetch', e => {
   const p = rel(req.url);
   if (p == null) return;
   // ページ：一覧の指紋が前と同じなら、しまってあるページ。違えば取り寄せ直す。通信できなければしまってあるページ
-  if (req.mode === 'navigate' || p === '' || p === 'index.html') {
+  // 2026-11-23：本編のページだけ。後日談の試遊版（aftertale/…）など、ほかのページはそのまま通す
+  if (p === '' || p === 'index.html') {
     e.respondWith((async () => {
       await withTimeout(freshSync(), 4000);
       const c = await caches.open(CACHE), key = keyOf('index.html');
