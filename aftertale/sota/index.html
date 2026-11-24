@@ -894,11 +894,11 @@
   /* ソウタ：左寄り。立っている絵は本編と同じ（高さ97%・下端ぞろえ）、座っている絵は画面の高さの25%下げる */
   /* 動きは入れない。出るとき・消えるときにフェードするだけ（ポーズの切り替えはその場で入れ替える） */
   .sota-fig { position: absolute; left: 4%; bottom: 0; height: 97%; aspect-ratio: 2 / 3; opacity: 0;
-              transition: opacity .4s ease; pointer-events: none; z-index: 2; }
+              transition: opacity .7s ease; pointer-events: none; z-index: 2; }   /* 2026-11-24：背景のフェード（.7s）とそろえる */
   .sota-fig.show { opacity: 1; }
   .sota-fig.seated {   /* 2026-11-23：本編の座り絵の .sit（会話中に暗くする指定）とぶつかるので名前を分けた */
     bottom: -25%; }
-  .sota-fig.out { opacity: 0; transition: opacity .6s ease; }
+  .sota-fig.out { opacity: 0; }
   .sota-fig img { position: absolute; inset: 0; width: 100%; height: 100%; }
   .scene.talk .sota-fig { filter: none; }
   /* 涙の光（glint の上書き）：本編と同じくスマホだけで光らせる。.sota-fig img の指定に負けないよう、ここでもう一度決める。src がないときは何も出さない */
@@ -915,7 +915,7 @@
   @media (prefers-reduced-motion: reduce) { .start .tap { animation: none; } }
   /* 終わりのフェードアウト：場面はゆっくり暗く、文章の欄は一度消してから「おわり」を出す */
   .scene .stage { transition: opacity 5.5s ease; }
-  .scene.fin .stage { opacity: 0; }
+  .scene.fin .stage, .scene.fin .sota-fig { opacity: 0; transition: opacity 5.5s ease; }
   .scene { transition: background-color 5.5s ease; }
   .scene.fin { background-color: #0c0a0f; }
   #msg { transition: opacity 2.5s ease; }
@@ -2480,33 +2480,61 @@
   // 表情パーツ：どの土台に重ねるか
   const FACE = { tense: ['stand', 'f1'], plead: ['upright', 'f2'], tremble: ['fists', 'f3'], cry: ['upright', 'f4'],
                  surprise: ['slump', 'f5'], down: ['stand', 'f6'], relief: ['slump', 'f7'], crySit: ['seizaUpB', 'f8'] };
-  const fig = $('#sotaFig'), figBase = $('#sotaBase'), figFace = $('#sotaFace');
+  const fig = $('#sotaFig');
   let cur = null;  // 今の { pose, face }
   // ソウタを出す：show('tense') のように表情名、または show('bow') のように顔つきの絵（お辞儀・正座）
   const AFTER_GLINT = new Set(['f4', 'f5', 'f8', 's_seiza_up']);   // 涙の光の絵がある顔パーツ・絵（11/14 Q302 で作った）
+
+  // 2026-11-24：立ち絵の入れ替えをそろえる。土台・表情・涙の光を別々に差し替えると、読み込みの早い遅いで前の絵の一部が残るので、
+  // 新しい3枚を画面の外で読み込み・デコードしてから、まとめて1回で入れ替える。消えている途中なら、消え終わるのを待ってから入れ替える
+  const FIG_MS = 700;   // 立ち絵の出入り（CSS の .7s）＝ 背景の切り替え（bgSet の 700ms）
+  let figHideAt = -1e9, figSeq = 0;
+  const sleep = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
+  const figShown = () => fig.classList.contains('show') && !fig.classList.contains('out');
+  async function figSwap(base, face, glint, cls) {
+    const seq = ++figSeq, old = fig.querySelectorAll('img');
+    const mk = (id, src, c) => { const im = new Image(); im.id = id; im.alt = ''; if (c) im.className = c; if (src) im.src = src; return im; };
+    const nb = mk(old[0].id, base), nf = mk(old[1].id, face), ng = mk(old[2].id, glint, 'glint');
+    if (!face) nf.hidden = true;
+    // 読み込み→デコードを待つ（デコードが返らない環境でも止まらないよう、上限つき）
+    const ready = im => new Promise(r => { const t = setTimeout(r, 4000), ok = () => { clearTimeout(t); r(); };
+      const dec = () => { im.decode().then(ok, ok); setTimeout(ok, 600); };
+      if (im.complete) dec(); else { im.addEventListener('load', dec, { once: true }); im.addEventListener('error', ok, { once: true }); } });
+    await Promise.all([nb, nf, ng].filter(im => im.getAttribute('src')).map(ready));
+    if (seq !== figSeq) return;
+    const left = figHideAt + FIG_MS - performance.now();
+    if (!figShown() && left > 0) await sleep(left);
+    if (seq !== figSeq) return;
+    ng.classList.toggle('show', !!glint);
+    fig.replaceChildren(nb, nf, ng);
+    if (cls) cls();
+    fig.classList.remove('out'); fig.classList.add('show');
+  }
+  const figOut = () => { if (figShown()) figHideAt = performance.now(); fig.classList.remove('show'); };
+  // 場面のフェード：背景と立ち絵を同じ長さ・同じ動きで消す／戻す
+  const fadeEls = (els, ms, on) => els.forEach(el => { el.style.transition = `opacity ${ms / 1000}s ease`; el.style.opacity = on ? '' : '0'; });
+  // 2026-11-24：場面を切り替えるときは、文章の欄も背景と一緒に消し、消えている間に前の文を片づける
+  const clearMsg = () => { const t = $('#text'), sp = $('#speaker'), mo = $('#more'); if (t) t.textContent = ''; if (sp) sp.hidden = true; if (mo) mo.hidden = true; };
+  const fadeDone = els => els.forEach(el => { el.style.transition = ''; el.style.opacity = ''; });
   function show(name) {
     const f = FACE[name], pose = f ? f[0] : name, face = f ? f[1] : null;
     const p = POSE[pose];
-    figBase.src = `img/${p.img}.webp`;
-    figFace.hidden = !face; if (face) figFace.src = `img/${face}.webp`;
-    // 涙のきらめき（スマホのみ。本編と同じ）：涙のある顔・絵には、涙の形の光の絵（img/<名前>_glint.webp）を重ねてときどき光らせる
-    const gn = [face, p.img].find(n => n && AFTER_GLINT.has(n)), gl = $('#sotaGlint');
-    if (gn) { const u = `img/${gn}_glint.webp`; if (gl.getAttribute('src') !== u) gl.src = u; }
-    gl.classList.toggle('show', !!gn);
-    fig.classList.toggle('seated', p.sit);
-    fig.classList.remove('out'); fig.classList.add('show');
     cur = { pose, face };
+    // 涙のきらめき（スマホのみ。本編と同じ）：涙のある顔・絵には、涙の形の光の絵（img/<名前>_glint.webp）を重ねてときどき光らせる
+    const gn = [face, p.img].find(n => n && AFTER_GLINT.has(n));
+    return figSwap(`img/${p.img}.webp`, face ? `img/${face}.webp` : null, gn ? `img/${gn}_glint.webp` : null, () => fig.classList.toggle('seated', p.sit));
   }
   const S = name => () => show(name);
   // 床に頭をつける：立ち絵をフェードで消す（画面の外へ出たことにする）
-  const frameOut = () => () => new Promise(r => { fig.classList.add('out'); setTimeout(r, reduce ? 0 : 600); });
-  const hide = () => () => { fig.classList.remove('show'); cur = null; };
+  const frameOut = () => () => new Promise(r => { if (figShown()) figHideAt = performance.now(); fig.classList.add('out'); setTimeout(r, reduce ? 0 : FIG_MS); });
+  const hide = () => () => { figOut(); cur = null; };
   const music = (n, f) => () => bgm(n, f);
   const bgSet = (src, fade = true) => () => new Promise(r => {
     const im = $('#bgImg');
     if (!fade || reduce) { im.src = `img/${src}.webp`; setSceneLabel(src); r(); return; }
-    im.style.opacity = 0;
-    setTimeout(() => { im.src = `img/${src}.webp`; setSceneLabel(src); im.decode().catch(() => {}).then(() => { im.style.opacity = 1; setTimeout(r, 700); }); }, 700);
+    const els = [im, fig, $('#msg')];   // 2026-11-24：立ち絵と文章の欄も背景と同じ長さで消して、同じ長さで戻す
+    fadeEls(els, 700, false);
+    setTimeout(() => { clearMsg(); im.src = `img/${src}.webp`; setSceneLabel(src); im.decode().catch(() => {}).then(() => { fadeEls(els, 700, true); setTimeout(() => { fadeDone(els); r(); }, 700); }); }, 700);
   });
   const SCENE_LABEL = { sota_living_night: 'ソウタの家のリビング（夜）', sota_hall_night: 'ソウタの部屋の前の廊下（深夜）' };
   const setSceneLabel = src => { const l = SCENE_LABEL[src]; if (l) $('#scene').setAttribute('aria-label', l); };
@@ -2516,17 +2544,17 @@
     const im = $('#bgImg'), msg = $('#msg'), ck = $('#clock');
     if (reduce) { im.src = `img/${src}.webp`; ck.textContent = time; setSceneLabel(src); r(); return; }
     const els = [im, msg, ck];
-    im.style.transition = 'opacity 2s ease'; msg.style.transition = ck.style.transition = 'opacity 1.4s ease';
-    els.forEach(el => el.style.opacity = 0);
+    fig.style.transition = im.style.transition = msg.style.transition = ck.style.transition = 'opacity 2s ease';   // 2026-11-24：立ち絵・文章の欄・時計も背景と同じ長さで一緒に消す
+    els.forEach(el => el.style.opacity = 0); fig.style.opacity = 0;
     setTimeout(() => {
-      im.src = `img/${src}.webp`; ck.textContent = time; setSceneLabel(src);
+      clearMsg(); im.src = `img/${src}.webp`; ck.textContent = time; setSceneLabel(src);
       setTimeout(() => {
         ck.style.opacity = 1;
         im.decode().catch(() => {}).then(() => {
           im.style.opacity = 1;
           setTimeout(() => {
             msg.style.opacity = 1;
-            setTimeout(() => { els.forEach(el => el.style.transition = ''); msg.style.opacity = ck.style.opacity = ''; r(); }, 1400);
+            setTimeout(() => { els.forEach(el => el.style.transition = ''); msg.style.opacity = ck.style.opacity = ''; fadeDone([fig]); r(); }, 1400);
           }, 2000);
         });
       }, 1600);
