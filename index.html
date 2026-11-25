@@ -495,14 +495,13 @@
   .slot .who { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
   /* サウンドトラック */
   .ost { display: flex; flex-direction: column; gap: 6px; max-height: 56vh; overflow-y: auto; }
-  .ost-row { display: grid; grid-template-columns: 3.4em 1fr auto; align-items: center; gap: 10px; text-align: left; background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; cursor: pointer; }
+  .ost-row { display: grid; grid-template-columns: 3.4em 1fr auto; align-items: center; gap: 10px; text-align: left; background: #120f17; border: 1px solid var(--line); border-radius: 4px; padding: 18px 10px; cursor: pointer; }
   .ost-row:hover { border-color: var(--akane); }
   .ost-row .no { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .ost-row.bonus { margin-top: 8px; border-style: dashed; border-color: var(--gold); }
   .ost-row.bonus .no { color: var(--gold); font-size: 10px; letter-spacing: .05em; }
   .ost-row .ttl { font-family: var(--serif); font-size: 15px; }
   .ost-row .ttl small { font-family: var(--hand); font-size: 11px; color: var(--gold); margin-left: 6px; border: 1px solid var(--gold); border-radius: 3px; padding: 0 4px; vertical-align: 2px; }
-  .ost-row .desc { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
   .ost-row .st { font-size: 12px; color: var(--muted); min-width: 4.5em; text-align: right; }
   .ost-row.on { border-color: var(--akane); background: #1d1620; }
   .ost-row.on .st { color: var(--akane); }
@@ -812,7 +811,7 @@
      一覧の行は、薄い紙を重ねた札。選べる行は重ねると青い線。印は朱・金 */
   .save-slot, .pair-side, .ach-row, .slot, .ost-row { background: #efe7d6; border: 1px solid var(--line); border-left: 3px solid var(--line); color: var(--ink); }
   .save-slot .info { color: var(--ink); }
-  .save-slot .no, .save-slot .when, .slot .who, .ost-row .no, .ost-row .desc, .ost-row .st, .ach-row .cond, .ach-row .when, .ach-row .ach-mark { color: var(--muted); }
+  .save-slot .no, .save-slot .when, .slot .who, .ost-row .no, .ost-row .st, .ach-row .cond, .ach-row .when, .ach-row .ach-mark { color: var(--muted); }
   .save-slot .btn { border-bottom: 1px solid var(--blue); color: var(--blue); }
   .save-slot .btn:hover { border-bottom-width: 2px; padding-bottom: 6px; }
   .save-slot .btn:disabled { opacity: .3; color: var(--muted); border-bottom-color: var(--line); }
@@ -2668,7 +2667,7 @@
   const fileBytes = {}, fileBuf = {};
   // 同じファイルを別の位置から鳴らす曲（farewellLate など）は、取り寄せとほどいた音を元の曲と分け合う
   const fileKey = name => (FILE_BGM[name] && FILE_BGM[name].same) || name;
-  // 通信量を減らす（2026-11-13 作者の指示）：第五章より後でしか流れない曲（屋上『深淵からの声』・TRUE『黎明に肩を並べて』・決別『分かたれる道』・TRUEのエンドロール『Last Bell in July』）は、
+  // 通信量を減らす（2026-11-13 作者の指示）：第五章より後でしか流れない曲（屋上『深淵からの声』・TRUE『黎明に肩を並べて』・決別『分かたれる道』・TRUEのエンドロール『淡光に重ね合う手』）は、
   // はじめに取り寄せず、第五章に入ったときに取り寄せる。BAD1『終わらない放課後』はどの章でもなりうるので、はじめから取り寄せる
   const LATE_BGM = new Set(['roofCore', 'unravelTrue', 'farewell', 'lastBell']);
   const fetchLateBgm = () => { if (P.bgmLazy) return; try { LATE_BGM.forEach(fetchFileBgm); } catch (e) {} };   // 通信を節約する設定のときは、流れるときに取り寄せる
@@ -9501,28 +9500,28 @@
     $('#setBack').onclick = () => showTitle();
   }
   /* ---------- サウンドトラック（BAD以外の結末＝NORMAL・GOOD・TRUEのどれかを初めて見ると、タイトルに出る。ボーナストラックはTRUEの後） ---------- */
-  // [曲, 題, 版の印, 説明]。ゲームの中で流れる順に並べる。『放課後』はソウタとハルの連弾曲。ソロなどの版は、題の後の印で分かるようにする
+  // [曲, 題, 版の印]。ゲームの中で流れる順に並べる。『放課後』はソウタとハルの連弾曲。ソロなどの版は、題の後の印で分かるようにする
   const OST = [
-    ['title', '夕映えの校舎', '', 'アコースティックギターと、遠くで練習する吹奏楽のホルン'],
-    ['explore', 'July Hallways（仮）', '', '（説明は未定）'],
-    ['core', '胸の奥の声', '', '（説明は未定）'],
-    ['musicbox', 'ひとかけらの希望', '', '（説明は未定）'],
-    ['unravel', '夕映えの微笑み', '', '（説明は未定）'],
-    ['sota', '放課後', 'ソロ', 'ソウタのピアノ・ソロ。ハルのパートと同じ主題から始まる'],
-    ['vanish', '手のひらに遺るもの', '', '（説明は未定）'],
-    ['shut', '閉ざされた扉', '', '（説明は未定）'],
-    ['coreHeavy', '影に沈む手', '', '（説明は未定）'],
-    ['roofCore', '深淵からの声', '', '（説明は未定）'],
-    ['codep', 'ふたりきりの子守唄', '', 'オルゴールとピアノの3拍子。穏やかなのに、どこか落ち着かない'],
+    ['title', '夕映えの校舎', ''],
+    ['explore', '暮れなずむ窓辺', ''],
+    ['core', '胸の奥の声', ''],
+    ['musicbox', 'ひとかけらの希望', ''],
+    ['unravel', '夕映えの微笑み', ''],
+    ['sota', '放課後', 'ソロ'],
+    ['vanish', '手のひらに遺るもの', ''],
+    ['shut', '閉ざされた扉', ''],
+    ['coreHeavy', '影に沈む手', ''],
+    ['roofCore', '深淵からの声', ''],
+    ['codep', 'ふたりきりの子守唄', ''],
     // ここから下の（仮）の題は、管理人が名前をつけるまでの仮の名前
-    ['endless', '終わらない放課後（仮）', '', '（説明は未定）'],
-    ['tension', '向き合う心', '', '（説明は未定）'],
-    ['farewell', '分かたれる道', '', '（説明は未定）'],
-    ['burst', '溢れ出す本心', '', '（説明は未定）'],
-    ['unravelDim', '見送る背中', '', '（説明は未定）'],
-    ['unravelTrue', '黎明に肩を並べて', '', '（説明は未定）'],
-    ['lastBell', 'Last Bell in July（仮）', '', '（説明は未定）'],
-    ['sotaDuet', '放課後', '連弾', 'ボーナストラック（本編には出てこない曲）。ソウタとハルが4本の手で弾く連弾版'],
+    ['endless', '終わらない放課後（仮）', ''],
+    ['tension', '向き合う心', ''],
+    ['farewell', '分かたれる道', ''],
+    ['burst', '溢れ出す本心', ''],
+    ['unravelDim', '見送る背中', ''],
+    ['unravelTrue', '黎明に肩を並べて', ''],
+    ['lastBell', '淡光に重ね合う手', ''],
+    ['sotaDuet', '放課後', '連弾'],
   ];
   const ostOpen = () => !!(P.endings && (P.endings.END9 || P.endings.END10 || P.endings.END11 || P.endings.TRUE));
   const ostList = () => OST.filter(([k]) => k !== 'sotaDuet' || !!(P.endings && P.endings.TRUE));
@@ -9533,10 +9532,10 @@
     const list = ostList(), got = list.filter(([k]) => ostHeard(k)).length;
     openOverlay(`<p class="eyebrow">おまけ</p><h2>サウンドトラック</h2>
       <p class="note">聴いた曲　${got} / ${list.length}　　押すと流れ、もう一度押すと止まります。</p>
-      <div class="ost">${list.map(([k, ttl, ver, desc], i) => ostHeard(k)
+      <div class="ost">${list.map(([k, ttl, ver], i) => ostHeard(k)
         ? `<button type="button" class="ost-row${k === 'sotaDuet' ? ' bonus' : ''}" data-k="${k}"><span class="no">${k === 'sotaDuet' ? 'BONUS' : String(i + 1).padStart(2, '0')}</span>
-            <span><span class="ttl">『${ttl}』${ver ? `<small>${ver}</small>` : ''}</span><span class="desc">${desc}</span></span><span class="st"></span></button>`
-        : `<div class="ost-row locked"><span class="no">${String(i + 1).padStart(2, '0')}</span><span><span class="ttl">？？？</span><span class="desc">まだ聴いていない曲</span></span><span class="st"></span></div>`).join('')}</div>
+            <span class="ttl">『${ttl}』${ver ? `<small>${ver}</small>` : ''}</span><span class="st"></span></button>`
+        : `<div class="ost-row locked"><span class="no">${String(i + 1).padStart(2, '0')}</span><span class="ttl">？？？</span><span class="st"></span></div>`).join('')}</div>
       <div class="row"><button type="button" class="btn primary" id="oBack">戻る</button></div>`);
     const draw = () => card.querySelectorAll('.ost-row[data-k]').forEach(b => {
       const k = b.dataset.k, on = k === playing; b.classList.toggle('on', on);
