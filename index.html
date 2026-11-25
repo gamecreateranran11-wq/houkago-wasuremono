@@ -3741,7 +3741,7 @@
   }
   // 章の結果を記録して、次の章を返す（なければ null＝周回の終わり）
   function recordResult(kind) {
-    P.cur.results[C.key] = kind; P.played = true; saveP();
+    P.cur.results[C.key] = kind; P.played = true; if (kind === 'shut') P.everShut = true; saveP();   // everShut：閉ざされた結末を一度でも見た（アチーブメントのヒント用）
     tel('ch_end', { c: C.id, res: kind, loops: R ? R.loop : null });
     const i = ORDER.indexOf(C.id);
     return ORDER[i + 1] ? CHAPTERS[ORDER[i + 1]] : null;
@@ -4647,7 +4647,7 @@
     if (C.id === 'infirmary' && !R.touched && mioRes() === 'saved') await say(['扉の窓の向こうに本を抱えた影が何度か見えた気がした。……どのチャイムの後もノックの音はしなかった。']);
     // 「何もしてあげられない」を選んだとき（心には触れていた）は、届かなかったのではなく、届きかけた手を自分で下ろした形にする
     await say(['チャイムを数えるのをいつの間にかやめていた。', R.touched ? '届きかけた手を自分から下ろしてしまった。窓の外の空は少しも動かない。' : '誰の心にも手が届かないまま。窓の外の空は少しも動かない。',
-               '自分の名前を思い出せなくなっていた。……それでも、放課後は終わらなかった。']);
+               '自分の名前を思い出そうとするのもやめていた。……それでも、放課後は終わらなかった。']);
     keepMem();
     R.over = true; clearRun(); P.endings.END1 = true; saveP(); render(); idle();
     tel('bad', { c: C.id, tag: 'END1', loops: R.loop });
@@ -5004,7 +5004,7 @@
     if (album) albumSee(album);
     R.standing = true;  // 見送りの場面では立っている
     const now = chStart() + R.ticks * MIN_PER_TICK;
-    R.over = true; clearRun(); P.saved[C.key] = true; saveP(); albumSync(); render(); idle(); if (music) keepBgm(music, [music]); else keepBgm('unravel', WARM);
+    R.over = true; clearRun(); P.saved[C.key] = true; saveP(); albumSync(); achCheck(); render(); idle(); if (music) keepBgm(music, [music]); else keepBgm('unravel', WARM);
     const next = recordResult('saved');
     closeOverlay();
     $('#hsLayer').innerHTML = '';   // 2026-11-17 作者の指摘：見送るボタンの後、明転している間に調べる場所の白い枠（流しなど）が出ていた
@@ -5983,7 +5983,7 @@
              '言われたとおりに座っていると、ソウタは安心したようにハルの話ばかりするようになった。',
              '「ハルはさ、こういうとき、ちょっと前のめりに座るんだ」', '気づけば、少し前のめりに座っていた。',
              '「……そう、それ」', 'いつからか、ソウタはこちらを「ハル」と呼ぶようになった。いつからか、それに返事をしていた。',
-             '自分の名前はもう思い出せなかった。思い出す必要もなかった。',
+             '自分の名前がなくても、もう困らなかった。',
              '「……ここにいれば、もう誰にも取り上げられないな」',
              '鍵盤にはどちらも触れなかった。',
              '扉はどちらからも開けようとしなかった。窓の外の空はずっと同じ色のままだった。'],
@@ -8404,8 +8404,7 @@
       // 3段目
       if (mioRes() === 'shut') {
         // ミオを閉め出した周回：最後の段の前に、容態が急に悪くなる
-        // わすれもの（来室カード）を持っていても、ミオがいないのでほどける道はない。容態の急変より先に「かける言葉が見つからない」の3択を出す
-        if (hasKey('tsumugi')) return lastWrong();
+        // 2026-11-25 作者の決定：わすれもの（来室カード）を持っていても急変を先にする（ミオがいないのでほどける道はない。前は3択を先に出していたため、わすれものを手に入れた後はEND 8が取れなかった）
         await say([['ツムギ', '……今日ね。最後に、ちょっとだけ、行きたいところがあったの', 'down'], 'ツムギの言葉が途中で途切れた。']);
         return tsumugiDies();
       }
@@ -8554,7 +8553,7 @@
     }
     // 仲直り：まっすぐなときは、まずオルゴール（仲直りの場面で『また明日』へ）。ぎこちないときは、ここから『また明日』
     const straight = risk === 0;
-    P.cur.mtKind = straight ? 'straight' : 'awk'; saveP();
+    P.cur.mtKind = straight ? 'straight' : 'awk'; if (!straight) P.sawAwk = true; saveP();   // sawAwk：アチーブメント「ふたりぶんの椅子」の条件を見せる
     bgm(straight ? 'musicbox' : 'unravel');
     await say([['ツムギ', '……別々にいようって言ったの、私だよね', 'down'], ['ツムギ', 'ミオを守りたかったのに。……一人にして、ごめん', 'down']]);
     if (slips.includes('smile') || slips.includes('side')) await say([['ツムギ', '……さっきは、笑ってごまかして、ごめん', 'down']]);
@@ -9104,7 +9103,7 @@
   // わすれもの（姿を変えたもの）と同じ絵は、一枚絵には並べない（わすれものの段にだけ出す）
   ['sketchbook_face', 'm_duet', 'g_letter'].forEach(id => { delete P.album[id]; });
   // 2026-11-10：この周回で見た一枚絵も P.cur.album に記録する（エンドロールは、この周回で見たものだけを映す。他の周回の差分はネタバレになるため）
-  function albumSee(id) { if (P.cur) { P.cur.album = P.cur.album || {}; if (!P.cur.album[id]) { P.cur.album[id] = true; saveP(); } } if (!P.album[id]) { P.album[id] = true; saveP(); } }
+  function albumSee(id) { if (P.cur) { P.cur.album = P.cur.album || {}; if (!P.cur.album[id]) { P.cur.album[id] = true; saveP(); } } if (!P.album[id]) { P.album[id] = true; saveP(); achCheck(); } }
   // わすれもの：棚に並んだ姿（w_〇〇_v）と、姿を変えた後（w_〇〇_s）。棚を空にしても、アルバムには残す
   // 主人公のわすれもの（生徒手帳）。GOOD で夕焼けの屋上に落ちている。TRUE で姿を変える（終業式の後の保健室の床頭台の上で、寄せ書きの見開き）。TRUE は未実装なので P.saved.me はまだ立たない
   // 寄せ書きの一言（絵の字と同じ文。似顔絵の横に、それぞれ自分の字で）
@@ -9259,21 +9258,38 @@
      条件が見えていなくても、取ることはできる */
   const perfectShown = () => !!(P.achShown && P.achShown.perfect) || (!!(P.endings.END11 || P.endings.TRUE) && FIVE.every(k => P.shelf[k]));
   const ACH = [
-    ['firstEnd', null, '初めて、エンディングを見る', () => ALL_ENDS.some(t => P.endings[t]), () => true],
-    ['shelf5', null, '5人のわすれものを全て手に入れる', () => FIVE.every(k => P.shelf[k]), () => false],
-    ['dawn', null, '朝へ向かうエンディングにたどり着く', () => !!(P.endings.END9 || P.endings.END10 || P.endings.END11 || P.endings.TRUE), () => false],
+    // 2026-11-25 作者が名前を決めた（ヒナ〜ツムギの「心をほどく」5つと「END 1」「END 8」「一枚絵」は同じ日に追加。心をほどく5つの名前は未定）
+    ['firstEnd', 'わすれものを取りに', '初めて、エンディングを見る', () => ALL_ENDS.some(t => P.endings[t]), () => true],
+    ['saveHina', null, 'ヒナの心をほどく', () => !!P.saved.hina, () => false],
+    ['saveSota', null, 'ソウタの心をほどく', () => !!P.saved.sota, () => false],
+    ['saveMio', null, 'ミオの心をほどく', () => !!P.saved.mio, () => false],
+    ['saveKei', null, 'ケイの心をほどく', () => !!P.saved.kei, () => false],
+    ['saveTsumugi', null, 'ツムギの心をほどく', () => !!P.saved.tsumugi, () => false],
+    ['shelf5', '確かに、そこにいた', '5人のわすれものを全て手に入れる', () => FIVE.every(k => P.shelf[k]), () => false],
+    ['end1', '止まった時間', 'END 1を見る', () => !!P.endings.END1, () => false],
+    // 2026-11-25 作者の指示：END 8 は条件が重なっていて見つけにくいので、条件の欄にそのまま出す。
+    // 段階を分けると、途中の文どおりにしても取れない（条件が嘘に見える）ので、最初から全部の条件を一つの文で。息を引き取ることは書かない。
+    // 急変は、3段目の話の前と三度目のチャイムの2通り。ツムギに閉め出されたときと追い詰めたとき（doom）は起きない
+    ['end8', '最後に届いた指先', () => P.ach.end8 ? 'END 8を見る'
+       : 'ヒナ・ソウタ・ケイ・ミオの扉が閉ざされたまま保健室へ行き、ツムギの心に寄り添い続ける', () => !!P.endings.END8,
+       () => !!(P.endings.END5 || P.endings.END6 || P.endings.END7 || P.endings.END8) && !!(P.everShut || P.shutTold || P.endings.END7 || P.endings.END8)],   // 2026-11-25 作者の指示：ヒントは END 5〜8 のどれかを見て、かつ閉ざされた結末を一度でも見てから
+    ['dawn', '夕陽を見届けし者', '朝へ向かうエンディングにたどり着く（TRUEをのぞく）', () => !!(P.endings.END9 || P.endings.END10 || P.endings.END11), () => false],   // 2026-11-25 作者の指示：TRUEは含めない
     // 2026-11-19 作者の指示：TRUEにたどり着いたこと自体のアチーブメント（取るまで条件は「？？？」）
-    ['true', null, 'TRUEにたどり着く', () => !!P.endings.TRUE, () => false],
-    ['allEnd', null, '全てのエンディングを見る', () => ALL_ENDS.every(t => P.endings[t]), () => true],
-    ['perfect', null, '一つの周回で、チャイムを一度も聞かず、ヒントも使わず、選択肢も謎解きも間違えずに、TRUEにたどり着く', () => false, perfectShown],
-    // 第五章でツムギが爆発する決別を見たとき（その場で記録し、章の終わりの画面で知らせる）。名前は仮
+    ['true', '幸せへの決断', 'TRUEにたどり着く', () => !!P.endings.TRUE, () => false],
     // 第五章でミオとツムギがまっすぐに仲直りし、正門まで見送ったとき
     // 2026-11-19 作者の指示：条件の文はネタバレになるので、取るまで「？？？」にする（まっすぐな仲直りのときだけ取れる）
-    ['friends', 'ふたりの行く末', 'ミオとツムギの友情を見届ける', () => false, () => false],  // 条件は、5章に初めて進んでから見せる
-    ['burst', '友情クラッシャー', 'ツムギの本心に触れる', () => false, () => !!P.metTsumugi]  // 条件は、5章に初めて進んで（ツムギに出会って）から見せる
+    ['friends', 'ふたりぶんの椅子', 'ミオとツムギがぎこちなさを残さずに一緒に帰っていくのを見届ける',   // 2026-11-25 作者の指示：まっすぐな仲直りだけで取れると分かる文に（ネタバレは避ける）。条件はぎこちない仲直りを一度見てから見せる
+      () => false, () => !!(P.sawAwk || P.cardKind === 'awk')],
+    // 第五章でツムギが爆発する決別を見たとき（その場で記録し、章の終わりの画面で知らせる）。条件は、5章に初めて進んで（ツムギに出会って）から見せる
+    ['burst', 'ひび割れた微笑み', 'ツムギの本心に触れる', () => false, () => !!P.metTsumugi],
+    ['album', '卒業アルバム', '一枚絵を全て集める', () => ALBUM.every(a => P.album[a[0]]), () => true],
+    ['allEnd', '脳内シミュレーター', '全てのエンディングを見る', () => ALL_ENDS.every(t => P.endings[t]), () => true],
+    ['perfect', '放課後マスター', '一つの周回で、チャイムを一度も聞かず、ヒントも使わず、選択肢も謎解きも間違えずに、TRUEにたどり着く', () => false, perfectShown]
   ];
   // エンディング以外で取ったアチーブメント：章の終わりの画面でまとめて知らせる
   if (!P.metTsumugi && (P.cur.results.tsumugi || P.shelf.tsumugi || P.saved.tsumugi || P.endings.END9 || P.endings.END11 || P.endings.END7 || P.endings.END5 || P.endings.END6 || P.endings.END8)) { P.metTsumugi = true; saveP(); }
+  // エンディング以外の時（心がほどけた・一枚絵を見た）に、条件を満たしたものを取る
+  function achCheck() { try { ACH.forEach(([id, , , test]) => { if (id !== 'perfect' && !P.ach[id] && test()) achGrant(id); }); } catch (e) {} }
   function achGrant(id) { if (P.ach[id]) return; P.ach[id] = Date.now(); P.achPending = (P.achPending || []).concat(id); saveP(); }
   function achNoteTake() { const g = P.achPending || []; if (!g.length) return ''; P.achPending = []; saveP(); return achNote(g); }
   P.ach = P.ach || {};
@@ -9300,7 +9316,7 @@
     saveP();
     return got;
   }
-  const achName = a => a[1] || a[2];
+  const achName = a => a[1] || (typeof a[2] === 'function' ? a[2]() : a[2]);
   // エンディング画面の下に、静かに一行ずつ出す
   function achNote(got) {
     if (!got || !got.length) return '';
@@ -9314,7 +9330,7 @@
     const got = ACH.filter(a => P.ach[a[0]]).length;
     if (perfectShown() && !(P.achShown && P.achShown.perfect)) { P.achShown = { ...(P.achShown || {}), perfect: true }; saveP(); }
     const rows = ACH.map(a => {
-      const on = !!P.ach[a[0]], x = a[0] === 'perfect' && on && P.achX, cond = on || a[4]() ? a[2] : '？？？';
+      const on = !!P.ach[a[0]], x = a[0] === 'perfect' && on && P.achX, cond = on || a[4]() ? (typeof a[2] === 'function' ? a[2]() : a[2]) : '？？？';
       return `<div class="ach-row${on ? ' on' : ''}${x ? ' x' : ''}"><span class="ach-mark" aria-hidden="true">${on ? (x ? '✦' : '●') : '○'}</span>
         <div class="info"><span class="ttl">${on ? achName(a) : '？？？'}</span>${on && !a[1] ? '' : `<span class="cond">${cond}</span>`}
         ${on ? `<span class="when">${slotDate(P.ach[a[0]])}</span>` : ''}${x ? `<span class="x-msg">${ACH_X_MSG}</span>` : ''}</div></div>`;
