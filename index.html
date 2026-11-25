@@ -1105,6 +1105,8 @@
       let d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
       if (!d) return null;
       if (!d.run) d = { run: d };   // 古い形（周回の状態だけ）
+      // 締めくくった周回の途中が残っていたら（上の不具合で残った分）、使わずに消す。周回の番号は締めくくるたびに増える
+      if (d.prog && d.prog.runNo && P.runNo && d.prog.runNo < P.runNo) { clearRun(); return null; }
       const r = d.run;
       r.items = new Set(r.items); r.know = new Set(r.know); r.seen = new Set(r.seen || []); r.log = r.log || []; r.over = false;
       r.ch = r.ch || 'art'; r.st = r.st || r.hina || 'here';
@@ -3774,6 +3776,9 @@
     if (count) P.runs = (P.runs || 0) + 1;
     P.lastRun = { runNo: P.runNo || 1, cur: JSON.parse(JSON.stringify(P.cur || { results: {} })), end: end || null };   // end：その周回で見た結末（次の放課後の初めの文を変える）   // 「放課後を思い返す」で、終えた周回の章に戻るため
     P.runNo = (P.runNo || 1) + 1; P.cur = { results: {} }; saveP(); clearRun();
+    // 2026-11-26 作者の報告：END5（空席の教室）など、締めくくった後も同じ会話の中で文が続くと、その文で「つづきから」が保存し直され、
+    // 終わった周回の古い途中（保健室18:15など）がタイトルに残っていた。締めくくったら、この周回はもう保存しない
+    if (R) R.over = true;
   }
   // 本実装版に切り替えるときは RELEASE を true にする：タイトルの「試作版　第一章〜」をやめて「ver 〇〇」を小さく出し、
   // GOOD の結末の「（屋上への道は、製品版で開きます）」を消す（屋上・TRUE の場面ができてから）
@@ -3913,7 +3918,10 @@
     const wait = fxWait;
     const d = fxLayer('white'); await wait(40); d.classList.add('on'); await wait(inMs);
     spk.hidden = true; txt.textContent = ''; chs.innerHTML = ''; more.hidden = true;
-    fn(); await wait(holdMs);
+    // 2026-11-26 作者の報告（明転のあと、真っ白のまま・絵が遅れて出た）：切り替え（廊下の絵の読み込みなど）と背景の絵のデコードが済んでから白を戻す。
+    // 通信が止まっても進めなくならないよう、待つのは10秒まで
+    const ready = Promise.all([Promise.resolve(fn()).catch(() => {}), wait(holdMs)]).then(() => $('#bgImg').decode().catch(() => {}));
+    await Promise.race([ready, new Promise(r => setTimeout(r, 10000))]);
     d.classList.remove('on'); await wait(outMs); fxEnd(d);
   }
   function fxEnd(box) { box.remove(); if (!document.querySelector('.roof-fx')) document.body.classList.remove('fx-on'); }
@@ -4588,10 +4596,28 @@
     const wait = ms => new Promise(r => setTimeout(r, reduce ? 0 : ms));
     const pre = new Image(); pre.src = `img/${img}.webp`;
     const slow = setTimeout(() => { $('#loading').hidden = false; }, 1100);   // 2026-11-18：絵の読み込みが遅いときは、空白のままにせず「読み込み中」を出す
-    bg.style.opacity = '0'; await Promise.all([fxWait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);   // 椅子・わすれものも、背景と一緒に消えていく
-    lo.style.display = 'none'; $('#scene').classList.toggle('recall', recall); bg.src = pre.src; try { await bg.decode(); } catch (e) {}   // 背景が消えている間に、回想の色に切り替える
-    clearTimeout(slow); $('#loading').hidden = true;
-    bg.style.opacity = '1'; await fxWait(750);
+    // 2026-11-26 作者の指示：ふだんは今のまま（消えて0.75秒・出て0.75秒のあとに文）。途中で押したら、絵のフェードを早めて、文も同時に出す
+    let rushed = false, target = '0';
+    const rush = () => { if (rushed) return; rushed = true; const cur = getComputedStyle(bg).opacity;
+      bg.style.transition = 'none'; bg.style.opacity = cur; void bg.offsetWidth; bg.style.transition = 'opacity .15s ease'; bg.style.opacity = target; };
+    hurry.add(rush);
+    try {
+      bg.style.opacity = '0'; await Promise.all([fxWait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);   // 椅子・わすれものも、背景と一緒に消えていく
+      lo.style.display = 'none'; $('#scene').classList.toggle('recall', recall); bg.src = pre.src; try { await bg.decode(); } catch (e) {}   // 背景が消えている間に、回想の色に切り替える
+      clearTimeout(slow); $('#loading').hidden = true;
+      target = '1'; bg.style.opacity = '1';
+      if (!rushed) await fxWait(750);
+    } finally { hurry.delete(rush); if (rushed) setTimeout(() => { bg.style.transition = ''; }, 200); }
+  }
+  // 2026-11-26 作者の指示：結末の場面送り（空席の教室・閉ざされた校舎）も、ふだんは今のまま。フェードの途中で押したら、絵のフェードを早めて、文もすぐ出す
+  function fadeRush(els) {
+    const st = { rushed: false, target: '0' };
+    st.fn = () => { if (st.rushed) return; st.rushed = true;
+      els.forEach(el => { if (!el) return; const cur = getComputedStyle(el).opacity; el.style.transition = 'none'; el.style.opacity = cur; void el.offsetWidth; el.style.transition = 'opacity .15s ease'; el.style.opacity = st.target; }); };
+    hurry.add(st.fn);
+    st.fast = el => { if (st.rushed && el) el.style.transition = 'opacity .15s ease'; };
+    st.end = () => { hurry.delete(st.fn); if (st.rushed) setTimeout(() => els.forEach(el => { if (el) el.style.transition = ''; }), 200); };
+    return st;
   }
   // BAD5 空席の教室：消えた子の教室を順に映し（席にはわすれものだけ）、最後はチャイムの鳴らない夕焼けに一人
   async function emptySeats(chs) {
@@ -4605,7 +4631,9 @@
       const pre = new Image(); pre.src = `img/${img}.webp`;
       const preLo = ch && ch.leftoverImg ? new Image() : null; if (preLo) preLo.src = `img/${img.endsWith('_1830_dark') ? ch.leftoverImg + '_1830' : (((img.endsWith('_unlit') || img.endsWith('_dark')) && ch.leftoverDark) || ch.leftoverImg)}.webp`;   // 18:30の暗い部屋では、背景の色みで焼いた版（2026-11-10）
       bg.style.opacity = '0'; lo.style.transition = 'opacity .7s ease'; lo.style.opacity = '0';
-      await Promise.all([wait(750), dec(pre), preLo ? dec(preLo) : null]);
+      const fr = fadeRush([bg, lo]);
+      try {
+      await Promise.all([fxWait(750), dec(pre), preLo ? dec(preLo) : null]);
       bg.src = pre.src;
       if (ch) {
         if (preLo) {
@@ -4614,8 +4642,10 @@
         } else { lo.innerHTML = ''; lo.setAttribute('style', ch.leftover); lo.style.opacity = '0'; lo.style.transition = 'opacity .7s ease'; }
       } else lo.style.display = 'none';
       try { await bg.decode(); } catch (e) {}
+      fr.target = '1'; fr.fast(lo); fr.fast(bg);
       if (ch) lo.style.opacity = '1';
-      bg.style.opacity = '1'; await wait(750);
+      bg.style.opacity = '1'; if (!fr.rushed) await fxWait(750);
+      } finally { fr.end(); }
     };
     for (const ch of chs) {
       await show(`${ch.bg}_1830_dark`, ch);   // 消えた子の部屋は、明かりが消えたまま。時刻は18:30（5章の後）なので、18:30の暗い版
@@ -4634,9 +4664,13 @@
     const show = async img => {
       if (bg.getAttribute('src') === `img/${img}.webp`) return;
       const pre = new Image(); pre.src = `img/${img}.webp`;
-      bg.style.opacity = '0'; await Promise.all([wait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);
-      bg.src = pre.src; try { await bg.decode(); } catch (e) {}
-      bg.style.opacity = '1'; await wait(750);
+      const fr = fadeRush([bg]);
+      try {
+        bg.style.opacity = '0'; await Promise.all([fxWait(750), (pre.decode ? pre.decode() : Promise.resolve()).catch(() => {})]);
+        bg.src = pre.src; try { await bg.decode(); } catch (e) {}
+        fr.target = '1'; fr.fast(bg);
+        bg.style.opacity = '1'; if (!fr.rushed) await fxWait(750);
+      } finally { fr.end(); }
     };
     const halls = ORDER.map(id => CHAPTERS[id]).filter(ch => ch.hall);
     await show(`${halls[0].hall}_1830_lit`);   // BAD4 は5章の後（18:30）なので、初めの廊下も18:30の絵
