@@ -3356,7 +3356,7 @@
     $('#btnSkip').setAttribute('aria-pressed', P.skip ? 'true' : 'false');
 
     if (!C) return;
-    { const sf = $('#sitFig'), g = R.st === 'vanished' || R.st === 'shut' || !!R.standing;
+    { const sf = $('#sitFig'), g = R.st === 'vanished' || R.st === 'shut' || R.st === 'died' || !!R.collapse || !!R.standing;   // 2026-11-25 作者の指摘：容態が急変してからは、背景の座り姿を出さない（END8まで）
       if (g && R.standing && !sf.classList.contains('gone')) ghostOut(sf);   // 立ち上がるとき：座り姿もフェードで消える（立った絵はフェードで出る）
       sf.classList.toggle('gone', g); }
     $('#leftover').style.display = R.st === 'vanished' ? '' : 'none';
@@ -7949,6 +7949,7 @@
   // ミオを閉め出した周回：ツムギの容態が急に悪くなる（主人公の責任にはしない。表現はぼかす）
   async function tsumugiDies() {
     bgm(null); hideCut();
+    R.collapse = true; { const sf = $('#sitFig'); ghostOut(sf); sf.classList.add('gone'); }   // 2026-11-25 作者の指摘：うずくまった後も座り姿が残っていた
     await say(['ツムギが急に胸を押さえてうずくまった。', '「ツムギさん！」', '浅く、苦しそうな息。額に汗がにじんでいる。',
                '扉に駆け寄った。……開かない。何度叩いても、叫んでも、廊下には誰もいなかった。',
                '自分のスマホは最初から持っていなかった。',
