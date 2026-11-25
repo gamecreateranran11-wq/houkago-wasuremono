@@ -1095,8 +1095,9 @@
   function saveRun() {
     if (!R || R.over || replay) return;
     const d = scr && !onRoof()
-      ? { at: Date.now(), mid: true, run: scr.start, prog: scr.prog, resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs } }
-      : { at: Date.now(), run: serR(R), prog: progSnap() };
+      ? { at: Date.now(), label: saveLabel(R), mid: true, run: scr.start, prog: scr.prog, resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs, line: lineKey } }
+      : { at: Date.now(), label: saveLabel(R), run: serR(R), prog: progSnap() };
+    // label：タイトルの「前回のつづきから」に出す場面・時刻・チャイム。会話の途中は run が会話の始まりの状態なので、今の状態から作っておく（2026-11-25 作者の報告）
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (e) {}
   }
   function loadRun() {
@@ -1133,7 +1134,7 @@
   function saveRoof() {
     if (!onRoof() || replay) return;
     saveRoofStart();
-    try { localStorage.setItem(ROOF_KEY, JSON.stringify({ at: Date.now(), label: '屋上・18:30', mid: true, rain: !!rainNodes, wind: !!windNodes, run: scr.start, prog: scr.prog, resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs } })); } catch (e) {}
+    try { localStorage.setItem(ROOF_KEY, JSON.stringify({ at: Date.now(), label: '屋上・18:30', mid: true, rain: !!rainNodes, wind: !!windNodes, run: scr.start, prog: scr.prog, resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs, line: lineKey } })); } catch (e) {}
   }
   function loadRoof() {
     try {
@@ -1161,7 +1162,7 @@
   function writeSlot(n) {
     const d = scr
       ? { at: Date.now(), label: onRoof() ? '屋上・18:30' : saveLabel(R), mid: true, run: scr.start, prog: scr.prog,
-          resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs } }
+          resume: { key: scr.key, lines: scr.lines, inputs: scr.inputs, line: lineKey } }
       : { at: Date.now(), label: saveLabel(R), run: serR(R), prog: progSnap() };
     try { localStorage.setItem(SLOT_KEY(n), JSON.stringify(d)); return true; } catch (e) { return false; }
   }
@@ -1252,7 +1253,9 @@
      そこから出した文章の数・選んだ答えを記録しておく。ロードすると、始めた時点から同じ答えで
      画面に出さずに早送りし、セーブしたときの文章から表示を再開する */
   let scr = null;     // 進行中のストーリーの記録 { key, start, prog, lines, inputs }
-  let replay = null;  // ロード直後の早送り { skip: 画面に出さずに進める文章の数, inputs: 記録した答え }
+  let replay = null;  // ロード直後の早送り { skip: 画面に出さずに進める文章の数, inputs: 記録した答え, line: セーブしたときの文 }
+  // 2026-11-25 作者の報告（再開すると1行先から始まった）：セーブしたときに出していた文（話し手|本文）も記録し、早送りの終わりで照らし合わせる
+  let lineKey = '';
   const serR = r => JSON.parse(JSON.stringify({ ...r, items: [...r.items], know: [...r.know], seen: [...r.seen] }));
   const progSnap = () => JSON.parse(JSON.stringify({ shelf: P.shelf, shelfRun: P.shelfRun, runNo: P.runNo, cur: P.cur }));
   function beginScript(key) { scr = key ? { key, start: serR(R), prog: progSnap(), lines: 0, inputs: [] } : null; }
@@ -1267,7 +1270,10 @@
     { const [w0, t0] = Array.isArray(l) ? l : ['', l];
       if (R && !w0 && typeof t0 === 'string' && STAND_RE.test(t0) && !STAND_NOT.test(t0) && !R.standing) { R.standing = true; render(); } }
     if (scr) scr.lines++;
+    { const [kw, kt] = Array.isArray(l) ? l : ['', l]; lineKey = kw + '|' + kt; }
     if (replay) {
+      // 数えた文の数が少しずれていても（最大3文）、セーブしたときの文が先に出てきたら、そこで早送りを止める
+      if (replay.skip > 0 && replay.line && replay.skip <= 3 && lineKey === replay.line) replay.skip = 0;
       if (replay.skip > 0) {
         // 早送り：表示と記録だけ整えて、すぐ次へ
         replay.skip--;
@@ -1471,9 +1477,12 @@
   // 一度選んだことがある選択肢（周回をまたいで残す。プレイデータのリセットで消える）
   function markPicked(o) { if (typeof o !== 'string') return; if (R) { R.chosen = Array.isArray(R.chosen) ? R.chosen : []; if (!R.chosen.includes(o)) R.chosen.push(o); } P.picked = P.picked || {}; if (!P.picked[o]) { P.picked[o] = 1; saveP(); } }
   function choose(opts) {
-    const r = replayed(); if (r) { chs.innerHTML = ''; addLog({ choice: opts[r.v] }); if (R) R.lastPick = opts[r.v]; markPicked(opts[r.v]); return Promise.resolve(r.v); }
+    // 2026-11-25：答えは番号と選んだ文（{ i, t }）で記録する。早送りでは文が同じ選択肢を選ぶ（なければ番号。前の形の記録は番号だけ）
+    const r = replayed();
+    if (r) { const q = r.v, k = q && typeof q === 'object' ? (opts.indexOf(q.t) >= 0 ? opts.indexOf(q.t) : q.i) : q;
+             chs.innerHTML = ''; addLog({ choice: opts[k] }); if (R) R.lastPick = opts[k]; markPicked(opts[k]); return Promise.resolve(k); }
     return new Promise(res0 => {
-      const res = v => { if (R) R.lastPick = opts[v]; markPicked(opts[v]); res0(rec(v)); };
+      const res = v => { if (R) R.lastPick = opts[v]; markPicked(opts[v]); rec({ i: v, t: opts[v] }); res0(v); };
       chs.innerHTML = '';
       chs.classList.toggle('roof', onRoof());   // 2026-11-10 屋上の選択肢は「正解」ではなく今の気持ち。見た目を章と変える（作者の指示）
       const build = () => { more.hidden = true; opts.forEach((o, i) => {
@@ -3512,6 +3521,18 @@
     P.howtoSeen = true; saveP();
     await overlayWait(howtoHtml(), '', [first ? '始める' : '閉じる']);
     closeOverlay();
+  }
+  // メニュー・タイトルから開く遊び方：会話の途中でも開ける。閉じたら、開いていた画面をボタンの動きごとそのまま戻す（ログと同じ）。答えとして記録しない
+  // 2026-11-25 作者の報告：会話の途中ではメニューの「遊び方」が何もしなかった（busy の間は開かなかった）
+  function openHowto(back) {
+    const wasOpen = !ov.hidden ? [...card.childNodes] : null, wasCls = ov.className, wasCard = card.className;
+    P.howtoSeen = true; saveP();
+    openOverlay(howtoHtml() + '<div class="row"><button type="button" class="btn primary" id="howtoClose">閉じる</button></div>');
+    $('#howtoClose').onclick = () => {
+      if (back) return back();
+      if (wasOpen !== null) { ov.className = wasCls; card.className = wasCard; card.replaceChildren(...wasOpen); }
+      else closeOverlay();
+    };
   }
   const waitScript = async () => {
     await say(['窓の外を眺めてチャイムを待った。']);
@@ -8828,7 +8849,7 @@
       <div class="title-side${splash ? ' later' : ''}" id="titleMenu"${splash ? ' hidden' : ''}>
         ${RELEASE ? '' : `<p class="eyebrow">試作版　第一章〜第${'一二三四五'[ORDER.length - 1]}章</p>`}
         ${Object.keys(P.cur.results).length ? `<p class="note">この周回の記録　${runRecord()}</p>` : ''}
-        ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${saveLabel(save.run)}${save.resume ? '・会話の途中' : ''}</span></button>` : ''}
+        ${save ? `<button type="button" class="btn primary" id="tCont">前回のつづきから<span class="sub">${save.label || saveLabel(save.run)}${save.resume ? '・会話の途中' : ''}</span></button>` : ''}
         ${roof ? `<button type="button" class="btn primary" id="tRoof">前回のつづきから<span class="sub">屋上・18:30</span></button>` : ''}
         ${roof && roof.resume ? '<button type="button" class="btn-sub" id="tRoofRedo">屋上を初めからやり直す<span class="sub">屋上の途中の続きは消えます</span></button>' : ''}
         ${(save || roof || !allDone()) ? '' : '<button type="button" class="btn primary" id="tEnd">放課後の終わりへ<span class="sub">この周回の結末を見る</span></button>'}
@@ -8839,6 +8860,7 @@
         ${(P.runNo || 1) > 1 && recallSrc() ? '<button type="button" class="btn" id="tRecall">放課後を思い返す<span class="sub">好きな章からやり直せます</span></button>' : ''}
         ${!roof && loadRoofStart() ? '<button type="button" class="btn" id="tRoofBack">屋上に戻る<span class="sub">最後に着いた屋上の初めから</span></button>' : ''}
         ${extrasAny() ? '<button type="button" class="btn" id="tExtra">おまけ</button>' : ''}
+        <button type="button" class="btn" id="tHowto">遊び方</button>
         <button type="button" class="btn" id="tSet">設定<span class="sub">既読スキップ・文字の速さ・音量</span></button>
         <button type="button" class="btn-reset" id="tWipe">プレイデータをリセット</button>
         <p class="note">この作品には、自傷・自死をほのめかす描写・事故死・いじめ・罵倒や暴言・家庭や部活動での心理的虐待（体罰を含む）を示唆する表現が含まれます。</p>
@@ -8884,6 +8906,7 @@
     if ($('#tRoofBack')) $('#tRoofBack').onclick = askRoofBack;  // わすれものを一つ手に入れるまで、棚のボタンは出さない
     if ($('#tExtra')) $('#tExtra').onclick = showExtras;
     $('#tSet').onclick = showSettings;
+    $('#tHowto').onclick = () => openHowto(() => showTitle());
     if ($('#tLoad')) $('#tLoad').onclick = () => showSlots('load');
     if (splash) {
       const reveal = e => {
@@ -9445,7 +9468,7 @@
     if (C.id === 'infirmary' && R.taken && R.taken.dark) setDark(true);  // 明かりを消したまま中断していたら、消したまま再開する
     render();
     if (resume && resume.key && resume.key.startsWith('roof:')) {
-      replay = { skip: Math.max(0, resume.lines - 1), inputs: [...(resume.inputs || [])] };
+      replay = { skip: Math.max(0, resume.lines - 1), inputs: [...(resume.inputs || [])], line: resume.line || '' };
       beginScript(resume.key);
       busy = true;   // 屋上の間は、持ち物・ヒント・調べる場所を押せないようにする（ふつうに屋上へ来たときと同じ）
       try { await roofScene(resume.key === 'roof:split'); } finally { if (R === d) busy = false; }
@@ -9453,7 +9476,7 @@
     }
     const fn = resume && scriptFn(resume.key);
     if (fn) {
-      replay = { skip: Math.max(0, resume.lines - 1), inputs: [...(resume.inputs || [])] };
+      replay = { skip: Math.max(0, resume.lines - 1), inputs: [...(resume.inputs || [])], line: resume.line || '' };
       act(fn, resume.key);
       return;
     }
@@ -9662,7 +9685,7 @@
   document.addEventListener('click', e => { if (!menuPanel.hidden && !e.target.closest('.menu-wrap')) setMenu(false); }, true);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menuPanel.hidden) setMenu(false); });
   ['btnMenu', 'btnWait', 'btnHowto'].forEach(id => $('#' + id).addEventListener('click', () => setMenu(false)));
-  $('#btnHowto').onclick = () => { if (!busy) showHowto(false); };
+  $('#btnHowto').onclick = () => openHowto();
   // タイトルへ戻る前に確認する（他の画面を開いているときは、そのまま戻る）
   $('#btnMenu').onclick = async () => {
     if (ov.hidden) {
