@@ -9260,11 +9260,11 @@
   const ACH = [
     // 2026-11-25 作者が名前を決めた（ヒナ〜ツムギの「心をほどく」5つと「END 1」「END 8」「一枚絵」は同じ日に追加。心をほどく5つの名前は未定）
     ['firstEnd', 'わすれものを取りに', '初めて、エンディングを見る', () => ALL_ENDS.some(t => P.endings[t]), () => true],
-    ['saveHina', null, 'ヒナの心をほどく', () => !!P.saved.hina, () => false],
-    ['saveSota', null, 'ソウタの心をほどく', () => !!P.saved.sota, () => false],
-    ['saveMio', null, 'ミオの心をほどく', () => !!P.saved.mio, () => false],
-    ['saveKei', null, 'ケイの心をほどく', () => !!P.saved.kei, () => false],
-    ['saveTsumugi', null, 'ツムギの心をほどく', () => !!P.saved.tsumugi, () => false],
+    ['saveHina', '私のために描く', 'ヒナの心がほどける', () => !!P.saved.hina, () => false],
+    ['saveSota', '空の彼方へ旋律を', 'ソウタの心がほどける', () => !!P.saved.sota, () => false],
+    ['saveMio', 'もう一度、目を見て', 'ミオの心がほどける', () => !!P.saved.mio, () => false],
+    ['saveKei', '守られていた背中', 'ケイの心がほどける', () => !!P.saved.kei, () => false],
+    ['saveTsumugi', '手渡された本、ふたりぶんの時間', 'ツムギの心がほどける', () => !!P.saved.tsumugi, () => false],
     ['shelf5', '確かに、そこにいた', '5人のわすれものを全て手に入れる', () => FIVE.every(k => P.shelf[k]), () => false],
     ['end1', '止まった時間', 'END 1を見る', () => !!P.endings.END1, () => false],
     // 2026-11-25 作者の指示：END 8 は条件が重なっていて見つけにくいので、条件の欄にそのまま出す。
