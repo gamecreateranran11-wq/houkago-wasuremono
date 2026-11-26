@@ -97,7 +97,7 @@
   .nbz-in.far { transform: none; transition: none; }
   .cutin .nbz-in img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .nbz-row { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .nbz-row::after { content: ""; position: absolute; left: 0; top: 18%; bottom: 14%; width: 0; border-radius: 999px; background: linear-gradient(90deg, rgba(255, 226, 170, 0), rgba(255, 226, 170, .2) 12%, rgba(255, 226, 170, .2) 88%, rgba(255, 226, 170, 0)); mix-blend-mode: screen;   /* なぞった後も字が読めるくらいの、うすい光 */ transition: width .9s ease; }
+  .nbz-row::after { content: ""; position: absolute; left: 0; top: 18%; bottom: 14%; width: 0; border-radius: 999px; background: linear-gradient(90deg, rgba(255, 214, 140, 0), rgba(255, 214, 140, .42) 12%, rgba(255, 214, 140, .42) 88%, rgba(255, 214, 140, 0)); box-shadow: 0 0 14px 5px rgba(255, 176, 80, .75);   /* 2026-11-26 作者の指示：押した反応が分かるよう強めの光 */ transition: width .9s ease; }
   .nbz-row.traced::after { width: 100%; }
   /* なぞり終えた名前：光らせず、少しだけ暗く沈ませる（まだなぞれる名前の、明滅する光と見分けるため） */
   .nbz-row.done::before { content: ""; position: absolute; inset: 14% -2% 10%; border-radius: 999px; background: rgba(30, 14, 24, .3); mix-blend-mode: multiply; }
@@ -605,7 +605,9 @@
   #bgRain { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; display: none; }
   /* 2026-11-21 作者の指示：過去の回想の背景は彩度を落とし、ベージュの幕をかけたように色あせさせる */
   /* 作者の決定（A）：記憶のかけらの画面と同じ処理。ぼかして色を落とし、記憶のかけらの白っぽい色を3割重ねる（ぼかした縁が透けないよう少しだけ拡大） */
-  #scene.recall #bgImg { filter: blur(2px) saturate(.55) brightness(1.08); transform: scale(1.02); }
+  /* 2026-11-26 作者の指摘：図書室の椅子（背景と別の絵）にもかける。拡大は背景の絵だけでなく舞台ごと（椅子の位置がずれないように） */
+  #scene.recall #stage > img, #scene.recall #stage > svg { filter: blur(2px) saturate(.55) brightness(1.08); }
+  #scene.recall #stage { transform: scale(1.02); }
   #stage::after { content: ""; position: absolute; inset: 0; background: rgba(249, 243, 237, .3); opacity: 0; pointer-events: none; transition: opacity .7s ease; }
   #scene.recall #stage::after { opacity: 1; }
   #scene.roof-dark #bgImg { filter: brightness(.35) saturate(.6); transition: filter 1.2s ease; }
@@ -3366,6 +3368,8 @@
     $('#btnSkip').setAttribute('aria-pressed', P.skip ? 'true' : 'false');
 
     if (!C) return;
+    // 2026-11-26 作者の指摘：屋上で既読スキップなどを切り替えると、保健室（5章）の持ち物と時計が出ていた。屋上は 18:30 のまま、持ち物は出さない
+    if (C.id === 'roof') { $('#clock').textContent = '18:30'; $('#remain').textContent = ''; $('#btnWait').disabled = true; $('#btnHint').disabled = true; $('#inv').innerHTML = ''; return; }
     { const sf = $('#sitFig'), g = R.st === 'vanished' || R.st === 'shut' || R.st === 'died' || !!R.collapse || !!R.standing;   // 2026-11-25 作者の指摘：容態が急変してからは、背景の座り姿を出さない（END8まで）
       if (g && R.standing && !sf.classList.contains('gone')) ghostOut(sf);   // 立ち上がるとき：座り姿もフェードで消える（立った絵はフェードで出る）
       sf.classList.toggle('gone', g); }
@@ -3455,10 +3459,12 @@
   // 2026-11-16 作者の指示：黒い画面の文が、文節の途中で折り返していた。文節の切れ目（ひらがなの後に漢字・カタカナ・かぎかっこが来る所、
   // 読点・句点・閉じかっこ・「……」の後）にだけ折り返しの候補（<wbr>）を入れ、CSS の keep-all でそれ以外では折り返さない
   const voidPhrase = s => String(s)
-    .replace(/([ぁ-ゖ])(?=[一-龯々〆ァ-ヺ「『（A-Za-z0-9０-９])/g, '$1<wbr>')
+    .replace(/([ぁ-ゖ])(?=[一-龯々〆ァ-ヺ「『（A-Za-z0-9０-９])/g, (m, k, i, str) => (/[のとおご]/.test(k) && !/[「『（]/.test(str[i + 1])) || (/[いきしちにひみりぎじび]/.test(k) && /[一-龯々]/.test(str[i - 1] || '') && /[一-龯々]/.test(str[i + 1])) || (k === 'つ' && str[i + 1] === '目') || (k === 'う' && str[i - 1] === 'も') || (k === 'れ' && /[こそあど]/.test(str[i - 1] || '')) ? k : k + '<wbr>')   // 2026-11-26 作者の指示：「この先も」「と言った」「屋上の鍵」などは一続きに。「飲み込む」「思い返す」のような二つの動詞のつながりも切らない
+    .replace(/([一-龯々ァ-ヺ][もはを])(?=[ぁ-ゖ])(?!と[でにをの])/g, '$1<wbr>')   // ひらがなが続く所は「先も｜ずっと」のように助詞の後で
     .replace(/([、。！？])(?=[^、。」』）！？])/g, '$1<wbr>')
     .replace(/([」』）])(?=[^、。」』）！？ぁ-ゖ])/g, '$1<wbr>')   // 「……」と言った：閉じかっこの後の助詞は前につける
-    .replace(/(…+)(?=[^…、。」』）！？])/g, '$1<wbr>');
+    .replace(/([」』）])(?=[ぁ-ゖ])/g, '$1\u2060')   // 閉じかっこの後はブラウザが改行してしまうので、つなぐ印（見えない）を入れる
+    .replace(/(…+)(?=[^…、。」』）！？])/g, '$1\u2060');   // 「……うん」の「……」の後でも切らない
   // 2026-11-18 作者の指示：暗転・明転で場面が切り替わるときは、直前の文をメッセージ欄に残さない
   const clearMsg = () => { spk.hidden = true; txt.textContent = ''; chs.innerHTML = ''; more.hidden = true; };
   function voidWait(lines) {
@@ -4268,7 +4274,7 @@
     await say([[[O, '……出るために、聞いたんだ'], [O, 'あの子たちの痛みを鍵みたいに使って']],
                [[O, '……自分を思い出すためにあの子たちの話を聞いたんだ'], [O, 'それってあの子たちのため？']],
                [[O, '……知りたかっただけ'], [O, 'のぞき見と何が違うの']],
-               [[O, '頼まれてもいないのに、扉を開けて、言葉をかけて。……役に立っていたかっただけじゃないの']],
+               [[O, '……役に立つことで、自分には価値があるって思いたかっただけじゃないの'], [O, 'あの子たちを、自分の苦しみを和らげるために利用したんだ']],   // 2026-11-26 作者の指示：前の「頼まれてもいないのに」は「誰も助けてなんて言ってなかった」と重なるので言い換え
                [[O, '……分からないまま人の心に手を入れたんだ']]][why]);
     await say([
                [O, '言葉一つ間違えたら、もっと追い詰めてたかもしれないのに'],
