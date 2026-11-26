@@ -2983,6 +2983,8 @@
   }
   let windNodes = null;
   const seWant = { wind: false, rain: false };   // 早送り中に指示された風・雨の状態（早送りが終わったら、その状態にする）
+  // スマホ・タブレットか（iPad にキーボード・トラックパッドをつなぐと (pointer: coarse) にならないので、端末の種類＝iPad は Macintosh＋タッチ でも見る）
+  const TABLETISH = matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   function windSE(on, fade = 2.5) {
     if (replay) { seWant.wind = !!on; return; }
     try {
@@ -2994,9 +2996,8 @@
       if (windNodes || !P.sound) return;
       const a = audio(), dst = out(), t = a.currentTime;
       // スマホ・タブレットは端末の稼働音がない分うるさく聞こえやすいので下げる。2026-11-26 作者の指示：タブレットもスマホと同じ音量に。
-      // iPad にキーボード・トラックパッドをつなぐと (pointer: coarse) にならないので、端末の種類（iPad は Macintosh＋タッチ）でも見る
-      const tabletish = matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-      const WIND = tabletish ? 1.1 : 1.5;   // PC：2026-11-26 作者の指示で 1.7 → 1.5（稼働音の静かな機種でうるさくならないように少しだけ下げる）
+      // PC でも、設定の「イヤホン・ヘッドフォン」を ON にしたときはスマホと同じ音量（耳もとで鳴るので）
+      const WIND = (TABLETISH || P.earphone) ? 1.1 : 1.5;   // PC：2026-11-26 作者の指示で 1.7 → 1.5（稼働音の静かな機種でうるさくならないように少しだけ下げる）
       const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(WIND * seMul(), t + 2.5); g.connect(dst);
       // 低いうなり
       const s1 = a.createBufferSource(), f1 = a.createBiquadFilter(), g1 = a.createGain();
@@ -9440,7 +9441,7 @@
       //   → リセット後の記録は同じ端末の「リセット後のデータ」として届き、集計の表で初回と分けて数えられる（同じ人が別人として二重に数えられない）
       const hadTel = P.telemetry !== undefined;
       if (telOn()) { tel('reset', { runs: P.runs || 0, ends: Object.keys(P.endings || {}).length }); telFlush(); }
-      const keep = { sound: P.sound, skip: P.skip, textSpeed: P.textSpeed, bgmVol: P.bgmVol, seVol: P.seVol, bgmLazy: P.bgmLazy, ...(hadTel ? { telemetry: P.telemetry } : {}), ...(P.tid ? { tid: P.tid } : {}), resets: (P.resets || 0) + 1 };
+      const keep = { sound: P.sound, skip: P.skip, textSpeed: P.textSpeed, bgmVol: P.bgmVol, seVol: P.seVol, bgmLazy: P.bgmLazy, earphone: P.earphone, ...(hadTel ? { telemetry: P.telemetry } : {}), ...(P.tid ? { tid: P.tid } : {}), resets: (P.resets || 0) + 1 };
       try {
         [KEY, SAVE_KEY, ROOF_KEY, ROOF_START_KEY, READ_KEY, ...SLOTS.map(SLOT_KEY)].forEach(k => localStorage.removeItem(k));
         localStorage.setItem(KEY, JSON.stringify({ shelf: {}, runs: 0, endings: {}, ...keep }));
@@ -9539,6 +9540,9 @@
         <div class="set-row"><span class="set-label">曲の読み込み</span><div class="seg" id="setLazy">
           <button type="button" data-lazy="0" aria-pressed="${!P.bgmLazy}">先にまとめて</button><button type="button" data-lazy="1" aria-pressed="${!!P.bgmLazy}">流れるときに</button></div></div>
         <p class="note set-note">「流れるときに」は通信量を抑えます（Wi-Fiがないとき向け）。曲の始まりが少し遅れることがあります。</p>
+        ${TABLETISH ? '' : `<div class="set-row"><span class="set-label">イヤホン・ヘッドフォン</span><div class="seg" id="setEar">
+          <button type="button" data-ear="1" aria-pressed="${!!P.earphone}">使う</button><button type="button" data-ear="0" aria-pressed="${!P.earphone}">使わない</button></div></div>
+        <p class="note set-note">イヤホン・ヘッドフォンで遊ぶときは「使う」にすると、屋上の風の音などが耳もとでうるさくならないよう小さめになります。</p>`}
         <div class="set-row"><span class="set-label">音量</span>
           <label class="vol">BGM<input id="sVolBgm" type="range" min="0" max="100" step="5" aria-label="BGMの音量"></label>
           <label class="vol">効果音<input id="sVolSe" type="range" min="0" max="100" step="5" aria-label="効果音の音量"></label></div>
@@ -9553,6 +9557,10 @@
     card.querySelectorAll('#setDiff [data-diff]').forEach(b => b.onclick = () => {
       P.diff = b.dataset.diff; P.diffSet = true; saveP(); if (P.diff === 'easy' && R && R.ch && !R.over) nmMark('easy');
       card.querySelectorAll('#setDiff [data-diff]').forEach(x => x.setAttribute('aria-pressed', x.dataset.diff === P.diff ? 'true' : 'false'));
+    });
+    card.querySelectorAll('#setEar [data-ear]').forEach(b => b.onclick = () => {   // 2026-11-26 作者の指示：PC だけ。イヤホン・ヘッドフォンのときは風の音をスマホと同じ音量に
+      P.earphone = b.dataset.ear === '1'; saveP();
+      card.querySelectorAll('#setEar [data-ear]').forEach(x => x.setAttribute('aria-pressed', (x.dataset.ear === '1') === P.earphone ? 'true' : 'false'));
     });
     card.querySelectorAll('#setTel [data-tel]').forEach(b => b.onclick = () => {
       P.telemetry = b.dataset.tel === '1'; saveP(); if (P.telemetry) tel('consent'); else telQ = [];
