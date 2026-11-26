@@ -2993,7 +2993,10 @@
       }
       if (windNodes || !P.sound) return;
       const a = audio(), dst = out(), t = a.currentTime;
-      const WIND = matchMedia('(pointer: coarse)').matches ? 1.1 : 1.7;   // スマホは端末の稼働音がない分うるさく聞こえやすいので下げる
+      // スマホ・タブレットは端末の稼働音がない分うるさく聞こえやすいので下げる。2026-11-26 作者の指示：タブレットもスマホと同じ音量に。
+      // iPad にキーボード・トラックパッドをつなぐと (pointer: coarse) にならないので、端末の種類（iPad は Macintosh＋タッチ）でも見る
+      const tabletish = matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+      const WIND = tabletish ? 1.1 : 1.5;   // PC：2026-11-26 作者の指示で 1.7 → 1.5（稼働音の静かな機種でうるさくならないように少しだけ下げる）
       const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(WIND * seMul(), t + 2.5); g.connect(dst);
       // 低いうなり
       const s1 = a.createBufferSource(), f1 = a.createBiquadFilter(), g1 = a.createGain();
